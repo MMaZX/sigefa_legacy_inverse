@@ -1,0 +1,25 @@
+## Build output
+bin/
+obj/
+[Bb]uild/
+
+## Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## Precompiled binary dependencies
+Debug_gr/
+
+## Temporary files
+*.tmp
+*.log
+*.cache
+Thumbs.db
+
+## NuGet
+packages/
+*.nupkg

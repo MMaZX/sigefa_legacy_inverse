@@ -1,0 +1,496 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>SIGEFA</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net461</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+  </ItemGroup>
+  <!-- Exclude decompiler artifacts and redundant assembly metadata -->
+  <ItemGroup>
+    <Compile Remove="SIGEFA (1.0.0.0).cs" />
+    <Compile Remove="__fAnonymousType*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="SIGEFA.Reportes.clsReportes.CRCuotasPrestamo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCodigodeBarras.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCompras.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCotizacionSimple.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDespacho.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDespachoFormatoContinuo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDocumentosEnviados.rpt" />
+    <None Remove="SIGEFA.Reportes.CREntrega.rpt" />
+    <None Remove="SIGEFA.Reportes.CREntregaFormatoContinuo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRExistencia.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFacturaFomatoContinuocont.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFacturaFomatoContinuoAnulado.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFacturaFomatoContinuo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFacturaInsumos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFacturaXXX.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGananciaxArticulo2_Vendedores.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGananciaxArticulo2_Clientes.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGananciaxArticuloCatalogo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGananciaxArticulo2.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGananciaxArticulo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGananciaxCliente.rpt" />
+    <None Remove="SIGEFA.Reportes.CRHistoriaClinica.rpt" />
+    <None Remove="SIGEFA.Reportes.CRInventarioVargas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRKardexTransferencia_S.rpt" />
+    <None Remove="SIGEFA.Reportes.CRKardexInternoSimplificado.rpt" />
+    <None Remove="SIGEFA.Reportes.CRKardexInterno.rpt" />
+    <None Remove="SIGEFA.Reportes.CRListadoDePropuestasDePedido.rpt" />
+    <None Remove="SIGEFA.Reportes.CRNIngreso.rpt" />
+    <None Remove="SIGEFA.Reportes.CRNotaCreditoVentaTicket.rpt" />
+    <None Remove="SIGEFA.Reportes.CRNotaCreditoVenta.rpt" />
+    <None Remove="SIGEFA.Reportes.CROrdenCompraNuevoFormato.rpt" />
+    <None Remove="SIGEFA.Reportes.CRPropuestaDePedidoDeOrdenDeCompra.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteFacturacont.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteFacturaAnulado.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteFactura.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteGuiaFacturacion.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReqAlmacen.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReqAlmacenFormatoContinuocont.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteListadoEntrega.rpt" />
+    <None Remove="SIGEFA.Reportes.CRResumenEntregas_Despacho.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTransferenciaDirectaFormatoContinuocont.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentasDiarias.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentasPorVendedor.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentxCliente2.rpt" />
+    <None Remove="SIGEFA.Reportes.CRUtilidad3.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentasUtilidad.rpt" />
+    <None Remove="SIGEFA.Reportes.CRInventario2.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteNotaFormatoAntiguo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTransferenciaDirecta.rpt" />
+    <None Remove="SIGEFA.Reportes.CRUtilidad1.rpt" />
+    <None Remove="SIGEFA.Reportes.CRUtilidad2.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentasVendedor.rpt" />
+    <None Remove="SIGEFA.Reportes.CRListaVentasSeparacion.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentSeparacion.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCierre.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCierreCajaChica.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDetalleCaja.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFacturasLetrasXvencer.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReciboEgresosPorTercerosCajaChica.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReciboEgresosMovilidsdCajaChica.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRecibodeIngresosCajaChica.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRecibodeEgresosCajaChica.rpt" />
+    <None Remove="SIGEFA.Reportes.CRConsultorEnt.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGuiaRemionVentaNewFormat.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGuiaRemisionNewFormat.rpt" />
+    <None Remove="SIGEFA.Reportes.CRKardex4.rpt" />
+    <None Remove="SIGEFA.Reportes.CROrdenCompra.rpt" />
+    <None Remove="SIGEFA.Reportes.CRAlmacenVendeMas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCotizacionCompra.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGuiaRemision.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGuiaRemisionSD.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGuiaRemisionVenta.rpt" />
+    <None Remove="SIGEFA.Reportes.CRImpresionCobro.rpt" />
+    <None Remove="SIGEFA.Reportes.CRLiquidacion.rpt" />
+    <None Remove="SIGEFA.Reportes.CRLiquidacion3.rpt" />
+    <None Remove="SIGEFA.Reportes.CRLiquidacion4.rpt" />
+    <None Remove="SIGEFA.Reportes.CRLiquidacionCaja2.rpt" />
+    <None Remove="SIGEFA.Reportes.CRListaNotasDebito.rpt" />
+    <None Remove="SIGEFA.Reportes.CRMercaderiaEntregar.rpt" />
+    <None Remove="SIGEFA.Reportes.CRNotaDebito.rpt" />
+    <None Remove="SIGEFA.Reportes.CRNotaDebitoVenta.rpt" />
+    <None Remove="SIGEFA.Reportes.CRPrestamos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRecibodeEgresos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRecibodeIngresos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReciboEgresoDietasyEstimulos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReciboEgresosMovilidadAgazajosFestividades.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReciboEgresosMovilidsd.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReciboEgresosPorTerceros.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRendiciones.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteArqueoFondoFijo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteBoleta.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteBoletaFormatoAntiguo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteMovimientosBancariosRPT.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReporteMovimientosCajaChica.rpt" />
+    <None Remove="SIGEFA.Reportes.CRResumenCobranza.rpt" />
+    <None Remove="SIGEFA.Reportes.CRResumenVentas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRotacionProducto.rpt" />
+    <None Remove="SIGEFA.Reportes.CRSalidaDespacho.rpt" />
+    <None Remove="SIGEFA.Reportes.CRStockAgotar.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTipoEgresoCaja.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTransferencia.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTransferenciaxDevolucion.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTarjetadePago.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDestaque.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVarolizacion.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVendedores.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentasxCliente.rpt" />
+    <None Remove="SIGEFA.Reportes.CRZonas.rpt" />
+    <None Remove="SIGEFA.Reportes.CREmpresaTransporte.rpt" />
+    <None Remove="SIGEFA.Reportes.CRConductores.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVehiculoTransporte.rpt" />
+    <None Remove="SIGEFA.Reportes.CRListaPrecios.rpt" />
+    <None Remove="SIGEFA.Reportes.CRMetodoPago.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGrupos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRLineas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRSucursales.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFlujoCaja.rpt" />
+    <None Remove="SIGEFA.Reportes.CRImpresionPago.rpt" />
+    <None Remove="SIGEFA.Reportes.CRLiquidacionCaja.rpt" />
+    <None Remove="SIGEFA.Reportes.CRMovimientosBancarios.rpt" />
+    <None Remove="SIGEFA.Reportes.CROrden.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCtasCte.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRequerimiento.rpt" />
+    <None Remove="SIGEFA.Reportes.CRListaVentas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentxArtixVend.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCatalogoPrecios.rpt" />
+    <None Remove="SIGEFA.Reportes.CRBancos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRAlmacenes.rpt" />
+    <None Remove="SIGEFA.Reportes.CRArqueo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRArqueoCargado.rpt" />
+    <None Remove="SIGEFA.Reportes.CRAutorizado.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCaracteristicas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRClientesCompletos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRClientesCorporativos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRClientesSimple.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCobrosGeneral.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCobrosxDia.rpt" />
+    <None Remove="SIGEFA.Reportes.CRComision.rpt" />
+    <None Remove="SIGEFA.Reportes.CRCotizacion.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDespachoDocumento.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDespachoxArticulo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRDocumentos.rpt" />
+    <None Remove="SIGEFA.Reportes.CREmpresas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFamilias.rpt" />
+    <None Remove="SIGEFA.Reportes.CRFormaPago.rpt" />
+    <None Remove="SIGEFA.Reportes.CRGuia.rpt" />
+    <None Remove="SIGEFA.Reportes.CRInventario.rpt" />
+    <None Remove="SIGEFA.Reportes.CRKardex.rpt" />
+    <None Remove="SIGEFA.Reportes.CRListaGuias.rpt" />
+    <None Remove="SIGEFA.Reportes.CRListaNotas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRMarcas.rpt" />
+    <None Remove="SIGEFA.Reportes.CRNotaCredito.rpt" />
+    <None Remove="SIGEFA.Reportes.CRNotasIngresoSalida.rpt" />
+    <None Remove="SIGEFA.Reportes.CRPagosDia.rpt" />
+    <None Remove="SIGEFA.Reportes.CRProductos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRProveedores.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRankingArticulo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRRankingCliente.rpt" />
+    <None Remove="SIGEFA.Reportes.CRReportePagos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTipoArticulos.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTipoCambio.rpt" />
+    <None Remove="SIGEFA.Reportes.CRTransacciones.rpt" />
+    <None Remove="SIGEFA.Reportes.CRUnidades.rpt" />
+    <None Remove="SIGEFA.Reportes.CRUsuarios.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentaMesArticulo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentaxArticulo.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentCredContDia.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentxCliente.rpt" />
+    <None Remove="SIGEFA.Reportes.CRVentxVendedor.rpt" />
+    <None Remove="SIGEFA.exe.licenses" />
+    <EmbeddedResource Include="SIGEFA.Reportes.clsReportes.CRCuotasPrestamo.rpt" LogicalName="SIGEFA.Reportes.clsReportes.CRCuotasPrestamo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCodigodeBarras.rpt" LogicalName="SIGEFA.Reportes.CRCodigodeBarras.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCompras.rpt" LogicalName="SIGEFA.Reportes.CRCompras.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCotizacionSimple.rpt" LogicalName="SIGEFA.Reportes.CRCotizacionSimple.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDespacho.rpt" LogicalName="SIGEFA.Reportes.CRDespacho.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDespachoFormatoContinuo.rpt" LogicalName="SIGEFA.Reportes.CRDespachoFormatoContinuo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDocumentosEnviados.rpt" LogicalName="SIGEFA.Reportes.CRDocumentosEnviados.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CREntrega.rpt" LogicalName="SIGEFA.Reportes.CREntrega.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CREntregaFormatoContinuo.rpt" LogicalName="SIGEFA.Reportes.CREntregaFormatoContinuo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRExistencia.rpt" LogicalName="SIGEFA.Reportes.CRExistencia.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFacturaFomatoContinuocont.rpt" LogicalName="SIGEFA.Reportes.CRFacturaFomatoContinuocont.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFacturaFomatoContinuoAnulado.rpt" LogicalName="SIGEFA.Reportes.CRFacturaFomatoContinuoAnulado.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFacturaFomatoContinuo.rpt" LogicalName="SIGEFA.Reportes.CRFacturaFomatoContinuo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFacturaInsumos.rpt" LogicalName="SIGEFA.Reportes.CRFacturaInsumos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFacturaXXX.rpt" LogicalName="SIGEFA.Reportes.CRFacturaXXX.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGananciaxArticulo2_Vendedores.rpt" LogicalName="SIGEFA.Reportes.CRGananciaxArticulo2_Vendedores.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGananciaxArticulo2_Clientes.rpt" LogicalName="SIGEFA.Reportes.CRGananciaxArticulo2_Clientes.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGananciaxArticuloCatalogo.rpt" LogicalName="SIGEFA.Reportes.CRGananciaxArticuloCatalogo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGananciaxArticulo2.rpt" LogicalName="SIGEFA.Reportes.CRGananciaxArticulo2.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGananciaxArticulo.rpt" LogicalName="SIGEFA.Reportes.CRGananciaxArticulo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGananciaxCliente.rpt" LogicalName="SIGEFA.Reportes.CRGananciaxCliente.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRHistoriaClinica.rpt" LogicalName="SIGEFA.Reportes.CRHistoriaClinica.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRInventarioVargas.rpt" LogicalName="SIGEFA.Reportes.CRInventarioVargas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRKardexTransferencia_S.rpt" LogicalName="SIGEFA.Reportes.CRKardexTransferencia_S.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRKardexInternoSimplificado.rpt" LogicalName="SIGEFA.Reportes.CRKardexInternoSimplificado.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRKardexInterno.rpt" LogicalName="SIGEFA.Reportes.CRKardexInterno.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRListadoDePropuestasDePedido.rpt" LogicalName="SIGEFA.Reportes.CRListadoDePropuestasDePedido.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRNIngreso.rpt" LogicalName="SIGEFA.Reportes.CRNIngreso.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRNotaCreditoVentaTicket.rpt" LogicalName="SIGEFA.Reportes.CRNotaCreditoVentaTicket.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRNotaCreditoVenta.rpt" LogicalName="SIGEFA.Reportes.CRNotaCreditoVenta.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CROrdenCompraNuevoFormato.rpt" LogicalName="SIGEFA.Reportes.CROrdenCompraNuevoFormato.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRPropuestaDePedidoDeOrdenDeCompra.rpt" LogicalName="SIGEFA.Reportes.CRPropuestaDePedidoDeOrdenDeCompra.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteFacturacont.rpt" LogicalName="SIGEFA.Reportes.CRReporteFacturacont.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteFacturaAnulado.rpt" LogicalName="SIGEFA.Reportes.CRReporteFacturaAnulado.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteFactura.rpt" LogicalName="SIGEFA.Reportes.CRReporteFactura.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteGuiaFacturacion.rpt" LogicalName="SIGEFA.Reportes.CRReporteGuiaFacturacion.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReqAlmacen.rpt" LogicalName="SIGEFA.Reportes.CRReqAlmacen.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReqAlmacenFormatoContinuocont.rpt" LogicalName="SIGEFA.Reportes.CRReqAlmacenFormatoContinuocont.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteListadoEntrega.rpt" LogicalName="SIGEFA.Reportes.CRReporteListadoEntrega.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRResumenEntregas_Despacho.rpt" LogicalName="SIGEFA.Reportes.CRResumenEntregas_Despacho.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTransferenciaDirectaFormatoContinuocont.rpt" LogicalName="SIGEFA.Reportes.CRTransferenciaDirectaFormatoContinuocont.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentasDiarias.rpt" LogicalName="SIGEFA.Reportes.CRVentasDiarias.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentasPorVendedor.rpt" LogicalName="SIGEFA.Reportes.CRVentasPorVendedor.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentxCliente2.rpt" LogicalName="SIGEFA.Reportes.CRVentxCliente2.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRUtilidad3.rpt" LogicalName="SIGEFA.Reportes.CRUtilidad3.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentasUtilidad.rpt" LogicalName="SIGEFA.Reportes.CRVentasUtilidad.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRInventario2.rpt" LogicalName="SIGEFA.Reportes.CRInventario2.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteNotaFormatoAntiguo.rpt" LogicalName="SIGEFA.Reportes.CRReporteNotaFormatoAntiguo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTransferenciaDirecta.rpt" LogicalName="SIGEFA.Reportes.CRTransferenciaDirecta.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRUtilidad1.rpt" LogicalName="SIGEFA.Reportes.CRUtilidad1.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRUtilidad2.rpt" LogicalName="SIGEFA.Reportes.CRUtilidad2.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentasVendedor.rpt" LogicalName="SIGEFA.Reportes.CRVentasVendedor.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRListaVentasSeparacion.rpt" LogicalName="SIGEFA.Reportes.CRListaVentasSeparacion.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentSeparacion.rpt" LogicalName="SIGEFA.Reportes.CRVentSeparacion.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCierre.rpt" LogicalName="SIGEFA.Reportes.CRCierre.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCierreCajaChica.rpt" LogicalName="SIGEFA.Reportes.CRCierreCajaChica.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDetalleCaja.rpt" LogicalName="SIGEFA.Reportes.CRDetalleCaja.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFacturasLetrasXvencer.rpt" LogicalName="SIGEFA.Reportes.CRFacturasLetrasXvencer.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReciboEgresosPorTercerosCajaChica.rpt" LogicalName="SIGEFA.Reportes.CRReciboEgresosPorTercerosCajaChica.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReciboEgresosMovilidsdCajaChica.rpt" LogicalName="SIGEFA.Reportes.CRReciboEgresosMovilidsdCajaChica.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRecibodeIngresosCajaChica.rpt" LogicalName="SIGEFA.Reportes.CRRecibodeIngresosCajaChica.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRecibodeEgresosCajaChica.rpt" LogicalName="SIGEFA.Reportes.CRRecibodeEgresosCajaChica.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRConsultorEnt.rpt" LogicalName="SIGEFA.Reportes.CRConsultorEnt.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGuiaRemionVentaNewFormat.rpt" LogicalName="SIGEFA.Reportes.CRGuiaRemionVentaNewFormat.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGuiaRemisionNewFormat.rpt" LogicalName="SIGEFA.Reportes.CRGuiaRemisionNewFormat.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRKardex4.rpt" LogicalName="SIGEFA.Reportes.CRKardex4.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CROrdenCompra.rpt" LogicalName="SIGEFA.Reportes.CROrdenCompra.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRAlmacenVendeMas.rpt" LogicalName="SIGEFA.Reportes.CRAlmacenVendeMas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCotizacionCompra.rpt" LogicalName="SIGEFA.Reportes.CRCotizacionCompra.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGuiaRemision.rpt" LogicalName="SIGEFA.Reportes.CRGuiaRemision.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGuiaRemisionSD.rpt" LogicalName="SIGEFA.Reportes.CRGuiaRemisionSD.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGuiaRemisionVenta.rpt" LogicalName="SIGEFA.Reportes.CRGuiaRemisionVenta.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRImpresionCobro.rpt" LogicalName="SIGEFA.Reportes.CRImpresionCobro.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRLiquidacion.rpt" LogicalName="SIGEFA.Reportes.CRLiquidacion.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRLiquidacion3.rpt" LogicalName="SIGEFA.Reportes.CRLiquidacion3.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRLiquidacion4.rpt" LogicalName="SIGEFA.Reportes.CRLiquidacion4.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRLiquidacionCaja2.rpt" LogicalName="SIGEFA.Reportes.CRLiquidacionCaja2.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRListaNotasDebito.rpt" LogicalName="SIGEFA.Reportes.CRListaNotasDebito.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRMercaderiaEntregar.rpt" LogicalName="SIGEFA.Reportes.CRMercaderiaEntregar.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRNotaDebito.rpt" LogicalName="SIGEFA.Reportes.CRNotaDebito.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRNotaDebitoVenta.rpt" LogicalName="SIGEFA.Reportes.CRNotaDebitoVenta.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRPrestamos.rpt" LogicalName="SIGEFA.Reportes.CRPrestamos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRecibodeEgresos.rpt" LogicalName="SIGEFA.Reportes.CRRecibodeEgresos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRecibodeIngresos.rpt" LogicalName="SIGEFA.Reportes.CRRecibodeIngresos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReciboEgresoDietasyEstimulos.rpt" LogicalName="SIGEFA.Reportes.CRReciboEgresoDietasyEstimulos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReciboEgresosMovilidadAgazajosFestividades.rpt" LogicalName="SIGEFA.Reportes.CRReciboEgresosMovilidadAgazajosFestividades.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReciboEgresosMovilidsd.rpt" LogicalName="SIGEFA.Reportes.CRReciboEgresosMovilidsd.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReciboEgresosPorTerceros.rpt" LogicalName="SIGEFA.Reportes.CRReciboEgresosPorTerceros.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRendiciones.rpt" LogicalName="SIGEFA.Reportes.CRRendiciones.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteArqueoFondoFijo.rpt" LogicalName="SIGEFA.Reportes.CRReporteArqueoFondoFijo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteBoleta.rpt" LogicalName="SIGEFA.Reportes.CRReporteBoleta.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteBoletaFormatoAntiguo.rpt" LogicalName="SIGEFA.Reportes.CRReporteBoletaFormatoAntiguo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteMovimientosBancariosRPT.rpt" LogicalName="SIGEFA.Reportes.CRReporteMovimientosBancariosRPT.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReporteMovimientosCajaChica.rpt" LogicalName="SIGEFA.Reportes.CRReporteMovimientosCajaChica.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRResumenCobranza.rpt" LogicalName="SIGEFA.Reportes.CRResumenCobranza.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRResumenVentas.rpt" LogicalName="SIGEFA.Reportes.CRResumenVentas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRotacionProducto.rpt" LogicalName="SIGEFA.Reportes.CRRotacionProducto.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRSalidaDespacho.rpt" LogicalName="SIGEFA.Reportes.CRSalidaDespacho.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRStockAgotar.rpt" LogicalName="SIGEFA.Reportes.CRStockAgotar.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTipoEgresoCaja.rpt" LogicalName="SIGEFA.Reportes.CRTipoEgresoCaja.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTransferencia.rpt" LogicalName="SIGEFA.Reportes.CRTransferencia.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTransferenciaxDevolucion.rpt" LogicalName="SIGEFA.Reportes.CRTransferenciaxDevolucion.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTarjetadePago.rpt" LogicalName="SIGEFA.Reportes.CRTarjetadePago.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDestaque.rpt" LogicalName="SIGEFA.Reportes.CRDestaque.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVarolizacion.rpt" LogicalName="SIGEFA.Reportes.CRVarolizacion.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVendedores.rpt" LogicalName="SIGEFA.Reportes.CRVendedores.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentasxCliente.rpt" LogicalName="SIGEFA.Reportes.CRVentasxCliente.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRZonas.rpt" LogicalName="SIGEFA.Reportes.CRZonas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CREmpresaTransporte.rpt" LogicalName="SIGEFA.Reportes.CREmpresaTransporte.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRConductores.rpt" LogicalName="SIGEFA.Reportes.CRConductores.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVehiculoTransporte.rpt" LogicalName="SIGEFA.Reportes.CRVehiculoTransporte.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRListaPrecios.rpt" LogicalName="SIGEFA.Reportes.CRListaPrecios.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRMetodoPago.rpt" LogicalName="SIGEFA.Reportes.CRMetodoPago.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGrupos.rpt" LogicalName="SIGEFA.Reportes.CRGrupos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRLineas.rpt" LogicalName="SIGEFA.Reportes.CRLineas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRSucursales.rpt" LogicalName="SIGEFA.Reportes.CRSucursales.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFlujoCaja.rpt" LogicalName="SIGEFA.Reportes.CRFlujoCaja.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRImpresionPago.rpt" LogicalName="SIGEFA.Reportes.CRImpresionPago.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRLiquidacionCaja.rpt" LogicalName="SIGEFA.Reportes.CRLiquidacionCaja.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRMovimientosBancarios.rpt" LogicalName="SIGEFA.Reportes.CRMovimientosBancarios.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CROrden.rpt" LogicalName="SIGEFA.Reportes.CROrden.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCtasCte.rpt" LogicalName="SIGEFA.Reportes.CRCtasCte.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRequerimiento.rpt" LogicalName="SIGEFA.Reportes.CRRequerimiento.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRListaVentas.rpt" LogicalName="SIGEFA.Reportes.CRListaVentas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentxArtixVend.rpt" LogicalName="SIGEFA.Reportes.CRVentxArtixVend.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCatalogoPrecios.rpt" LogicalName="SIGEFA.Reportes.CRCatalogoPrecios.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRBancos.rpt" LogicalName="SIGEFA.Reportes.CRBancos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRAlmacenes.rpt" LogicalName="SIGEFA.Reportes.CRAlmacenes.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRArqueo.rpt" LogicalName="SIGEFA.Reportes.CRArqueo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRArqueoCargado.rpt" LogicalName="SIGEFA.Reportes.CRArqueoCargado.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRAutorizado.rpt" LogicalName="SIGEFA.Reportes.CRAutorizado.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCaracteristicas.rpt" LogicalName="SIGEFA.Reportes.CRCaracteristicas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRClientesCompletos.rpt" LogicalName="SIGEFA.Reportes.CRClientesCompletos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRClientesCorporativos.rpt" LogicalName="SIGEFA.Reportes.CRClientesCorporativos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRClientesSimple.rpt" LogicalName="SIGEFA.Reportes.CRClientesSimple.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCobrosGeneral.rpt" LogicalName="SIGEFA.Reportes.CRCobrosGeneral.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCobrosxDia.rpt" LogicalName="SIGEFA.Reportes.CRCobrosxDia.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRComision.rpt" LogicalName="SIGEFA.Reportes.CRComision.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRCotizacion.rpt" LogicalName="SIGEFA.Reportes.CRCotizacion.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDespachoDocumento.rpt" LogicalName="SIGEFA.Reportes.CRDespachoDocumento.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDespachoxArticulo.rpt" LogicalName="SIGEFA.Reportes.CRDespachoxArticulo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRDocumentos.rpt" LogicalName="SIGEFA.Reportes.CRDocumentos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CREmpresas.rpt" LogicalName="SIGEFA.Reportes.CREmpresas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFamilias.rpt" LogicalName="SIGEFA.Reportes.CRFamilias.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRFormaPago.rpt" LogicalName="SIGEFA.Reportes.CRFormaPago.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRGuia.rpt" LogicalName="SIGEFA.Reportes.CRGuia.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRInventario.rpt" LogicalName="SIGEFA.Reportes.CRInventario.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRKardex.rpt" LogicalName="SIGEFA.Reportes.CRKardex.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRListaGuias.rpt" LogicalName="SIGEFA.Reportes.CRListaGuias.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRListaNotas.rpt" LogicalName="SIGEFA.Reportes.CRListaNotas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRMarcas.rpt" LogicalName="SIGEFA.Reportes.CRMarcas.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRNotaCredito.rpt" LogicalName="SIGEFA.Reportes.CRNotaCredito.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRNotasIngresoSalida.rpt" LogicalName="SIGEFA.Reportes.CRNotasIngresoSalida.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRPagosDia.rpt" LogicalName="SIGEFA.Reportes.CRPagosDia.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRProductos.rpt" LogicalName="SIGEFA.Reportes.CRProductos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRProveedores.rpt" LogicalName="SIGEFA.Reportes.CRProveedores.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRankingArticulo.rpt" LogicalName="SIGEFA.Reportes.CRRankingArticulo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRRankingCliente.rpt" LogicalName="SIGEFA.Reportes.CRRankingCliente.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRReportePagos.rpt" LogicalName="SIGEFA.Reportes.CRReportePagos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTipoArticulos.rpt" LogicalName="SIGEFA.Reportes.CRTipoArticulos.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTipoCambio.rpt" LogicalName="SIGEFA.Reportes.CRTipoCambio.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRTransacciones.rpt" LogicalName="SIGEFA.Reportes.CRTransacciones.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRUnidades.rpt" LogicalName="SIGEFA.Reportes.CRUnidades.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRUsuarios.rpt" LogicalName="SIGEFA.Reportes.CRUsuarios.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentaMesArticulo.rpt" LogicalName="SIGEFA.Reportes.CRVentaMesArticulo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentaxArticulo.rpt" LogicalName="SIGEFA.Reportes.CRVentaxArticulo.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentCredContDia.rpt" LogicalName="SIGEFA.Reportes.CRVentCredContDia.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentxCliente.rpt" LogicalName="SIGEFA.Reportes.CRVentxCliente.rpt" />
+    <EmbeddedResource Include="SIGEFA.Reportes.CRVentxVendedor.rpt" LogicalName="SIGEFA.Reportes.CRVentxVendedor.rpt" />
+    <EmbeddedResource Include="SIGEFA.exe.licenses" LogicalName="SIGEFA.exe.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\Debug_gr\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Bunifu_UI_v1.5.3">
+      <HintPath>..\Debug_gr\Bunifu_UI_v1.5.3.dll</HintPath>
+    </Reference>
+    <Reference Include="DevComponents.DotNetBar2">
+      <HintPath>..\Debug_gr\DevComponents.DotNetBar2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="SIGEFA.Base.WinForm">
+      <HintPath>..\Debug_gr\SIGEFA.Base.WinForm.dll</HintPath>
+    </Reference>
+    <Reference Include="SpreadsheetLight">
+      <HintPath>..\Debug_gr\SpreadsheetLight.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="WinApp.Comun.Dto">
+      <HintPath>..\Debug_gr\WinApp.Comun.Dto.dll</HintPath>
+    </Reference>
+    <Reference Include="QRCoder">
+      <HintPath>..\Debug_gr\QRCoder.dll</HintPath>
+    </Reference>
+    <Reference Include="itextsharp">
+      <HintPath>..\Debug_gr\itextsharp.dll</HintPath>
+    </Reference>
+    <Reference Include="SIGEFA.Data">
+      <HintPath>..\Debug_gr\SIGEFA.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="WinApp.Firmado">
+      <HintPath>..\Debug_gr\WinApp.Firmado.dll</HintPath>
+    </Reference>
+    <Reference Include="WinApp.Servicio">
+      <HintPath>..\Debug_gr\WinApp.Servicio.dll</HintPath>
+    </Reference>
+    <Reference Include="RestSharp">
+      <HintPath>..\Debug_gr\RestSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="CrystalDecisions.CrystalReports.Engine">
+      <HintPath>..\Debug_gr\CrystalDecisions.CrystalReports.Engine.dll</HintPath>
+    </Reference>
+    <Reference Include="CrystalDecisions.Shared">
+      <HintPath>..\Debug_gr\CrystalDecisions.Shared.dll</HintPath>
+    </Reference>
+    <Reference Include="CrystalDecisions.ReportSource">
+      <HintPath>..\Debug_gr\CrystalDecisions.ReportSource.dll</HintPath>
+    </Reference>
+    <Reference Include="CrystalDecisions.Windows.Forms">
+      <HintPath>..\Debug_gr\CrystalDecisions.Windows.Forms.dll</HintPath>
+    </Reference>
+    <Reference Include="Telerik.WinControls.UI">
+      <HintPath>..\Debug_gr\Telerik.WinControls.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="DataGridViewAutoFilter">
+      <HintPath>..\Debug_gr\DataGridViewAutoFilter.dll</HintPath>
+    </Reference>
+    <Reference Include="MySql.Data">
+      <HintPath>..\Debug_gr\MySql.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="HtmlAgilityPack">
+      <HintPath>..\Debug_gr\HtmlAgilityPack.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="Telerik.WinControls.GridView">
+      <HintPath>..\Debug_gr\Telerik.WinControls.GridView.dll</HintPath>
+    </Reference>
+    <Reference Include="Telerik.WinControls">
+      <HintPath>..\Debug_gr\Telerik.WinControls.dll</HintPath>
+    </Reference>
+    <Reference Include="Telerik.WinControls.Themes.TelerikMetroBlue">
+      <HintPath>..\Debug_gr\Telerik.WinControls.Themes.TelerikMetroBlue.dll</HintPath>
+    </Reference>
+    <Reference Include="Telerik.WinControls.Themes.TelerikMetroTouch">
+      <HintPath>..\Debug_gr\Telerik.WinControls.Themes.TelerikMetroTouch.dll</HintPath>
+    </Reference>
+    <Reference Include="Telerik.WinControls.Themes.TelerikMetro">
+      <HintPath>..\Debug_gr\Telerik.WinControls.Themes.TelerikMetro.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Telerik.WinControls.Themes.Material">
+      <HintPath>..\Debug_gr\Telerik.WinControls.Themes.Material.dll</HintPath>
+    </Reference>
+    <Reference Include="AForge">
+      <HintPath>..\Debug_gr\AForge.dll</HintPath>
+    </Reference>
+    <Reference Include="AForge.Imaging">
+      <HintPath>..\Debug_gr\AForge.Imaging.dll</HintPath>
+    </Reference>
+    <Reference Include="Tesseract">
+      <HintPath>..\Debug_gr\Tesseract.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="AxInterop.AcroPDFLib">
+      <HintPath>..\Debug_gr\AxInterop.AcroPDFLib.dll</HintPath>
+    </Reference>
+    <Reference Include="Telerik.WinControls.Themes.Fluent">
+      <HintPath>..\Debug_gr\Telerik.WinControls.Themes.Fluent.dll</HintPath>
+    </Reference>
+    <Reference Include="MySqlBackup">
+      <HintPath>..\Debug_gr\MySqlBackup.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Configuration" />
+    <Reference Include="DocumentFormat.OpenXml">
+      <HintPath>..\Debug_gr\DocumentFormat.OpenXml.dll</HintPath>
+    </Reference>
+    <Reference Include="WinApp.Estructuras">
+      <HintPath>..\Debug_gr\WinApp.Estructuras.dll</HintPath>
+    </Reference>
+    <Reference Include="TelerikExport">
+      <HintPath>..\Debug_gr\TelerikExport.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="WinApp.API">
+      <HintPath>..\Debug_gr\WinApp.API.dll</HintPath>
+    </Reference>
+    <Reference Include="WinApp.Servicio.Soap">
+      <HintPath>..\Debug_gr\WinApp.Servicio.Soap.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http">
+      <HintPath>..\Debug_gr\System.Net.Http.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
