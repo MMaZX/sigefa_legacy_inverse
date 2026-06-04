@@ -980,12 +980,10 @@ public class frmVentas : Office2007Form
 
 	private void dtpDesde_ValueChanged(object sender, EventArgs e)
 	{
-		CargaLista();
 	}
 
 	private void dtpHasta_ValueChanged(object sender, EventArgs e)
 	{
-		CargaLista();
 	}
 
 	private void btnReporte_Click(object sender, EventArgs e)
@@ -1068,7 +1066,12 @@ public class frmVentas : Office2007Form
 
 	public void button1_Click(object sender, EventArgs e)
 	{
+		button1.Text = "Buscando ventas...";
+		button1.Enabled = false;
+		Application.DoEvents();
 		CargaLista();
+		button1.Text = "Actualizar";
+		button1.Enabled = true;
 	}
 
 	private void btnVistaSucursales_Click(object sender, EventArgs e)
@@ -2616,14 +2619,12 @@ public class frmVentas : Office2007Form
 		this.dtpDesde.Name = "dtpDesde";
 		this.dtpDesde.Size = new System.Drawing.Size(91, 20);
 		this.dtpDesde.TabIndex = 15;
-		this.dtpDesde.ValueChanged += new System.EventHandler(dtpDesde_ValueChanged);
 		this.dtpHasta.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
 		this.dtpHasta.Format = System.Windows.Forms.DateTimePickerFormat.Short;
 		this.dtpHasta.Location = new System.Drawing.Point(304, 88);
 		this.dtpHasta.Name = "dtpHasta";
 		this.dtpHasta.Size = new System.Drawing.Size(83, 20);
 		this.dtpHasta.TabIndex = 14;
-		this.dtpHasta.ValueChanged += new System.EventHandler(dtpHasta_ValueChanged);
 		this.imageList2.ImageStream = (System.Windows.Forms.ImageListStreamer)resources.GetObject("imageList2.ImageStream");
 		this.imageList2.TransparentColor = System.Drawing.Color.Transparent;
 		this.imageList2.Images.SetKeyName(0, "Add Green Button.png");

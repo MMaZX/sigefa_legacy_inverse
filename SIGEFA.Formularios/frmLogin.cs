@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using DevComponents.DotNetBar;
 using DevComponents.DotNetBar.Validator;
@@ -133,47 +134,74 @@ public class frmLogin : Office2007Form
 		Close();
 	}
 
-	private void btnLogin_Click(object sender, EventArgs e)
+	private async void btnLogin_Click(object sender, EventArgs e)
 	{
 		if (!superValidator1.Validate())
-		{
 			return;
-		}
-		Login.Usuario = txtUsuario.Text;
-		Login.Contraseña = txtContra.Text;
-		Login.CodEmpresaLogin = Convert.ToInt32(cmbEmpresa.SelectedValue);
-		if (AdmUser.EstableceLogin(Login))
+
+		btnLogin.Enabled = false;
+		btnLogin.Text = "INGRESANDO...";
+		Cursor = Cursors.WaitCursor;
+
+		try
 		{
+			Login.Usuario = txtUsuario.Text;
+			Login.Contraseña = txtContra.Text;
+			Login.CodEmpresaLogin = Convert.ToInt32(cmbEmpresa.SelectedValue);
+
+			var loginOk = await Task.Run(() => AdmUser.EstableceLogin(Login));
+
+			if (!loginOk)
+			{
+				iContador++;
+				if (iContador == 3)
+				{
+					MessageBox.Show("Ha realizado 3 intentos de Logueo Erróneos, consulte con el Área de TI", "Logueo Fallido!");
+					Application.Exit();
+					return;
+				}
+				MessageBox.Show("Usuario o Contraseña no coinciden", "Logueo Fallido!");
+				return;
+			}
+
+			var datos = await Task.Run(() => new
+			{
+				Empresa = AdmEmp.CargaEmpresa(Login.CodEmpresaLogin),
+				Sucursal = AdmSuc.CargaSucursal(iCodSucursal),
+				Config = AdmEmp.CargaConfiguracion()
+			});
+
 			iCodUser = Login.CodUsuario;
 			sUsuario = Login.Usuario;
 			sNombreUser = Login.Nombre;
 			sApellidoUSer = Login.Apellido;
 			iNivelUser = Login.Nivel;
 			iCodEmpresa = Login.CodEmpresaLogin;
-			EmpreLogin = AdmEmp.CargaEmpresa(iCodEmpresa);
-			SucurLogin = AdmSuc.CargaSucursal(iCodSucursal);
-			Configuracion = AdmEmp.CargaConfiguracion();
-			sEmpresa = EmpreLogin.RazonSocial;
+			EmpreLogin = datos.Empresa;
+			SucurLogin = datos.Sucursal;
+			Configuracion = datos.Config;
+			sEmpresa = datos.Empresa.RazonSocial;
 			DirecIp = con.LocalIPAddress();
-			RUC = EmpreLogin.Ruc;
+			RUC = datos.Empresa.Ruc;
 			estadoIngreso = Login.EstadoIngreso;
 			logo = pictureBox1.Image;
 			accesocanalventas = Login.CanalVentaAcceso1;
-			mdi_Menu frm = new mdi_Menu();
+
+			var frm = new mdi_Menu();
 			Hide();
 			frm.Show();
 		}
-		else
+		catch (Exception ex)
 		{
-			iContador++;
-			if (iContador == 3)
+			MessageBox.Show($"Error al iniciar sesión: {ex.Message}", "Error");
+		}
+		finally
+		{
+			if (!IsDisposed)
 			{
-				MessageBox.Show("Ha realizado 3 intentos de Logueo Erróneos, consulte con el Área de TI", "Logueo Fallido!");
-				Application.Exit();
-			}
-			else
-			{
-				MessageBox.Show("Usuario o Contraseña no coinciden", "Logueo Fallido!");
+				btnLogin.Enabled = true;
+				btnLogin.Text = "INGRESAR";
+				Cursor = Cursors.Default;
 			}
 		}
 	}
@@ -181,13 +209,14 @@ public class frmLogin : Office2007Form
 	private void frmLogin_Load(object sender, EventArgs e)
 	{
 		CargaEmpresas();
-		if (empresas.Rows[cmbEmpresa.SelectedIndex][2] != DBNull.Value)
+		if (empresas != null && empresas.Rows.Count > 0 && empresas.Rows[cmbEmpresa.SelectedIndex][2] != DBNull.Value)
 		{
 			MemoryStream ms1 = new MemoryStream((byte[])empresas.Rows[cmbEmpresa.SelectedIndex][2]);
 			Image returnImage = Image.FromStream(ms1);
 			pictureBox1.Image = returnImage;
 		}
-		cmbEmpresa.SelectedIndex = 0;
+		if (cmbEmpresa.Items.Count > 0)
+			cmbEmpresa.SelectedIndex = 0;
 		btnLogin.FlatAppearance.BorderSize = 0;
 	}
 
@@ -216,7 +245,10 @@ public class frmLogin : Office2007Form
 	private void CargaEmpresas()
 	{
 		empresas = AdmEmp.CargaEmpresas();
-		cmbEmpresa.DataSource = AdmEmp.CargaEmpresas();
+		if (empresas != null)
+		{
+			cmbEmpresa.DataSource = empresas;
+		}
 		cmbEmpresa.DisplayMember = "razonsocial";
 		cmbEmpresa.ValueMember = "codEmpresa";
 	}
@@ -307,7 +339,7 @@ public class frmLogin : Office2007Form
 	private void cmbEmpresa_SelectionChangeCommitted(object sender, EventArgs e)
 	{
 		btnLogin.Focus();
-		if (empresas.Rows[cmbEmpresa.SelectedIndex][2] != DBNull.Value)
+		if (empresas != null && empresas.Rows.Count > 0 && empresas.Rows[cmbEmpresa.SelectedIndex][2] != DBNull.Value)
 		{
 			MemoryStream ms = new MemoryStream((byte[])empresas.Rows[cmbEmpresa.SelectedIndex][2]);
 			Image returnImage = Image.FromStream(ms);

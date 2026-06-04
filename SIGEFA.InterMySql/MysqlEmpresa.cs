@@ -152,9 +152,12 @@ internal class MysqlEmpresa : IEmpresa
 		}
 		finally
 		{
-			con.conector.Dispose();
-			cmd.Dispose();
-			con.desconectarBD();
+			cmd?.Dispose();
+			if (con.conector != null)
+			{
+				con.desconectarBD();
+				con.conector.Dispose();
+			}
 		}
 	}
 
@@ -253,9 +256,12 @@ internal class MysqlEmpresa : IEmpresa
 		}
 		finally
 		{
-			con.conector.Dispose();
-			cmd.Dispose();
-			con.desconectarBD();
+			if (cmd != null) cmd.Dispose();
+			if (con.conector != null)
+			{
+				con.desconectarBD();
+				con.conector.Dispose();
+			}
 		}
 	}
 
@@ -322,9 +328,12 @@ internal class MysqlEmpresa : IEmpresa
 		}
 		finally
 		{
-			con.conector.Dispose();
-			cmd.Dispose();
-			con.desconectarBD();
+			cmd?.Dispose();
+			if (con.conector != null)
+			{
+				con.desconectarBD();
+				con.conector.Dispose();
+			}
 		}
 	}
 

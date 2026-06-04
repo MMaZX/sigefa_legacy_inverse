@@ -173,9 +173,12 @@ internal class MysqlUsuario : IUsuario
 		}
 		finally
 		{
-			con.conector.Dispose();
-			cmd.Dispose();
-			con.desconectarBD();
+			cmd?.Dispose();
+			if (con.conector != null)
+			{
+				con.desconectarBD();
+				con.conector.Dispose();
+			}
 		}
 	}
 

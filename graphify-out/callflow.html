@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sigefa_legacy — Complete Call Flow &amp; Architecture Documentation</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+:root {
+  --bg: #0f172a; --surface: #1e293b; --border: #334155;
+  --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8;
+  --warn: #fbbf24; --err: #f87171; --ok: #34d399;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+.container { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+h1 { font-size: 2.4rem; margin-bottom: 8px; background: linear-gradient(135deg, var(--accent), #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+h2 { font-size: 1.7rem; margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent); }
+h3 { font-size: 1.25rem; margin: 32px 0 12px; color: var(--accent); }
+h4 { font-size: 1.05rem; margin: 20px 0 8px; color: var(--warn); }
+p { margin: 8px 0; color: var(--muted); }
+.subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 32px; }
+.mermaid { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 20px 0; overflow-x: auto; position: relative; }
+.mermaid.is-enhanced { padding: 0; overflow: hidden; min-height: 260px; }
+.mermaid-viewport { padding: 54px 24px 24px; overflow: hidden; cursor: grab; touch-action: none; min-height: 260px; }
+.mermaid-viewport.is-dragging { cursor: grabbing; }
+.mermaid-viewport svg { max-width: none !important; height: auto; transform-origin: 0 0; transition: transform 120ms ease; }
+.mermaid-toolbar { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 6px; background: rgba(15,23,42,0.92); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.28); }
+.mermaid-toolbar button, .mermaid-toolbar .zoom-level { height: 28px; min-width: 32px; border: 1px solid var(--border); border-radius: 6px; background: #1e293b; color: var(--text); font: 600 0.78rem system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; }
+.mermaid-toolbar button { cursor: pointer; }
+.mermaid-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.mermaid-toolbar .zoom-level { min-width: 52px; color: var(--muted); background: transparent; }
+.call-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+.call-table th { background: #1a2744; color: var(--accent); text-align: left; padding: 10px 14px; border: 1px solid var(--border); }
+.call-table td { padding: 8px 14px; border: 1px solid var(--border); vertical-align: top; }
+.call-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+.tag-async { background: #7c3aed33; color: #a78bfa; }
+.tag-class { background: #05966933; color: var(--ok); }
+.tag-func { background: #2563eb33; color: var(--accent); }
+.tag-cmd { background: #d9770633; color: var(--warn); }
+.tag-endpoint { background: #dc262633; color: var(--err); }
+.tag-hook { background: #db277733; color: #f472b6; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 16px 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin: 16px 0; }
+.arrow-chain { font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--accent); padding: 10px; background: rgba(56,189,248,0.06); border-radius: 6px; }
+code { font-family: 'Fira Code', 'Cascadia Code', monospace; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 3px; font-size: 0.88em; }
+ul, ol { margin: 8px 0 8px 24px; color: var(--muted); }
+li { margin: 4px 0; }
+a { color: var(--accent); }
+hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+.nav { position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; gap: 20px; flex-wrap: wrap; font-size: 0.9rem; }
+.nav a { text-decoration: none; }
+.nav a:hover { text-decoration: underline; }
+@media (max-width: 768px) { .container { padding: 16px; } h1 { font-size: 1.8rem; } }
+
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>sigefa_legacy — Complete Call Flow &amp; Architecture Documentation</h1>
+<p class="subtitle">Generated from graphify knowledge graph: 25166 nodes, 54195 edges, 1 communities. Commit: unknown</p>
+
+<div class="nav">
+    <a href="#overview">Architecture Overview</a>
+    <a href="#cli-skills">CLI &amp; Skill Installers</a>
+</div>
+
+<!-- ====== Architecture Overview ====== -->
+<h2 id="overview">1. Architecture Overview</h2>
+
+<div class="mermaid">
+
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>25166 nodes</small>")
+    class CLI_SKILLS_9964CBB8 module;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h4>Architecture Layers</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
+      <tr><td>CLI &amp; Skill Installers</td><td>25166</td><td><code>unknown</code></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Core Flow</h4>
+    <div class="arrow-chain">CLI &amp; Skill Installers</div>
+  </div>
+</div>
+<div class="grid">
+  <div class="card">
+    <h4>Graph Report Highlights</h4>
+    <ul>
+      <li>25075 nodes · 35111 edges · 1827 communities (1122 shown, 705 thin omitted)</li>
+      <li>Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 409 edges (avg confidence: 0.8)</li>
+      <li>Token cost: 0 input · 0 output</li>
+      <li>1. `mdi_Menu` - 302 edges</li>
+      <li>2. `frmVenta2019` - 288 edges</li>
+      <li>3. `frmVenta` - 244 edges</li>
+    </ul>
+  </div>
+</div>
+<hr>
+<!-- ====== 2. CLI & Skill Installers ====== -->
+<h2 id="cli-skills">2. CLI &amp; Skill Installers</h2>
+<p>CLI &amp; Skill Installers groups implementation around sigefaformularios, sigefareportes, sigefaintermysql, sigefaadministradores, mostly in SIGEFA/mdi_Menu.cs, SIGEFA.Formularios/frmVenta2019.cs, SIGEFA.Formularios/frmVenta.cs. This section covers 25166 nodes and 54195 internal edges; the diagram shows only representative relationships to stay readable.</p>
+
+<div class="mermaid">
+%%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
+flowchart LR
+    %% Section: CLI &amp; Skill Installers (25166 nodes, 54195 edges)
+    subgraph cli_skills_CDSSoftware_ImprimeTexto_cs_f1eb8218["CDSSoftware/ImprimeTexto.cs"]
+        cdssoftware_imprimetexto_imprimetexto_fce33cef("ImprimeTexto<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_chr_10f9fb87("Chr()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_createfile_c12a44f2("CreateFileA()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_closehandl_220c27b1("CloseHandle()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_inicio_7666ba2c("Inicio()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_fim_79be8e5a("Fim()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_imp_36ac3516("Imp()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_implf_14c9f74c("ImpLF()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_impcol_6d606375("ImpCol()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_impcollf_68f3e969("ImpColLF()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_pula_4d2efe88("Pula()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+        cdssoftware_imprimetexto_imprimetexto_eject_596c7ccc("Eject()<br/><small>CDSSoftware/ImprimeTexto.cs</small>")
+    end
+    sigefa_administradores_clsadmproducto_clsadmprod_5abb6470("clsAdmProducto<br/><small>SIGEFA.Administradores/clsAdmProducto.cs</small>")
+    sigefa_formularios_frmventa_frmventa_73a4c546("frmVenta<br/><small>SIGEFA.Formularios/frmVenta.cs</small>")
+    sigefa_formularios_frmventa2019_frmventa2019_038ee173("frmVenta2019<br/><small>SIGEFA.Formularios/frmVenta2019.cs</small>")
+    sigefa_intermysql_mysqlproducto_mysqlproducto_f707458a("MysqlProducto<br/><small>SIGEFA.InterMySql/MysqlProducto.cs</small>")
+    sigefa_interfaces_iproducto_iproducto_8b64da4a("IProducto<br/><small>SIGEFA.Interfaces/IProducto.cs</small>")
+    sigefa_mdi_menu_mdi_menu_95e20d6f("mdi_Menu<br/><small>SIGEFA/mdi_Menu.cs</small>")
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_chr_10f9fb87
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_createfile_c12a44f2
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_closehandl_220c27b1
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_inicio_7666ba2c
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_fim_79be8e5a
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_imp_36ac3516
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_implf_14c9f74c
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_impcol_6d606375
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_impcollf_68f3e969
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_pula_4d2efe88
+    cdssoftware_imprimetexto_imprimetexto_fce33cef -->|method| cdssoftware_imprimetexto_imprimetexto_eject_596c7ccc
+    cdssoftware_imprimetexto_imprimetexto_chr_10f9fb87 -->|calls| cdssoftware_imprimetexto_imprimetexto_impcol_6d606375
+    cdssoftware_imprimetexto_imprimetexto_chr_10f9fb87 -->|calls| cdssoftware_imprimetexto_imprimetexto_eject_596c7ccc
+    cdssoftware_imprimetexto_imprimetexto_closehandl_220c27b1 -->|calls| cdssoftware_imprimetexto_imprimetexto_fim_79be8e5a
+    cdssoftware_imprimetexto_imprimetexto_imp_36ac3516 -->|calls| cdssoftware_imprimetexto_imprimetexto_impcol_6d606375
+    cdssoftware_imprimetexto_imprimetexto_imp_36ac3516 -->|calls| cdssoftware_imprimetexto_imprimetexto_eject_596c7ccc
+    cdssoftware_imprimetexto_imprimetexto_implf_14c9f74c -->|calls| cdssoftware_imprimetexto_imprimetexto_pula_4d2efe88
+    cdssoftware_imprimetexto_imprimetexto_impcol_6d606375 -->|calls| cdssoftware_imprimetexto_imprimetexto_impcollf_68f3e969
+    cdssoftware_imprimetexto_imprimetexto_impcollf_68f3e969 -->|calls| cdssoftware_imprimetexto_imprimetexto_pula_4d2efe88
+    %% Omitted for readability: 25148 nodes, 0 edges
+    class cdssoftware_imprimetexto_imprimetexto_fce33cef klass;
+    class cdssoftware_imprimetexto_imprimetexto_chr_10f9fb87 function;
+    class cdssoftware_imprimetexto_imprimetexto_createfile_c12a44f2 function;
+    class cdssoftware_imprimetexto_imprimetexto_closehandl_220c27b1 function;
+    class cdssoftware_imprimetexto_imprimetexto_inicio_7666ba2c function;
+    class cdssoftware_imprimetexto_imprimetexto_fim_79be8e5a function;
+    class cdssoftware_imprimetexto_imprimetexto_imp_36ac3516 function;
+    class cdssoftware_imprimetexto_imprimetexto_implf_14c9f74c function;
+    class cdssoftware_imprimetexto_imprimetexto_impcol_6d606375 function;
+    class cdssoftware_imprimetexto_imprimetexto_impcollf_68f3e969 function;
+    class cdssoftware_imprimetexto_imprimetexto_pula_4d2efe88 function;
+    class cdssoftware_imprimetexto_imprimetexto_eject_596c7ccc function;
+    class sigefa_administradores_clsadmproducto_clsadmprod_5abb6470 function;
+    class sigefa_formularios_frmventa_frmventa_73a4c546 function;
+    class sigefa_formularios_frmventa2019_frmventa2019_038ee173 function;
+    class sigefa_intermysql_mysqlproducto_mysqlproducto_f707458a klass;
+    class sigefa_interfaces_iproducto_iproducto_8b64da4a klass;
+    class sigefa_mdi_menu_mdi_menu_95e20d6f function;
+    classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
+    classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
+    classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
+    classDef klass fill:#064e3b,stroke:#34d399,color:#d1fae5,stroke-width:1px;
+    classDef ui fill:#831843,stroke:#f472b6,color:#fce7f3,stroke-width:1px;
+    classDef module fill:#172554,stroke:#60a5fa,color:#dbeafe,stroke-width:1px;
+    classDef test fill:#3f3f46,stroke:#a1a1aa,color:#f4f4f5,stroke-width:1px;
+    classDef concept fill:#292524,stroke:#a8a29e,color:#fafaf9,stroke-dasharray:4 3;
+    classDef function fill:#0f172a,stroke:#38bdf8,color:#e0f2fe,stroke-width:1px;
+</div>
+
+<h3>Call Details</h3>
+<table class="call-table">
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">Node</th>
+  <th style="width:10%">Type</th>
+  <th style="width:17%">Caller</th>
+  <th style="width:20%">Callees</th>
+  <th style="width:20%">Description</th>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>--f__AnonymousType0.cs</code><br><small style="color:var(--muted)">--f__AnonymousType0.cs</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>--f__AnonymousType0.cs node in --f__AnonymousType0.cs.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>--f__AnonymousType3.cs</code><br><small style="color:var(--muted)">--f__AnonymousType3.cs</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>--f__AnonymousType3.cs node in --f__AnonymousType3.cs.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>opencode.json</code><br><small style="color:var(--muted)">.opencode/opencode.json</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>opencode.json node in .opencode/opencode.json.</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>plugin</code><br><small style="color:var(--muted)">.opencode/opencode.json</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>plugin node in .opencode/opencode.json.</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>graphify.js</code><br><small style="color:var(--muted)">.opencode/plugins/graphify.js</small></td>
+  <td><span class="tag tag-class">Module</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>fs</code><br><code>path</code></td>
+  <td>Builds dependency relationships and graph data.</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>GraphifyPlugin()</code><br><small style="color:var(--muted)">.opencode/plugins/graphify.js</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Builds dependency relationships and graph data.</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>ImprimeTexto.cs</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>interopservices</code><br><code>io</code><br><code>system</code></td>
+  <td>ImprimeTexto.cs node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>Chr()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>CloseHandle()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>CreateFileA()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br>+8 more</td>
+  <td>ImprimeTexto node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>int</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>int node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>string</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>string node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><code>FileStream</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-async">Async</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>FileStream node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><code>StreamWriter</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-async">Async</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>StreamWriter node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><code>IntPtr</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>IntPtr node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><code>bool</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>bool node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><code>.Chr()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><code>Eject()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImpCol()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>.Chr() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><code>.CreateFileA()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>No direct outbound edge</td>
+  <td>.CreateFileA() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td><code>DllImport</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>DllImport node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>18</td>
+  <td><code>.CloseHandle()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><code>Fim()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>.CloseHandle() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>19</td>
+  <td><code>.Inicio()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>No direct outbound edge</td>
+  <td>.Inicio() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td><code>.Fim()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>CloseHandle()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>No direct outbound edge</td>
+  <td>.Fim() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td><code>.Imp()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><code>Eject()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImpCol()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>.Imp() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>22</td>
+  <td><code>.ImpLF()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><code>Pula()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>.ImpLF() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>23</td>
+  <td><code>.ImpCol()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>Chr()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>Imp()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><code>ImpColLF()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>.ImpCol() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>24</td>
+  <td><code>.ImpColLF()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImpCol()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><code>Pula()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>.ImpColLF() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>25</td>
+  <td><code>.Pula()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>ImpColLF()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImpLF()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>No direct outbound edge</td>
+  <td>.Pula() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>26</td>
+  <td><code>.Eject()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>Chr()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>Imp()</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small><br><code>ImprimeTexto</code><br><small style="color:var(--muted)">CDSSoftware/ImprimeTexto.cs</small></td>
+  <td>No direct outbound edge</td>
+  <td>.Eject() node in CDSSoftware/ImprimeTexto.cs.</td>
+</tr>
+<tr>
+  <td>27</td>
+  <td><code>PortaException.cs</code><br><small style="color:var(--muted)">CDSSoftware/PortaException.cs</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>system</code></td>
+  <td>PortaException.cs node in CDSSoftware/PortaException.cs.</td>
+</tr>
+<tr>
+  <td>28</td>
+  <td><code>PortaException</code><br><small style="color:var(--muted)">CDSSoftware/PortaException.cs</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>PortaException node in CDSSoftware/PortaException.cs.</td>
+</tr>
+<tr>
+  <td>29</td>
+  <td><code>Exception</code><br><small style="color:var(--muted)"></small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Exception node in project.</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td><code>ReniecAPI.cs</code><br><small style="color:var(--muted)">FinalXML.Librerias/ReniecAPI.cs</small></td>
+  <td><span class="tag tag-endpoint">API</span></td>
+  <td>External entry / no inbound edge</td>
+  <td><code>configuration</code><br><code>io</code><br><code>linq</code><br>+3 more</td>
+  <td>ReniecAPI.cs node in FinalXML.Librerias/ReniecAPI.cs.</td>
+</tr>
+</table>
+
+<div class="grid">
+  <div class="card">
+    <h4>Key Files</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><th>File</th><th>Coverage</th></tr>
+      <tr><td><code>SIGEFA/mdi_Menu.cs</code></td><td>316 nodes</td></tr>
+<tr><td><code>SIGEFA.Formularios/frmVenta2019.cs</code></td><td>311 nodes</td></tr>
+<tr><td><code>SIGEFA.Formularios/frmVenta.cs</code></td><td>256 nodes</td></tr>
+<tr><td><code>SIGEFA.Formularios/frmNotaIngreso.cs</code></td><td>203 nodes</td></tr>
+<tr><td><code>SIGEFA.Formularios/frmVentaxEentregar.cs</code></td><td>178 nodes</td></tr>
+<tr><td><code>SIGEFA.Formularios/frmGuiaRemision.cs</code></td><td>175 nodes</td></tr>
+<tr><td><code>SIGEFA.Formularios/ListadoProductos.cs</code></td><td>171 nodes</td></tr>
+<tr><td><code>SIGEFA.Formularios/frmNotadeCredito.cs</code></td><td>170 nodes</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Design Notes</h4>
+    <p>This section comes from graphify community clustering. Relationship summary: references x28710, method x12080, imports x7044, calls x3602. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+  </div>
+</div>
+<hr>
+
+<h2 id="stats">Project Statistics</h2>
+
+<div class="grid">
+  <div class="card">
+    <h4>Graph</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><td>Nodes</td><td>25166</td></tr>
+      <tr><td>Edges</td><td>54195</td></tr>
+      <tr><td>Hyperedges</td><td>0</td></tr>
+      <tr><td>Communities</td><td>1</td></tr>
+      <tr><td>Documented Sections</td><td>1</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Edge Confidence</h4>
+    <table style="width:100%;font-size:0.85rem;">
+      <tr><td>EXTRACTED</td><td>53786</td></tr>
+      <tr><td>INFERRED</td><td>409</td></tr>
+      <tr><td>AMBIGUOUS</td><td>0</td></tr>
+    </table>
+  </div>
+</div>
+
+<div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
+  <p>sigefa_legacy — Architecture Documentation</p>
+  <p>Generated: 2026-06-04 09:09 UTC · graphify callflow-html</p>
+</div>
+
+</div><!-- .container -->
+
+<script>
+(function () {
+  const mermaidConfig = {
+    startOnLoad: false,
+    theme: 'dark',
+    securityLevel: 'loose',
+    flowchart: { htmlLabels: true, useMaxWidth: true },
+    themeVariables: {
+      primaryColor: '#1e293b',
+      primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#38bdf8',
+      secondaryColor: '#0f172a',
+      tertiaryColor: '#334155',
+      lineColor: '#64748b',
+      textColor: '#e2e8f0',
+    }
+  };
+
+  mermaid.initialize(mermaidConfig);
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function enhanceMermaidDiagrams() {
+    document.querySelectorAll('.mermaid').forEach((container) => {
+      if (container.dataset.zoomReady === 'true') return;
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+
+      container.dataset.zoomReady = 'true';
+      container.classList.add('is-enhanced');
+
+      const viewport = document.createElement('div');
+      viewport.className = 'mermaid-viewport';
+      svg.parentNode.insertBefore(viewport, svg);
+      viewport.appendChild(svg);
+
+      const toolbar = document.createElement('div');
+      toolbar.className = 'mermaid-toolbar';
+      toolbar.innerHTML = [
+        '<button type="button" data-action="zoom-out" title="Zoom out">-</button>',
+        '<span class="zoom-level" data-role="level">100%</span>',
+        '<button type="button" data-action="zoom-in" title="Zoom in">+</button>',
+        '<button type="button" data-action="fit" title="Fit width">Fit</button>',
+        '<button type="button" data-action="reset" title="Reset view">Reset</button>'
+      ].join('');
+      container.insertBefore(toolbar, viewport);
+
+      const state = { scale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 };
+      const level = toolbar.querySelector('[data-role="level"]');
+
+      function applyTransform() {
+        svg.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
+        level.textContent = `${Math.round(state.scale * 100)}%`;
+      }
+
+      function zoomBy(delta) {
+        state.scale = clamp(state.scale + delta, 0.25, 3);
+        applyTransform();
+      }
+
+      function reset() {
+        state.scale = 1;
+        state.x = 0;
+        state.y = 0;
+        applyTransform();
+      }
+
+      function fitWidth() {
+        const rawWidth = svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width
+          ? svg.viewBox.baseVal.width
+          : svg.getBoundingClientRect().width / state.scale;
+        if (!rawWidth) {
+          reset();
+          return;
+        }
+        state.scale = clamp((viewport.clientWidth - 48) / rawWidth, 0.25, 1.4);
+        state.x = 0;
+        state.y = 0;
+        applyTransform();
+      }
+
+      toolbar.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+        const action = button.dataset.action;
+        if (action === 'zoom-in') zoomBy(0.15);
+        if (action === 'zoom-out') zoomBy(-0.15);
+        if (action === 'fit') fitWidth();
+        if (action === 'reset') reset();
+      });
+
+      viewport.addEventListener('wheel', (event) => {
+        if (!event.ctrlKey && !event.metaKey) return;
+        event.preventDefault();
+        zoomBy(event.deltaY < 0 ? 0.1 : -0.1);
+      }, { passive: false });
+
+      viewport.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+        state.dragging = true;
+        state.startX = event.clientX;
+        state.startY = event.clientY;
+        state.originX = state.x;
+        state.originY = state.y;
+        viewport.classList.add('is-dragging');
+        viewport.setPointerCapture(event.pointerId);
+      });
+
+      viewport.addEventListener('pointermove', (event) => {
+        if (!state.dragging) return;
+        state.x = state.originX + event.clientX - state.startX;
+        state.y = state.originY + event.clientY - state.startY;
+        applyTransform();
+      });
+
+      function endDrag(event) {
+        if (!state.dragging) return;
+        state.dragging = false;
+        viewport.classList.remove('is-dragging');
+        if (viewport.hasPointerCapture(event.pointerId)) {
+          viewport.releasePointerCapture(event.pointerId);
+        }
+      }
+
+      viewport.addEventListener('pointerup', endDrag);
+      viewport.addEventListener('pointercancel', endDrag);
+      applyTransform();
+    });
+  }
+
+  function renderMermaid() {
+    const result = mermaid.run
+      ? mermaid.run({ querySelector: '.mermaid' })
+      : Promise.resolve();
+    Promise.resolve(result)
+      .then(enhanceMermaidDiagrams)
+      .catch((error) => {
+        console.error('Mermaid render failed:', error);
+        enhanceMermaidDiagrams();
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderMermaid);
+  } else {
+    renderMermaid();
+  }
+})();
+</script>
+
+</body>
+</html>

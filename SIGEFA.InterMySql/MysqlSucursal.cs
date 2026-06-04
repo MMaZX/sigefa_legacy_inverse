@@ -147,9 +147,12 @@ internal class MysqlSucursal : ISucursal
 		}
 		finally
 		{
-			con.conector.Dispose();
-			cmd.Dispose();
-			con.desconectarBD();
+			cmd?.Dispose();
+			if (con.conector != null)
+			{
+				con.desconectarBD();
+				con.conector.Dispose();
+			}
 		}
 	}
 
