@@ -2691,7 +2691,7 @@ public class frmVentas : Office2007Form
 		this.cmbAlmacenes.RootElement.StretchVertically = true;
 		this.cmbAlmacenes.Size = new System.Drawing.Size(125, 24);
 		this.cmbAlmacenes.TabIndex = 40;
-		this.cmbAlmacenes.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes.ThemeName = "Fluent";
 		this.cmbAlmacenes.SelectedIndexChanged += new Telerik.WinControls.UI.Data.PositionChangedEventHandler(cmbAlmacenes_SelectedIndexChanged);
 		this.lblicbper.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right;
 		this.lblicbper.AutoSize = true;

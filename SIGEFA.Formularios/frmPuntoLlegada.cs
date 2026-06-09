@@ -128,7 +128,7 @@ public class frmPuntoLlegada : RadForm
 		this.btnguardar.TabIndex = 1;
 		this.btnguardar.Text = "Guardar";
 		this.btnguardar.TextAlignment = System.Drawing.ContentAlignment.MiddleRight;
-		this.btnguardar.ThemeName = "TelerikMetroBlue";
+		this.btnguardar.ThemeName = "Fluent";
 		this.btnguardar.Click += new System.EventHandler(btnguardar_Click);
 		this.radLabel1.Location = new System.Drawing.Point(4, -2);
 		this.radLabel1.Name = "radLabel1";
@@ -144,7 +144,7 @@ public class frmPuntoLlegada : RadForm
 		this.radButton1.TabIndex = 2;
 		this.radButton1.Text = "Salir";
 		this.radButton1.TextAlignment = System.Drawing.ContentAlignment.MiddleRight;
-		this.radButton1.ThemeName = "TelerikMetroBlue";
+		this.radButton1.ThemeName = "Fluent";
 		this.radButton1.Click += new System.EventHandler(radButton1_Click);
 		this.rgvpuntos.BackColor = System.Drawing.Color.Snow;
 		this.rgvpuntos.Cursor = System.Windows.Forms.Cursors.Default;
@@ -189,7 +189,7 @@ public class frmPuntoLlegada : RadForm
 		base.ShowIcon = false;
 		base.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 		this.Text = "Puntos de Llegada";
-		base.ThemeName = "TelerikMetroBlue";
+		base.ThemeName = "Fluent";
 		base.Load += new System.EventHandler(frmPuntoLlegada_Load);
 		((System.ComponentModel.ISupportInitialize)this.txtdireccion).EndInit();
 		((System.ComponentModel.ISupportInitialize)this.btnguardar).EndInit();

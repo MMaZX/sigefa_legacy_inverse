@@ -23,3 +23,8 @@ Thumbs.db
 ## NuGet
 packages/
 *.nupkg
+
+## Agent Skills and Graphify cache
+.agents/
+graphify-out/cache/
+

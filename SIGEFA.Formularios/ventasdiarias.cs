@@ -528,7 +528,7 @@ public class ventasdiarias : Form
 		this.cmbAlmacenes.RootElement.StretchVertically = true;
 		this.cmbAlmacenes.Size = new System.Drawing.Size(125, 24);
 		this.cmbAlmacenes.TabIndex = 40;
-		this.cmbAlmacenes.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes.ThemeName = "Fluent";
 		this.button1.Anchor = System.Windows.Forms.AnchorStyles.Bottom;
 		this.button1.Image = (System.Drawing.Image)resources.GetObject("button1.Image");
 		this.button1.Location = new System.Drawing.Point(311, 670);

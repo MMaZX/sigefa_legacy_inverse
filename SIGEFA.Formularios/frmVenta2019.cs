@@ -7250,7 +7250,7 @@ public class frmVenta2019 : Office2007Form
 		this.cmbMoneda.RootElement.StretchVertically = true;
 		this.cmbMoneda.Size = new System.Drawing.Size(87, 24);
 		this.cmbMoneda.TabIndex = 132;
-		this.cmbMoneda.ThemeName = "TelerikMetroBlue";
+		this.cmbMoneda.ThemeName = "Fluent";
 		this.cmbMoneda.SelectedIndexChanged += new Telerik.WinControls.UI.Data.PositionChangedEventHandler(cmbMoneda_SelectedIndexChanged);
 		this.dtpFecha.Enabled = false;
 		this.dtpFecha.Format = System.Windows.Forms.DateTimePickerFormat.Short;

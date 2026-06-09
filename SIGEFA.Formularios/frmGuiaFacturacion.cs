@@ -2455,7 +2455,7 @@ public class frmGuiaFacturacion : Form
 		this.cmbMoneda.RootElement.StretchVertically = true;
 		this.cmbMoneda.Size = new System.Drawing.Size(87, 24);
 		this.cmbMoneda.TabIndex = 132;
-		this.cmbMoneda.ThemeName = "TelerikMetroBlue";
+		this.cmbMoneda.ThemeName = "Fluent";
 		this.labelX3.BackgroundStyle.CornerType = DevComponents.DotNetBar.eCornerType.Square;
 		this.labelX3.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
 		this.labelX3.Location = new System.Drawing.Point(12, 76);

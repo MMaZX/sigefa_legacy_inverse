@@ -543,7 +543,7 @@ public class frmRegeneracionArchivos : Office2007Form
 		this.cmbTipoDoc.RootElement.StretchVertically = true;
 		this.cmbTipoDoc.Size = new System.Drawing.Size(165, 24);
 		this.cmbTipoDoc.TabIndex = 17;
-		this.cmbTipoDoc.ThemeName = "TelerikMetroBlue";
+		this.cmbTipoDoc.ThemeName = "Fluent";
 		this.label5.AutoSize = true;
 		this.label5.Font = new System.Drawing.Font("Segoe UI", 11.25f, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
 		this.label5.Location = new System.Drawing.Point(8, 83);
@@ -558,7 +558,7 @@ public class frmRegeneracionArchivos : Office2007Form
 		this.cmbAlmacenes.RootElement.StretchVertically = true;
 		this.cmbAlmacenes.Size = new System.Drawing.Size(177, 24);
 		this.cmbAlmacenes.TabIndex = 15;
-		this.cmbAlmacenes.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes.ThemeName = "Fluent";
 		this.btnBuscarDocumentos.Font = new System.Drawing.Font("Segoe UI Semibold", 9.75f, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
 		this.btnBuscarDocumentos.Image = (System.Drawing.Image)resources.GetObject("btnBuscarDocumentos.Image");
 		this.btnBuscarDocumentos.Location = new System.Drawing.Point(429, 39);

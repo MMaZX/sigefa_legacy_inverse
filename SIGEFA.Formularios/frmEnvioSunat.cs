@@ -542,7 +542,7 @@ public class frmEnvioSunat : Office2007Form
 		this.cmbAlmacenes.Name = "cmbAlmacenes";
 		this.cmbAlmacenes.Size = new System.Drawing.Size(125, 24);
 		this.cmbAlmacenes.TabIndex = 144;
-		this.cmbAlmacenes.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes.ThemeName = "Fluent";
 		this.cmbAlmacenes.SelectedIndexChanged += new Telerik.WinControls.UI.Data.PositionChangedEventHandler(cmbAlmacenes_SelectedIndexChanged);
 		this.label3.AutoSize = true;
 		this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 10f, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);

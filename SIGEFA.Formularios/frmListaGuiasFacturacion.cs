@@ -987,7 +987,7 @@ public class frmListaGuiasFacturacion : Form
 		this.chktodos.Name = "chktodos";
 		this.chktodos.Size = new System.Drawing.Size(18, 18);
 		this.chktodos.TabIndex = 2;
-		this.chktodos.ThemeName = "TelerikMetroBlue";
+		this.chktodos.ThemeName = "Fluent";
 		this.chktodos.CheckStateChanged += new System.EventHandler(chktodos_CheckStateChanged);
 		this.chkrespuestasunat.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
 		this.chkrespuestasunat.Location = new System.Drawing.Point(272, 35);

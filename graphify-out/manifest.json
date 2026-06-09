@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   ".opencode/opencode.json": {
-    "mtime": 1780558738.068671,
-    "ast_hash": "f2ae21510d07365eb2bce8159272c7a0",
+    "mtime": 1780590729.1714568,
+    "ast_hash": "1efe24ecf938911d4f23e4b1c6ec91f7",
     "semantic_hash": ""
   },
   ".opencode/plugins/graphify.js": {
@@ -1405,8 +1405,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmAperturaCajaDiaria.cs": {
-    "mtime": 1779857542.2187867,
-    "ast_hash": "1579b01d5fcbee3ab7ae49d01e0bd922",
+    "mtime": 1780978890.9586964,
+    "ast_hash": "8fc38aadc4fda414d65fa357ac2e4972",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmAprobacionPagos.cs": {
@@ -1425,8 +1425,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmAutorizacion.cs": {
-    "mtime": 1779857538.9531598,
-    "ast_hash": "35236b701c354ab3f9a836608454fb3c",
+    "mtime": 1780591237.0850635,
+    "ast_hash": "24b20a6a0e5550c98ea071e8edac67f7",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmAutorizado.cs": {
@@ -1510,8 +1510,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmCajaVentasMovimientos.cs": {
-    "mtime": 1779857544.296917,
-    "ast_hash": "a10f67e45fc04d83e2bc3b3e34e58a5b",
+    "mtime": 1780591237.8877442,
+    "ast_hash": "fa394602101f9a74988859d9625bcaee",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmCambioCuentaBanco.cs": {
@@ -1740,8 +1740,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmDocumentosPendientes.cs": {
-    "mtime": 1779857539.6562927,
-    "ast_hash": "71e9d0fdf611ce7c4828941005d3ece7",
+    "mtime": 1780591238.0137322,
+    "ast_hash": "f73e3a58226e4fbd9d566b1e4fd31c3d",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmDocumentosRP.cs": {
@@ -1775,8 +1775,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmEnvioSunat.cs": {
-    "mtime": 1779857549.5937934,
-    "ast_hash": "574133fd9ef921b8fa3509ef6819257d",
+    "mtime": 1780591238.0313056,
+    "ast_hash": "6895eb686adea361e140c9e255ac782a",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmExistencias.cs": {
@@ -1930,8 +1930,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmGuiaFacturacion.cs": {
-    "mtime": 1779858884.6804206,
-    "ast_hash": "b336bc70aa367db61958086a2b7cd164",
+    "mtime": 1780591238.0452414,
+    "ast_hash": "2b828b7fc125b56ef0885dc4b8ec917e",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmGuiaRemision.cs": {
@@ -2020,8 +2020,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmListaGuiasFacturacion.cs": {
-    "mtime": 1779857545.203169,
-    "ast_hash": "8acef591e7d91d342dd5d5ebe0a8934b",
+    "mtime": 1780591238.4733508,
+    "ast_hash": "d13ca46ff035949ee49b86b402b6d841",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmListaNCreditosSinAplicar.cs": {
@@ -2050,8 +2050,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmListaRequerimientoCompleta.cs": {
-    "mtime": 1779857545.79692,
-    "ast_hash": "b4f5f9fcc9465815a86263c601d3ae2d",
+    "mtime": 1780591238.7481372,
+    "ast_hash": "39046d4ee3c44e4a43a1e49306390794",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmListaVendedores.cs": {
@@ -2065,8 +2065,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmListadoDeCajas.cs": {
-    "mtime": 1779857555.2500458,
-    "ast_hash": "a1d2d1c4a747dfd6fde575bb7d3f04e5",
+    "mtime": 1780591238.1010807,
+    "ast_hash": "29f804f7eaacdb73d4226829806a2df2",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmListadoDePropuestasDeOrdenDeCompra.cs": {
@@ -2135,8 +2135,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmLogin.cs": {
-    "mtime": 1780557554.1210704,
-    "ast_hash": "fcaeefe7ed2550b190b8253a758f5df0",
+    "mtime": 1780980006.4920182,
+    "ast_hash": "e82bef2cbb0a6205ec0ae5c83b292732",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmMarcas.cs": {
@@ -2150,8 +2150,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmMensajeCredito.cs": {
-    "mtime": 1779857556.2031765,
-    "ast_hash": "e398af583fdc6ebf61374212f283b12d",
+    "mtime": 1780591239.088523,
+    "ast_hash": "3759ec45c56477e1c1807b5723894272",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmMercaderiaEntregar.cs": {
@@ -2270,13 +2270,13 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmNotasCredito.cs": {
-    "mtime": 1779857586.7813122,
-    "ast_hash": "371e63bb84761c19085d789b54b4ac7e",
+    "mtime": 1780591239.8049042,
+    "ast_hash": "f820350541f39f2b9b3aa39b2fc44208",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmNotasCreditoAplicadas.cs": {
-    "mtime": 1779857547.0000484,
-    "ast_hash": "4d3503a32f8d7f11e95f0da2d324d3e7",
+    "mtime": 1780591240.4052122,
+    "ast_hash": "9aa64b7d5695ed60d9d657ec49423cfa",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmNotasCreditoCompras.cs": {
@@ -2315,8 +2315,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmOrdenCompraCotizacion.cs": {
-    "mtime": 1779857547.812543,
-    "ast_hash": "9dc73bfa393963a5dd55ad6e2b314ff9",
+    "mtime": 1780591241.2309103,
+    "ast_hash": "569c5a8e2b7e253fca4cf213bdf4f722",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmOrdenVenta.cs": {
@@ -2325,8 +2325,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmOrdenesCompraCotizaciones.cs": {
-    "mtime": 1779857548.031293,
-    "ast_hash": "21ebef1e1a5131cff132daf16b96b011",
+    "mtime": 1780591242.7484634,
+    "ast_hash": "c8357d7632e872b8b48d8aa215b7495e",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmOrdenesVigentes.cs": {
@@ -2490,8 +2490,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmPuntoLlegada.cs": {
-    "mtime": 1779857554.5937934,
-    "ast_hash": "d3ad7616cc10d45968513f2b976bab77",
+    "mtime": 1780591244.897108,
+    "ast_hash": "1862c970a786e4476d703ec0b06b4f69",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmRTransferencia.cs": {
@@ -2530,8 +2530,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmRegeneracionArchivos.cs": {
-    "mtime": 1779857566.2344296,
-    "ast_hash": "30a9729642a1f0e2a145e128f65e5b42",
+    "mtime": 1780591246.4337397,
+    "ast_hash": "8f60f79414c47e03cb146228a50e31fa",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmRegistroChequeCaja.cs": {
@@ -2775,8 +2775,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVenta2019.cs": {
-    "mtime": 1779859067.137135,
-    "ast_hash": "145f1a271807b9f5eb24642ca17549a1",
+    "mtime": 1780591249.3301437,
+    "ast_hash": "eb8809dca18fbb317fde3dfaa35c8a71",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVentaSeparacionAr.cs": {
@@ -2790,8 +2790,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVentas.cs": {
-    "mtime": 1780558117.5221138,
-    "ast_hash": "24c3ff5f26f3336364e4afda2c8e1195",
+    "mtime": 1780591250.2018907,
+    "ast_hash": "981cc12a8ed051e74bc22c3058cd058b",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVentasDiarias.cs": {
@@ -2885,8 +2885,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/ventasdiarias.cs": {
-    "mtime": 1779859042.2803826,
-    "ast_hash": "2d729d36cc611e3de3bf93d43c1a5d41",
+    "mtime": 1780591250.7894447,
+    "ast_hash": "e45d7133f738bdecaccf5a5ee755d63a",
     "semantic_hash": ""
   },
   "SIGEFA.InterMySql/MysqlAcceso.cs": {
@@ -6255,8 +6255,8 @@
     "semantic_hash": ""
   },
   "SIGEFA/Program.cs": {
-    "mtime": 1779857518.6250257,
-    "ast_hash": "d0b82214fb75cb2d80b6690e7d25f261",
+    "mtime": 1780591210.945286,
+    "ast_hash": "f251741946f0366b4745e7b04303258b",
     "semantic_hash": ""
   },
   "SIGEFA/PruebaCombo.cs": {
@@ -6295,8 +6295,8 @@
     "semantic_hash": ""
   },
   "skills-lock.json": {
-    "mtime": 1779855178.6686928,
-    "ast_hash": "64303c52714482dfbe93cc3791b54610",
+    "mtime": 1780977792.3700204,
+    "ast_hash": "5bf98cbc8eab7f90ef108e30bf8e0941",
     "semantic_hash": ""
   },
   ".agents/skills/find-skills/SKILL.md": {
@@ -6352,6 +6352,11 @@
   "AGENTS.md": {
     "mtime": 1780558738.0676913,
     "ast_hash": "4a0e8c5128cda9e18a307411a404a8fa",
+    "semantic_hash": ""
+  },
+  ".agents/skills/ui-ux-pro-max/SKILL.md": {
+    "mtime": 1780977791.675054,
+    "ast_hash": "9e67626a0013e85287078d475bdf105f",
     "semantic_hash": ""
   }
 }

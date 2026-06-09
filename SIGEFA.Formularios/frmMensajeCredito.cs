@@ -71,7 +71,7 @@ public class frmMensajeCredito : RadForm
 		this.radButton1.Size = new System.Drawing.Size(120, 25);
 		this.radButton1.TabIndex = 2;
 		this.radButton1.Text = "Aceptar";
-		this.radButton1.ThemeName = "TelerikMetroBlue";
+		this.radButton1.ThemeName = "Fluent";
 		this.radButton1.Click += new System.EventHandler(radButton1_Click);
 		base.AutoScaleDimensions = new System.Drawing.SizeF(6f, 13f);
 		base.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -84,7 +84,7 @@ public class frmMensajeCredito : RadForm
 		base.RootElement.ApplyShapeToControl = true;
 		base.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
 		this.Text = "Ventas";
-		base.ThemeName = "TelerikMetroBlue";
+		base.ThemeName = "Fluent";
 		((System.ComponentModel.ISupportInitialize)this.radLabel1).EndInit();
 		((System.ComponentModel.ISupportInitialize)this.radLabel2).EndInit();
 		((System.ComponentModel.ISupportInitialize)this.radButton1).EndInit();

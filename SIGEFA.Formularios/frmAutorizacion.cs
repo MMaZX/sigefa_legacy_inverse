@@ -297,7 +297,7 @@ public class frmAutorizacion : RadForm
 		this.txtClave.PasswordChar = '*';
 		this.txtClave.Size = new System.Drawing.Size(165, 24);
 		this.txtClave.TabIndex = 1;
-		this.txtClave.ThemeName = "TelerikMetroBlue";
+		this.txtClave.ThemeName = "Fluent";
 		this.txtClave.TextChanged += new System.EventHandler(txtClave_TextChanged);
 		this.radButton1.DialogResult = System.Windows.Forms.DialogResult.OK;
 		this.radButton1.Location = new System.Drawing.Point(34, 130);
@@ -305,7 +305,7 @@ public class frmAutorizacion : RadForm
 		this.radButton1.Size = new System.Drawing.Size(110, 24);
 		this.radButton1.TabIndex = 2;
 		this.radButton1.Text = "Aceptar";
-		this.radButton1.ThemeName = "TelerikMetroBlue";
+		this.radButton1.ThemeName = "Fluent";
 		this.radButton1.Click += new System.EventHandler(radButton1_Click);
 		this.radButton2.DialogResult = System.Windows.Forms.DialogResult.Cancel;
 		this.radButton2.Location = new System.Drawing.Point(184, 130);
@@ -313,14 +313,14 @@ public class frmAutorizacion : RadForm
 		this.radButton2.Size = new System.Drawing.Size(110, 24);
 		this.radButton2.TabIndex = 3;
 		this.radButton2.Text = "Cancelar";
-		this.radButton2.ThemeName = "TelerikMetroBlue";
+		this.radButton2.ThemeName = "Fluent";
 		this.radButton2.Click += new System.EventHandler(radButton2_Click);
 		this.txtUsuario.Location = new System.Drawing.Point(112, 41);
 		this.txtUsuario.Name = "txtUsuario";
 		this.txtUsuario.PasswordChar = '*';
 		this.txtUsuario.Size = new System.Drawing.Size(165, 24);
 		this.txtUsuario.TabIndex = 0;
-		this.txtUsuario.ThemeName = "TelerikMetroBlue";
+		this.txtUsuario.ThemeName = "Fluent";
 		this.radLabel2.Location = new System.Drawing.Point(39, 41);
 		this.radLabel2.Name = "radLabel2";
 		this.radLabel2.Size = new System.Drawing.Size(61, 23);
@@ -342,7 +342,7 @@ public class frmAutorizacion : RadForm
 		base.RootElement.ApplyShapeToControl = true;
 		base.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
 		this.Text = "frmAutorizacion";
-		base.ThemeName = "TelerikMetroBlue";
+		base.ThemeName = "Fluent";
 		base.Load += new System.EventHandler(frmAutorizacion_Load);
 		((System.ComponentModel.ISupportInitialize)this.radLabel1).EndInit();
 		((System.ComponentModel.ISupportInitialize)this.txtClave).EndInit();

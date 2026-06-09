@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
+using DevComponents.DotNetBar;
 using SIGEFA.Formularios;
 
 namespace SIGEFA;
@@ -58,6 +59,7 @@ internal static class Program
 			}
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(defaultValue: false);
+			StyleManager.Style = eStyle.Office2007Black;
 			Thread.CurrentThread.CurrentCulture = new CultureInfo("es-PE");
 			Application.Run(new frmLogin());
 		}

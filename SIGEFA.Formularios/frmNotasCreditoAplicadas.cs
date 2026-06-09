@@ -675,7 +675,7 @@ public class frmNotasCreditoAplicadas : RadForm
 		this.cmbAlmacenes1.Name = "cmbAlmacenes1";
 		this.cmbAlmacenes1.Size = new System.Drawing.Size(168, 24);
 		this.cmbAlmacenes1.TabIndex = 62;
-		this.cmbAlmacenes1.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes1.ThemeName = "Fluent";
 		this.cmbAlmacenes1.Visible = false;
 		this.cmbAlmacenes1.SelectedIndexChanged += new Telerik.WinControls.UI.Data.PositionChangedEventHandler(cmbAlmacenes_SelectedIndexChanged);
 		((Telerik.WinControls.UI.RadDropDownListElement)this.cmbAlmacenes1.GetChildAt(0)).DropDownStyle = Telerik.WinControls.RadDropDownStyle.DropDownList;
@@ -1074,7 +1074,7 @@ public class frmNotasCreditoAplicadas : RadForm
 		base.ShowInTaskbar = false;
 		base.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 		this.Text = "Notas de Credito Aplicadas";
-		base.ThemeName = "TelerikMetroBlue";
+		base.ThemeName = "Fluent";
 		base.WindowState = System.Windows.Forms.FormWindowState.Maximized;
 		base.Load += new System.EventHandler(frmPedidosPendientes_Load);
 		base.Shown += new System.EventHandler(frmNotasCredito_Shown);

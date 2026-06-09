@@ -359,7 +359,7 @@ public class frmListadoDeCajas : OfficeForm
 		this.cmbAlmacenes.Name = "cmbAlmacenes";
 		this.cmbAlmacenes.Size = new System.Drawing.Size(125, 24);
 		this.cmbAlmacenes.TabIndex = 33;
-		this.cmbAlmacenes.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes.ThemeName = "Fluent";
 		this.radLabel1.Location = new System.Drawing.Point(94, 354);
 		this.radLabel1.Name = "radLabel1";
 		this.radLabel1.Size = new System.Drawing.Size(52, 18);

@@ -2920,7 +2920,7 @@ public class frmCajaVentasMovimientos : Office2007Form
 		this.cmbAlmacenes.Name = "cmbAlmacenes";
 		this.cmbAlmacenes.Size = new System.Drawing.Size(125, 24);
 		this.cmbAlmacenes.TabIndex = 37;
-		this.cmbAlmacenes.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes.ThemeName = "Fluent";
 		this.cmbAlmacenes.SelectedIndexChanged += new Telerik.WinControls.UI.Data.PositionChangedEventHandler(cmbAlmacenes_SelectedIndexChanged);
 		this.dtpfecha1.Format = System.Windows.Forms.DateTimePickerFormat.Short;
 		this.dtpfecha1.Location = new System.Drawing.Point(147, 37);

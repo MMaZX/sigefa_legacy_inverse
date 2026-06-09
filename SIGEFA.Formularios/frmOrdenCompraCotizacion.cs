@@ -1605,7 +1605,7 @@ public class frmOrdenCompraCotizacion : RadForm
 		base.Name = "frmOrdenCompraCotizacion";
 		base.RootElement.ApplyShapeToControl = true;
 		this.Text = "frmOrdenCompraCotizacion";
-		base.ThemeName = "TelerikMetroBlue";
+		base.ThemeName = "Fluent";
 		base.WindowState = System.Windows.Forms.FormWindowState.Maximized;
 		base.Load += new System.EventHandler(frmOrdenCompraCotizacion_Load);
 		((System.ComponentModel.ISupportInitialize)this.gbDatos).EndInit();

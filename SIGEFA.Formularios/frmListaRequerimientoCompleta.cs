@@ -512,7 +512,7 @@ public class frmListaRequerimientoCompleta : Form
 		this.rgvTransferencias.ShowHeaderCellButtons = true;
 		this.rgvTransferencias.Size = new System.Drawing.Size(1274, 179);
 		this.rgvTransferencias.TabIndex = 0;
-		this.rgvTransferencias.ThemeName = "TelerikMetroBlue";
+		this.rgvTransferencias.ThemeName = "Fluent";
 		this.rgvTransferencias.TitleText = "Listado Transferencias";
 		this.rgvTransferencias.CellDoubleClick += new Telerik.WinControls.UI.GridViewCellEventHandler(rgvTransferencias_CellDoubleClick);
 		base.AutoScaleDimensions = new System.Drawing.SizeF(6f, 13f);

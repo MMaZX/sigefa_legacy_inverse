@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using DevComponents.DotNetBar;
 using SIGEFA.Administradores;
@@ -118,8 +119,10 @@ public class frmAperturaCajaDiaria : Office2007Form
 		}
 	}
 
-	private void btnaceptar_Click(object sender, EventArgs e)
+	private async void btnaceptar_Click(object sender, EventArgs e)
 	{
+		btnaceptar.Enabled = false;
+		btnaceptar.Text = "Guardando...";
 		try
 		{
 			caja.Codsucursal = frmLogin.iCodSucursal;
@@ -133,7 +136,8 @@ public class frmAperturaCajaDiaria : Office2007Form
 			caja.TotalDisponible = Convert.ToDecimal(txtmonto.Text);
 			caja.CodUser = frmLogin.iCodUser;
 			caja.Codalmacen = Convert.ToInt32(cmbAlmacenes.SelectedValue);
-			if (AdmApe.InsertAperturaCaja(caja))
+			var ok = await Task.Run(() => AdmApe.InsertAperturaCaja(caja));
+			if (ok)
 			{
 				MessageBox.Show("Los datos se guardaron correctamente", "APERTURA DE CAJA", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 				Close();
@@ -146,6 +150,14 @@ public class frmAperturaCajaDiaria : Office2007Form
 		catch (Exception ex)
 		{
 			MessageBox.Show(ex.Message.ToString());
+		}
+		finally
+		{
+			if (!IsDisposed)
+			{
+				btnaceptar.Enabled = true;
+				btnaceptar.Text = "Aceptar";
+			}
 		}
 	}
 
@@ -294,7 +306,7 @@ public class frmAperturaCajaDiaria : Office2007Form
 		this.cmbAlmacenes.Size = new System.Drawing.Size(146, 24);
 		this.cmbAlmacenes.TabIndex = 1;
 		this.cmbAlmacenes.Text = "Seleccione Almacen...";
-		this.cmbAlmacenes.ThemeName = "TelerikMetroBlue";
+		this.cmbAlmacenes.ThemeName = "Fluent";
 		this.cmbAlmacenes.SelectedValueChanged += new System.EventHandler(cmbAlmacenes_SelectedValueChanged);
 		base.AcceptButton = this.btnaceptar;
 		base.AutoScaleDimensions = new System.Drawing.SizeF(6f, 13f);

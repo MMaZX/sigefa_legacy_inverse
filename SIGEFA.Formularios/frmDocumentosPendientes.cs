@@ -196,7 +196,7 @@ public class frmDocumentosPendientes : RadForm
 		base.RootElement.ApplyShapeToControl = true;
 		base.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
 		this.Text = "Documentos pendientes de envío";
-		base.ThemeName = "TelerikMetroBlue";
+		base.ThemeName = "Fluent";
 		base.Load += new System.EventHandler(frmDocumentosPendientes_Load);
 		((System.ComponentModel.ISupportInitialize)this.dg_documentos.MasterTemplate).EndInit();
 		((System.ComponentModel.ISupportInitialize)this.dg_documentos).EndInit();
