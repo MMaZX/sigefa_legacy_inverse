@@ -2775,8 +2775,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVenta2019.cs": {
-    "mtime": 1780591249.3301437,
-    "ast_hash": "eb8809dca18fbb317fde3dfaa35c8a71",
+    "mtime": 1781929379.6727922,
+    "ast_hash": "72530b28b905d1c764b5dce3859aab9a",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVentaSeparacionAr.cs": {
@@ -6357,6 +6357,11 @@
   ".agents/skills/ui-ux-pro-max/SKILL.md": {
     "mtime": 1780977791.675054,
     "ast_hash": "9e67626a0013e85287078d475bdf105f",
+    "semantic_hash": ""
+  },
+  "docs/flujo_cierre_venta.md": {
+    "mtime": 1781372773.804547,
+    "ast_hash": "612d33f2be9d2ef1ceef180a826e1a4d",
     "semantic_hash": ""
   }
 }
