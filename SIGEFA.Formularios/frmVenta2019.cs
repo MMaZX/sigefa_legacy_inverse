@@ -1712,6 +1712,7 @@ public class frmVenta2019 : Office2007Form
 	{
 		if (cli != null)
 		{
+			this.cli = cli;
 			if (cli.Moneda == 1)
 			{
 				txtLineaCredito.Text = $"{cli.LineaCredito:#,##0.00}";
