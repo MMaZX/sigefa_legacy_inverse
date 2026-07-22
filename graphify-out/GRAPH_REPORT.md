@@ -1,16 +1,16 @@
-# Graph Report - sigefa_legacy  (2026-06-19)
+# Graph Report - sigefa_legacy  (2026-06-23)
 
 ## Corpus Check
-- 1271 files · ~1,112,785 words
+- 1272 files · ~1,113,494 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 25151 nodes · 35197 edges · 1844 communities (1133 shown, 711 thin omitted)
+- 25163 nodes · 35208 edges · 1840 communities (1136 shown, 704 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 409 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `da8ad378`
+- Built from commit: `40925999`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -610,7 +610,6 @@
 - [[_COMMUNITY_Community 596|Community 596]]
 - [[_COMMUNITY_Community 598|Community 598]]
 - [[_COMMUNITY_Community 599|Community 599]]
-- [[_COMMUNITY_Community 600|Community 600]]
 - [[_COMMUNITY_Community 601|Community 601]]
 - [[_COMMUNITY_Community 602|Community 602]]
 - [[_COMMUNITY_Community 603|Community 603]]
@@ -750,6 +749,7 @@
 - [[_COMMUNITY_Community 747|Community 747]]
 - [[_COMMUNITY_Community 748|Community 748]]
 - [[_COMMUNITY_Community 749|Community 749]]
+- [[_COMMUNITY_Community 750|Community 750]]
 - [[_COMMUNITY_Community 752|Community 752]]
 - [[_COMMUNITY_Community 753|Community 753]]
 - [[_COMMUNITY_Community 754|Community 754]]
@@ -876,6 +876,7 @@
 - [[_COMMUNITY_Community 880|Community 880]]
 - [[_COMMUNITY_Community 881|Community 881]]
 - [[_COMMUNITY_Community 882|Community 882]]
+- [[_COMMUNITY_Community 883|Community 883]]
 - [[_COMMUNITY_Community 884|Community 884]]
 - [[_COMMUNITY_Community 885|Community 885]]
 - [[_COMMUNITY_Community 886|Community 886]]
@@ -1038,11 +1039,9 @@
 - [[_COMMUNITY_Community 1052|Community 1052]]
 - [[_COMMUNITY_Community 1053|Community 1053]]
 - [[_COMMUNITY_Community 1054|Community 1054]]
-- [[_COMMUNITY_Community 1055|Community 1055]]
 - [[_COMMUNITY_Community 1056|Community 1056]]
 - [[_COMMUNITY_Community 1057|Community 1057]]
 - [[_COMMUNITY_Community 1058|Community 1058]]
-- [[_COMMUNITY_Community 1059|Community 1059]]
 - [[_COMMUNITY_Community 1060|Community 1060]]
 - [[_COMMUNITY_Community 1061|Community 1061]]
 - [[_COMMUNITY_Community 1063|Community 1063]]
@@ -1391,7 +1390,6 @@
 - [[_COMMUNITY_Community 1420|Community 1420]]
 - [[_COMMUNITY_Community 1421|Community 1421]]
 - [[_COMMUNITY_Community 1422|Community 1422]]
-- [[_COMMUNITY_Community 1423|Community 1423]]
 - [[_COMMUNITY_Community 1424|Community 1424]]
 - [[_COMMUNITY_Community 1425|Community 1425]]
 - [[_COMMUNITY_Community 1426|Community 1426]]
@@ -1770,14 +1768,11 @@
 - [[_COMMUNITY_Community 1829|Community 1829]]
 - [[_COMMUNITY_Community 1830|Community 1830]]
 - [[_COMMUNITY_Community 1831|Community 1831]]
-- [[_COMMUNITY_Community 1834|Community 1834]]
-- [[_COMMUNITY_Community 1835|Community 1835]]
+- [[_COMMUNITY_Community 1833|Community 1833]]
 - [[_COMMUNITY_Community 1836|Community 1836]]
 - [[_COMMUNITY_Community 1837|Community 1837]]
 - [[_COMMUNITY_Community 1838|Community 1838]]
 - [[_COMMUNITY_Community 1839|Community 1839]]
-- [[_COMMUNITY_Community 1840|Community 1840]]
-- [[_COMMUNITY_Community 1841|Community 1841]]
 - [[_COMMUNITY_Community 1842|Community 1842]]
 - [[_COMMUNITY_Community 1843|Community 1843]]
 
@@ -1808,7 +1803,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (1844 total, 711 thin omitted)
+## Communities (1840 total, 704 thin omitted)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.02
@@ -1875,8 +1870,8 @@ Cohesion: 0.05
 Nodes (37): BindingSource, bool, Button, ButtonItem, clsAdmNotaIngreso, clsAdmNotaSalida, clsAdmPedido, clsAdmProducto (+29 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.05
-Nodes (33): RadMultiColumnComboBox, bool, clsAdmCotizacion, clsAdmFormaPago, clsAdmMoneda, clsAdmOrdenCompraCotizacion, clsAdmProducto, clsAdmUsuario (+25 more)
+Cohesion: 0.06
+Nodes (28): RadMultiColumnComboBox, bool, clsAdmCotizacion, clsAdmFormaPago, clsAdmMoneda, clsAdmOrdenCompraCotizacion, clsAdmProducto, clsAdmUsuario (+20 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.03
@@ -1944,7 +1939,7 @@ Nodes (54): BindingSource, bool, Button, CheckBox, clsAdmAlmacen, clsAdmApertura
 
 ### Community 36 - "Community 36"
 Cohesion: 0.04
-Nodes (28): Form, CrystalReportViewer, IContainer, frmListaGuias, CrystalReportViewer, IContainer, frmReporteFlujoCaja, CrystalReportViewer (+20 more)
+Nodes (28): Form, IContainer, PictureBox, frmCargando, CrystalReportViewer, IContainer, frmListaNotasDebito, CrystalReportViewer (+20 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.04
@@ -2055,8 +2050,8 @@ Cohesion: 0.05
 Nodes (33): BindingSource, bool, Button, clsAdmFactura, clsAdmFacturaVenta, clsAdmFormaPago, clsAdmLetra, clsAdmMoneda (+25 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.06
-Nodes (26): BindingSource, Button, clsAdmNotaIngreso, clsAdmNotaSalida, clsAdmOrdenCompra, clsCliente, clsDetalleNotaIngreso, clsNotaIngreso (+18 more)
+Cohesion: 0.05
+Nodes (31): BindingSource, Button, clsAdmNotaIngreso, clsAdmNotaSalida, clsAdmOrdenCompra, clsCliente, clsDetalleNotaIngreso, clsNotaIngreso (+23 more)
 
 ### Community 68 - "Community 68"
 Cohesion: 0.04
@@ -2271,8 +2266,8 @@ Cohesion: 0.06
 Nodes (24): BackgroundWorker, Button, ButtonItem, clsAdmPago, ComboBox, ContextMenuStrip, DataGridView, DataGridViewCellEventArgs (+16 more)
 
 ### Community 122 - "Community 122"
-Cohesion: 0.05
-Nodes (39): AdmIngresosEgresos, bool, Button, clsAdmAlmacen, clsAdmAperturaCierre, clsAdmBanco, clsAdmCtaCte, clsAdmMetodoPago (+31 more)
+Cohesion: 0.04
+Nodes (44): AdmIngresosEgresos, bool, Button, clsAdmAlmacen, clsAdmAperturaCierre, clsAdmBanco, clsAdmCtaCte, clsAdmMetodoPago (+36 more)
 
 ### Community 123 - "Community 123"
 Cohesion: 0.06
@@ -2376,7 +2371,7 @@ Nodes (8): MysqlRequerimientoAlmacen, clsAdmRequerimientoAlmacen, clsDetalleRequ
 
 ### Community 148 - "Community 148"
 Cohesion: 0.05
-Nodes (20): ReportClass, CRCatalogoPrecios, CRCobrosxDia, CRCtasCte, CRDespacho, CRDespachoxArticulo, CREntregaFormatoContinuo, CRExistencia (+12 more)
+Nodes (20): ReportClass, CRCaracteristicas, CRCatalogoPrecios, CRCobrosxDia, CRCtasCte, CRDespachoxArticulo, CREntregaFormatoContinuo, CRExistencia (+12 more)
 
 ### Community 149 - "Community 149"
 Cohesion: 0.08
@@ -2435,8 +2430,8 @@ Cohesion: 0.08
 Nodes (10): IListaPrecio, clsConexionMysql, clsDetalleListaPrecio, clsListaPrecio, DataTable, List, MySqlCommand, MySqlDataAdapter (+2 more)
 
 ### Community 163 - "Community 163"
-Cohesion: 0.09
-Nodes (15): BindingSource, Button, clsAdmNotaSalida, clsNotaSalida, DataGridView, DataGridViewCellEventArgs, DataGridViewCellMouseEventArgs, DataGridViewTextBoxColumn (+7 more)
+Cohesion: 0.07
+Nodes (21): DispId, LCIDConversion, MethodImpl, _Workbook, WorkbookEvents_Event, BindingSource, Button, clsAdmNotaSalida (+13 more)
 
 ### Community 165 - "Community 165"
 Cohesion: 0.08
@@ -2919,7 +2914,7 @@ Cohesion: 0.07
 Nodes (24): BindingSource, Button, clsAdmAcceso, clsAdmAlmacen, clsAdmFormulario, clsAdmVendedor, clsConsultasExternas, clsValidar (+16 more)
 
 ### Community 295 - "Community 295"
-Cohesion: 0.10
+Cohesion: 0.11
 Nodes (3): clsCliente, Keys, Message
 
 ### Community 296 - "Community 296"
@@ -3328,7 +3323,7 @@ Nodes (12): clsReporteVentCredContDia, Button, clsAdmEmpresa, clsAdmFormaPago, c
 
 ### Community 411 - "Community 411"
 Cohesion: 0.11
-Nodes (10): Component, CachedCRTarjetadePago, ReportDocument, RequestContext, CachedCRVentCredContDia, ReportDocument, RequestContext, CachedCRVentxArtixVend (+2 more)
+Nodes (10): Component, CachedCRCobrosGeneral, ReportDocument, RequestContext, CachedCRVentCredContDia, ReportDocument, RequestContext, CachedCRVentxArtixVend (+2 more)
 
 ### Community 412 - "Community 412"
 Cohesion: 0.11
@@ -3383,8 +3378,8 @@ Cohesion: 0.12
 Nodes (13): Atriform, bool, Button, ComboBox, DataSet, DateTimePicker, EventArgs, GroupBox (+5 more)
 
 ### Community 429 - "Community 429"
-Cohesion: 0.06
-Nodes (24): DispId, LCIDConversion, MethodImpl, _Workbook, WorkbookEvents_Event, EventArgs, IContainer, MaterialTheme (+16 more)
+Cohesion: 0.12
+Nodes (11): bool, Button, Color, DialogResult, EventArgs, FormClosingEventArgs, GroupBox, IContainer (+3 more)
 
 ### Community 430 - "Community 430"
 Cohesion: 0.12
@@ -3431,7 +3426,7 @@ Cohesion: 0.24
 Nodes (5): clsDetalleDespacho, clsDetalleTransferencia, clsRequerimientoAlmacen, clsTransferencia, List
 
 ### Community 445 - "Community 445"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (3): DataGridViewCellEventArgs, frmGuiaRemisionCompra, frmOrdenCompra
 
 ### Community 450 - "Community 450"
@@ -3822,10 +3817,6 @@ Nodes (9): INotaDebito, clsConexionMysql, clsDetalleNotaDebito, clsNotaDebito, D
 Cohesion: 0.19
 Nodes (8): IParametroDescuento, clsConexionMysql, clsParametroDescuento, DataTable, MySqlCommand, MySqlDataAdapter, MySqlDataReader, MysqlParametroDescuento
 
-### Community 595 - "Community 595"
-Cohesion: 0.17
-Nodes (4): ProdTieneDespacho, DataGridViewRow, DataGridViewRowStateChangedEventArgs, DataRow
-
 ### Community 596 - "Community 596"
 Cohesion: 0.22
 Nodes (4): clsAdmMetodoPago, clsMetodoPago, DataTable, IMetodoPago
@@ -3977,6 +3968,10 @@ Nodes (3): DataGridViewCellEventArgs, DataGridViewRowsAddedEventArgs, DataGridVi
 ### Community 653 - "Community 653"
 Cohesion: 0.17
 Nodes (3): DataGridViewCellEventArgs, DataGridViewRowsAddedEventArgs, DataGridViewRowsRemovedEventArgs
+
+### Community 658 - "Community 658"
+Cohesion: 0.16
+Nodes (3): DataGridViewRow, DataGridViewRowsAddedEventArgs, DataGridViewRowsRemovedEventArgs
 
 ### Community 663 - "Community 663"
 Cohesion: 0.18
@@ -4558,6 +4553,10 @@ Nodes (7): clsPedido, DateTime, decimal, double, int, List, string
 Cohesion: 0.25
 Nodes (7): clsProducto, bool, DateTime, decimal, double, int, string
 
+### Community 883 - "Community 883"
+Cohesion: 0.17
+Nodes (11): 1. Arquitectura y Componentes Relacionados, 2. Funcionamiento Detallado, 3. Casuísticas de Negocio, A. Creación del Saldo Pendiente, B. Amortización de la Deuda (`GuardaPagoPendiente`), Base de Datos (Tablas y SPs), Casuística 1: Reversión de Cobros ("Pasar a Pendiente"), Casuística 2: Flujo de Aprobación de Tesorería (Depósitos, Transferencias y Cheques) (+3 more)
+
 ### Community 884 - "Community 884"
 Cohesion: 0.25
 Nodes (3): DataGridViewCellFormattingEventArgs, DataTable, ProgressChangedEventArgs
@@ -5030,13 +5029,13 @@ Nodes (5): clsVendedor, bool, DateTime, int, string
 Cohesion: 0.33
 Nodes (5): clsZona, bool, DateTime, int, string
 
+### Community 1054 - "Community 1054"
+Cohesion: 0.18
+Nodes (7): EventArgs, IContainer, MaterialTheme, RadButton, RadTextBox, string, frmmensajeanulacioncotizacion
+
 ### Community 1056 - "Community 1056"
 Cohesion: 0.47
 Nodes (3): clsCaja, DataTable, DateTime
-
-### Community 1059 - "Community 1059"
-Cohesion: 0.33
-Nodes (3): IContainer, PictureBox, frmCargando
 
 ### Community 1076 - "Community 1076"
 Cohesion: 0.14
@@ -5097,10 +5096,6 @@ Nodes (3): CachedCRClientesCorporativos, ReportDocument, RequestContext
 ### Community 1100 - "Community 1100"
 Cohesion: 0.33
 Nodes (3): CachedCRClientesSimple, ReportDocument, RequestContext
-
-### Community 1101 - "Community 1101"
-Cohesion: 0.33
-Nodes (3): CachedCRCobrosGeneral, ReportDocument, RequestContext
 
 ### Community 1102 - "Community 1102"
 Cohesion: 0.33
@@ -5710,9 +5705,9 @@ Nodes (3): CachedCRZonas, ReportDocument, RequestContext
 Cohesion: 0.33
 Nodes (3): CachedCRCuotasPrestamo, ReportDocument, RequestContext
 
-### Community 1255 - "Community 1255"
+### Community 1256 - "Community 1256"
 Cohesion: 0.33
-Nodes (3): CrystalReportViewer, IContainer, frmListaNotasDebito
+Nodes (3): CachedCRTarjetadePago, ReportDocument, RequestContext
 
 ### Community 1257 - "Community 1257"
 Cohesion: 0.33
@@ -5720,11 +5715,11 @@ Nodes (3): CrystalReportViewer, IContainer, frmListaNotasCredito
 
 ### Community 1259 - "Community 1259"
 Cohesion: 0.33
-Nodes (3): CrystalReportViewer, IContainer, frmRptArqueo
+Nodes (3): CrystalReportViewer, IContainer, frmReporteFlujoCaja
 
 ### Community 1260 - "Community 1260"
 Cohesion: 0.33
-Nodes (3): CrystalReportViewer, IContainer, frmRptCobranzaSucursal
+Nodes (3): CrystalReportViewer, IContainer, frmRptArqueoCargado
 
 ### Community 1262 - "Community 1262"
 Cohesion: 0.33
@@ -5748,7 +5743,7 @@ Nodes (3): CrystalReportViewer, IContainer, frmRptEntregaConsultor
 
 ### Community 1268 - "Community 1268"
 Cohesion: 0.33
-Nodes (3): CrystalReportViewer, IContainer, frmRptImpresionPago
+Nodes (3): CrystalReportViewer, IContainer, frmRptCobrosGeneral
 
 ### Community 1269 - "Community 1269"
 Cohesion: 0.33
@@ -5756,7 +5751,7 @@ Nodes (3): CrystalReportViewer, IContainer, frmRptKardexTranseferencia
 
 ### Community 1271 - "Community 1271"
 Cohesion: 0.33
-Nodes (3): CrystalReportViewer, IContainer, frmRptMovimientosBancario
+Nodes (3): CrystalReportViewer, IContainer, frmRptCuotas
 
 ### Community 1272 - "Community 1272"
 Cohesion: 0.33
@@ -5765,6 +5760,10 @@ Nodes (3): CrystalReportViewer, IContainer, frmRptNotaCredito
 ### Community 1273 - "Community 1273"
 Cohesion: 0.33
 Nodes (3): CrystalReportViewer, IContainer, frmRptNotaDebito
+
+### Community 1274 - "Community 1274"
+Cohesion: 0.33
+Nodes (3): CrystalReportViewer, IContainer, frmRptDespachoArticulo
 
 ### Community 1275 - "Community 1275"
 Cohesion: 0.33
@@ -5792,7 +5791,7 @@ Nodes (3): CrystalReportViewer, IContainer, frmRptVentxCliente2
 
 ### Community 1282 - "Community 1282"
 Cohesion: 0.33
-Nodes (3): CrystalReportViewer, IContainer, frmRptVentxVendedor
+Nodes (3): CrystalReportViewer, IContainer, frmRptMercaderiaEntregar
 
 ### Community 1283 - "Community 1283"
 Cohesion: 0.33
@@ -5902,6 +5901,14 @@ Nodes (4): clsSeleccionDespachoNC, bool, double, int
 Cohesion: 0.40
 Nodes (4): clsUnidadEquivalente, DateTime, decimal, int
 
+### Community 1310 - "Community 1310"
+Cohesion: 0.33
+Nodes (3): CrystalReportViewer, IContainer, frmRptOrdenCompra
+
+### Community 1311 - "Community 1311"
+Cohesion: 0.33
+Nodes (3): CrystalReportViewer, IContainer, frmRptRankingArticulo
+
 ### Community 1345 - "Community 1345"
 Cohesion: 0.50
 Nodes (3): clsAdmProducto, DataGridViewComboBoxColumn, PruebaCombo
@@ -6006,10 +6013,6 @@ Nodes (3): CrystalReportViewer, IContainer, frmReporteArqueoFondoFijoRPT
 Cohesion: 0.33
 Nodes (3): CrystalReportViewer, IContainer, frmRptAlmacenVendeMas
 
-### Community 1826 - "Community 1826"
-Cohesion: 0.33
-Nodes (3): CrystalReportViewer, IContainer, frmRptCaja
-
 ### Community 1827 - "Community 1827"
 Cohesion: 0.33
 Nodes (3): CrystalReportViewer, IContainer, frmRptComision
@@ -6027,21 +6030,21 @@ Cohesion: 0.33
 Nodes (3): CrystalReportViewer, IContainer, FrmRptVentaxArticulo
 
 ## Knowledge Gaps
-- **9050 isolated node(s):** `$schema`, `plugin`, `int`, `string`, `FileStream` (+9045 more)
+- **9057 isolated node(s):** `$schema`, `plugin`, `int`, `string`, `FileStream` (+9052 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **711 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **704 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `frmPagos` connect `Community 178` to `Community 32`, `Community 1443`, `Community 1444`, `Community 1477`, `Community 1382`, `Community 1383`, `Community 467`, `Community 823`, `Community 1592`?**
   _High betweenness centrality (0.022) - this node is a cross-community bridge._
-- **Why does `frmNotadeCredito` connect `Community 8` to `Community 32`, `Community 1325`, `Community 654`, `Community 653`, `Community 595`, `Community 377`, `Community 443`, `Community 444`, `Community 1565`?**
+- **Why does `frmNotadeCredito` connect `Community 8` to `Community 32`, `Community 1255`, `Community 1325`, `Community 654`, `Community 653`, `Community 595`, `Community 377`, `Community 443`, `Community 444`, `Community 1565`?**
   _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `frmGeneraVenta` connect `Community 10` to `Community 32`, `Community 1537`, `Community 645`, `Community 646`, `Community 1065`, `Community 1066`, `Community 814`, `Community 465`, `Community 530`, `Community 886`, `Community 441`?**
   _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **What connects `$schema`, `plugin`, `int` to the rest of the system?**
-  _9050 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _9057 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.014925373134328358 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

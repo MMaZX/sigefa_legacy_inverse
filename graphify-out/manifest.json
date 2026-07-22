@@ -6363,5 +6363,10 @@
     "mtime": 1781372773.804547,
     "ast_hash": "612d33f2be9d2ef1ceef180a826e1a4d",
     "semantic_hash": ""
+  },
+  "docs/pago_pendiente_y_caja_movimientos.md": {
+    "mtime": 1782231324.2495937,
+    "ast_hash": "d3d3c3c9d7640079926d3b787bc23b80",
+    "semantic_hash": ""
   }
 }

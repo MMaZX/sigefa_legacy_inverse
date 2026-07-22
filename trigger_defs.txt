@@ -1,0 +1,503 @@
+﻿Connected successfully to 192.168.1.129
+
+========================================
+DEFINITION OF TRIGGER: ActualizaNotaInsertPago
+========================================
+Trigger Name: ActualizaNotaInsertPago
+Table: pago
+Statement:
+BEGIN
+    DECLARE tc DECIMAL(10,4);
+    DECLARE mondoc INT;
+    DECLARE codsucur INTEGER(1);
+    DECLARE montototal DECIMAL(10,4);
+    DECLARE montoabonado DECIMAL(10,4);
+    DECLARE montopendiente DECIMAL(10,4);
+    DECLARE codfactven INT;
+    DECLARE montopend DECIMAL(10,4);
+    DECLARE codCaja int(11);
+    DECLARE codigoNota INT(11);
+    DECLARE codPagoPendiente INT(11);
+    DECLARE total_venta DECIMAL(10,3);
+    DECLARE total_pagado DECIMAL(10,3);
+    DECLARE total_pendiente DECIMAL(10,3);
+    DECLARE suma_abo_pen DECIMAL(10,3);
+
+    SET total_venta = (SELECT fv.total FROM factura_venta fv WHERE fv.codFacturaV = NEW.codNota);
+    SET total_pagado = (SELECT fv.abonado FROM factura_venta fv WHERE fv.codFacturaV = NEW.codNota);
+    SET total_pendiente = (SELECT fv.pendiente FROM factura_venta fv WHERE fv.codFacturaV = NEW.codNota);
+    SET suma_abo_pen = (total_pagado + total_pendiente);
+
+    SELECT codSucursal INTO codsucur FROM almacen WHERE codAlmacen = NEW.codAlmacen;
+    SET codigoNota = (SELECT p.codNota FROM pago p WHERE p.codPago = NEW.codPago);
+    SET codPagoPendiente = (SELECT IFNULL(p.codPago, 0) FROM pago p WHERE p.codNota = codigoNota AND p.codTipoPago = 12 LIMIT 1);
+
+    IF (codPagoPendiente != 0) THEN
+        SET codCaja = (SELECT p.codCaja FROM pago p WHERE p.codPago = codPagoPendiente);
+    ELSE
+        SET codCaja = (NEW.codCaja);
+    END IF;
+
+    IF NEW.Aprobado = 4 OR NEW.Aprobado = 0 OR NEW.Aprobado IS NULL THEN
+
+        
+        IF NEW.ingresoegreso = 0 THEN
+            
+            
+            
+            
+            
+            SELECT moneda INTO mondoc FROM facturacion WHERE codFactura = NEW.codNota;
+            
+            SET tc = CASE WHEN NEW.tipocambio > 0 THEN NEW.tipocambio ELSE 1 END;
+
+            IF NEW.tipo = 0 THEN
+
+                
+                IF mondoc = 2 AND NEW.codMoneda = 1 THEN
+                    UPDATE facturacion
+                    SET abonado   = ROUND(abonado   + (NEW.montocobrado / tc), 2),
+                        pendiente = ROUND(pendiente - (NEW.montocobrado / tc), 2)
+                    WHERE codFactura = NEW.codNota;
+
+                
+                ELSEIF mondoc = 1 AND NEW.codMoneda = 2 THEN
+                    UPDATE facturacion
+                    SET abonado   = ROUND(abonado   + (NEW.montocobrado * tc), 2),
+                        pendiente = ROUND(pendiente - (NEW.montocobrado * tc), 2)
+                    WHERE codFactura = NEW.codNota;
+
+                
+                ELSE
+                    UPDATE facturacion
+                    SET abonado   = ROUND(abonado   + NEW.montocobrado, 2),
+                        pendiente = ROUND(pendiente - NEW.montocobrado, 2)
+                    WHERE codFactura = NEW.codNota;
+                END IF;
+
+                
+                IF (SELECT pendiente FROM facturacion WHERE codFactura = NEW.codNota) <= 0.001 THEN
+                    UPDATE facturacion
+                    SET pendiente = 0, cancelado = 1, fechacancelado = NEW.fechapago
+                    WHERE codFactura = NEW.codNota;
+                END IF;
+
+            ELSE
+                
+                UPDATE facturacion
+                SET abonado = total, pendiente = 0, cancelado = 1, fechacancelado = NEW.fechapago
+                WHERE codFactura = NEW.codNota;
+
+                SELECT fv.codFacturaV INTO codfactven
+                FROM factura_venta fv
+                INNER JOIN notacredito nt ON fv.codFacturaV = nt.codReferencia
+                INNER JOIN notasalida ns ON fv.codFacturaV = ns.documentoreferencia
+                WHERE nt.codNotaCredito = NEW.codNota;
+            END IF;
+
+            
+            IF ((NEW.notacredito = 0) AND (NEW.ingresoegreso = 0) AND (NEW.codTipoDocumento != 0)) THEN
+                IF NEW.codmoneda = 2 THEN
+                    INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                    VALUES (codsucur, codCaja, NEW.codPago, "PAGO EGRESO", NEW.montocobrado * tc, 2, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                ELSE
+                    INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                    VALUES (codsucur, codCaja, NEW.codPago, "PAGO EGRESO", NEW.montocobrado, 2, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                END IF;
+            END IF;
+
+        
+        ELSE
+            SELECT compra INTO tc FROM tipocambio WHERE DATE(fecha) = DATE(NEW.fechapago);
+            SELECT moneda INTO mondoc FROM factura_venta WHERE codFacturaV = NEW.codNota;
+
+            IF NEW.tipo = 0 THEN
+                IF mondoc = 1 THEN
+                    IF NEW.codMoneda = 1 THEN
+                        IF (NEW.codTipoPago != 12 AND total_venta = suma_abo_pen) THEN
+                            UPDATE factura_venta SET abonado = abonado + NEW.montocobrado, pendiente = pendiente - NEW.montocobrado WHERE codFacturaV = NEW.codNota;
+                        ELSEIF (NEW.codTipoPago != 12 AND total_venta != suma_abo_pen) THEN
+                            UPDATE factura_venta SET abonado = abonado + NEW.montocobrado WHERE codFacturaV = NEW.codNota;
+                        ELSE
+                            UPDATE factura_venta SET pendiente = NEW.montocobrado WHERE codFacturaV = NEW.codNota;
+                        END IF;
+
+                        SET montopend = (SELECT pendiente FROM factura_venta WHERE codfacturaV = NEW.codnota);
+                        IF montopend < 0.001 THEN
+                            UPDATE factura_venta SET cancelado = 1 WHERE codfacturav = NEW.codnota;
+                        END IF;
+
+                        IF NEW.notacredito = 0 THEN
+                            INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                            VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                        END IF;
+
+                        IF NEW.notacredito = 1 THEN
+                            UPDATE notacredito SET abonado = abonado + NEW.montocobrado, pendiente = (CASE WHEN (NEW.montocobrado > pendiente) THEN 0 ELSE (pendiente - NEW.montocobrado) END) WHERE codNotaI = NEW.codNotaCredito;
+                            UPDATE factura_venta SET codNotaCredito = NEW.codNotaCredito WHERE codFacturaV = NEW.codNota;
+                            SELECT pendiente INTO montopendiente FROM notacredito WHERE codNotaI = NEW.codNotaCredito;
+                            IF montopendiente = 0 THEN
+                                UPDATE notacredito SET cancelado = 1 WHERE codNotaI = NEW.codNotaCredito;
+                            END IF;
+                            INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                            VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                        END IF;
+
+                    ELSE
+                        UPDATE factura_venta SET abonado = abonado + NEW.montocobrado * tc, pendiente = pendiente - NEW.montocobrado * tc WHERE codFacturaV = NEW.codNota;
+                        SET montopend = (SELECT pendiente FROM factura_venta WHERE codfacturaV = NEW.codnota);
+                        IF montopend < 0.001 THEN
+                            UPDATE factura_venta SET cancelado = 1 WHERE codfacturav = NEW.codnota;
+                        END IF;
+
+                        IF NEW.notacredito = 0 THEN
+                            INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                            VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado * tc, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                        END IF;
+
+                        IF NEW.notacredito = 1 THEN
+                            UPDATE notacredito SET abonado = abonado + NEW.montocobrado * tc, pendiente = pendiente - NEW.montocobrado * tc WHERE codNotaI = NEW.codNotaCredito;
+                            UPDATE factura_venta SET codNotaCredito = NEW.codNotaCredito WHERE codFacturaV = NEW.codNota;
+                            SELECT pendiente INTO montopendiente FROM notacredito WHERE codNotaI = NEW.codNotaCredito;
+                            IF montopendiente = 0 THEN
+                                UPDATE notacredito SET cancelado = 1 WHERE codNotaI = NEW.codNotaCredito;
+                            END IF;
+                            INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                            VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado * tc, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                        END IF;
+                    END IF;
+                ELSE
+                    IF NEW.codMoneda = 1 THEN
+                        UPDATE factura_venta SET abonado = abonado + NEW.montocobrado / tc, pendiente = pendiente - NEW.montocobrado / tc WHERE codFacturaV = NEW.codNota;
+                        SET montopend = (SELECT pendiente FROM factura_venta WHERE codfacturaV = NEW.codnota);
+                        IF montopend < 0.001 THEN
+                            UPDATE factura_venta SET cancelado = 1 WHERE codfacturav = NEW.codnota;
+                        END IF;
+                        INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                        VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado / tc, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                    ELSE
+                        UPDATE factura_venta SET abonado = abonado + NEW.montocobrado, pendiente = pendiente - NEW.montocobrado WHERE codFacturaV = NEW.codNota;
+                        SET montopend = (SELECT pendiente FROM factura_venta WHERE codfacturaV = NEW.codnota);
+                        IF montopend < 0.001 THEN
+                            UPDATE factura_venta SET cancelado = 1 WHERE codfacturav = NEW.codnota;
+                        END IF;
+                        INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                        VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                    END IF;
+                END IF;
+            ELSE
+                IF NEW.codMoneda = 1 THEN
+                    IF (NEW.codTipoPago != 12 AND total_venta = suma_abo_pen) THEN
+                        UPDATE factura_venta SET abonado = abonado + NEW.montocobrado, pendiente = pendiente - NEW.montocobrado, cancelado = 1, fechacancelado = NEW.fechapago WHERE codFacturaV = NEW.codNota;
+                    ELSEIF (NEW.codTipoPago != 12 AND total_venta != suma_abo_pen) THEN
+                        UPDATE factura_venta SET abonado = abonado + NEW.montocobrado WHERE codFacturaV = NEW.codNota;
+                    END IF;
+
+                    IF NEW.notacredito = 1 THEN
+                        UPDATE notacredito SET abonado = abonado + NEW.montocobrado, pendiente = (CASE WHEN (NEW.montocobrado > pendiente) THEN 0 ELSE (pendiente - NEW.montocobrado) END), fechacancelado = NEW.fechapago WHERE codNotaI = NEW.codNotaCredito;
+                        SELECT pendiente INTO montopendiente FROM notacredito WHERE codNotaI = NEW.codNotaCredito;
+                        IF montopendiente = 0 THEN
+                            UPDATE notacredito SET cancelado = 1 WHERE codNotaI = NEW.codNotaCredito;
+                        END IF;
+                        UPDATE factura_venta SET codNotaCredito = NEW.codNotaCredito WHERE codFacturaV = NEW.codNota;
+                        INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                        VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                    END IF;
+
+                    IF NEW.notacredito = 0 THEN
+                        INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                        VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                    END IF;
+                ELSE
+                    UPDATE factura_venta SET abonado = abonado + NEW.montocobrado * tc, pendiente = pendiente - NEW.montocobrado * tc, cancelado = 1, fechacancelado = NEW.fechapago WHERE codFacturaV = NEW.codNota;
+                    IF NEW.notacredito = 1 THEN
+                        UPDATE notacredito SET abonado = abonado + NEW.montocobrado, pendiente = pendiente - NEW.montocobrado * tc, fechacancelado = NEW.fechapago WHERE codNotaI = NEW.codNotaCredito;
+                        SELECT pendiente INTO montopendiente FROM notacredito WHERE codNotaI = NEW.codNotaCredito;
+                        IF montopendiente = 0 THEN
+                            UPDATE notacredito SET cancelado = 1 WHERE codNotaCredito = NEW.codNotaCredito;
+                        END IF;
+                        UPDATE factura_venta SET codNotaCredito = NEW.codNotaCredito WHERE codFacturaV = NEW.codNota;
+                        INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                        VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado * tc, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                    END IF;
+                    IF NEW.notacredito = 0 THEN
+                        INSERT INTO cajamovimiento (codSucursal, codcaja, codPago, concepto, monto, tipo, tipomovimiento, fecha, tipodocumento, codSerie, serie, NumDocumento, toneladas, codTipoPagoCaja, codUser, fecharegistro, codalmacen, tcVenta)
+                        VALUES (codsucur, codCaja, NEW.codPago, "PAGO INGRESO", NEW.montocobrado * tc, 1, 2, NOW(), NEW.codTipoDocumento, NEW.codSerie, NEW.serie, NEW.numdocumento, 0, NEW.codTipoPago, NEW.codUser, NEW.fecharegistro, NEW.codAlmacen, NEW.tipocambio);
+                    END IF;
+                END IF;
+            END IF;
+        END IF;
+    END IF;
+END
+
+========================================
+DEFINITION OF TRIGGER: ReactivaCobro
+========================================
+Trigger Name: ReactivaCobro
+Table: pago
+Statement:
+BEGIN
+
+
+      DECLARE contas INT DEFAULT 0;
+    DECLARE totalPagado DECIMAL(15,2) DEFAULT 0;
+    DECLARE totalFactura DECIMAL(15,2) DEFAULT 0;
+    DECLARE totalPendiente DECIMAL(15,2) DEFAULT 0;
+
+    SELECT 
+        COALESCE(SUM(p.montocobrado), 0) AS totalPagado,
+        fv.total AS totalFactura
+    INTO 
+        totalPagado, totalFactura
+    FROM factura_venta fv
+    LEFT JOIN pago p ON p.codNota = fv.codFacturaV
+       AND p.ingresoegreso = 1 
+       AND p.estado = 1 
+       AND p.codTipoPago <> 12   
+    WHERE fv.codFacturaV = NEW.codNota;
+
+    SET contas = CASE 
+                    WHEN totalPagado >= totalFactura THEN 1
+                    ELSE 0
+                 END;
+
+    SET totalPendiente = totalFactura - totalPagado;
+
+    UPDATE factura_venta 
+    SET cancelado = contas,
+        pendiente = totalPendiente,
+        abonado = totalPagado
+    WHERE codFacturaV = NEW.codNota;
+END
+
+========================================
+DEFINITION OF TRIGGER: ActualizaPago_al_AnularVenta
+========================================
+Trigger Name: ActualizaPago_al_AnularVenta
+Table: pago
+Statement:
+BEGIN
+
+
+
+DECLARE codigocaja INT(11);
+
+DECLARE codigosucursal INT(11);
+
+DECLARE estadocaja INT(11);
+
+DECLARE TotMontoCobrado DECIMAL(10,5);
+
+
+
+SELECT cj.codcaja INTO codigocaja FROM cajamovimiento cj WHERE cj.codPago = NEW.codPago;
+
+SELECT cj.codSucursal INTO codigosucursal FROM cajamovimiento cj WHERE cj.codPago =  NEW.codPago;
+
+SELECT estado  INTO estadocaja FROM caja WHERE codcaja = codigocaja;
+
+SELECT (p.montocobrado - c.monto) INTO TotMontoCobrado FROM pago p INNER JOIN cajamovimiento c  ON p.codPago=c.codPago WHERE p.codPago= NEW.codPago;
+
+
+
+
+                 IF NEW.estado <> OLD.estado THEN
+
+                       
+
+                              IF NEW.estado = 0 THEN  
+
+
+
+                                                               UPDATE cajamovimiento
+
+                                                               SET estado = 0
+
+                                                               WHERE codPago = NEW.codPago;
+
+
+
+                                                                IF NEW.codTipoPago = 6  THEN                                                                              
+
+                                                                           UPDATE caja
+
+                                                                           SET totalDeposito =(totalDeposito - NEW.montocobrado),
+
+																																					 totalIngreso = (totalIngreso - NEW.montocobrado)
+
+                                                                           WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+
+                                                                END IF;  
+
+                                                                    
+
+                                                                IF NEW.codTipoPago =7  THEN                                                                              
+
+                                                                           UPDATE caja
+
+                                                                           SET totalCheque = (totalCheque - NEW.montocobrado),
+
+				 totalIngreso = (totalIngreso - NEW.montocobrado)
+
+                                                                           WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+
+                                                                END IF;                               
+
+
+
+                                                                IF NEW.codTipoPago = 9  THEN                                                                              
+
+                                                                          UPDATE caja 
+				    
+                                                                           SET totalTransferencia =  (totalTransferencia - NEW.montocobrado),
+				                                                            totalIngreso = (totalIngreso - NEW.montocobrado)
+                                                                           WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+                                                                            
+				
+                                                                END IF;          
+
+																																
+
+				                                                IF NEW.codTipoPago =8  THEN                                                                              
+
+                                                                           UPDATE caja
+
+                                                                           SET totalIngreso = (totalIngreso - NEW.montocobrado)
+
+                                                                           WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+
+																																					 
+
+			                                                            update ctactemovimientos set estado=0
+
+			                                                                where codpago = new.codpago;
+
+                                                                END IF;
+
+
+
+                                                                IF NEW.codTipoPago =5  THEN                
+
+
+
+                                                                            IF estadocaja = 1  THEN 
+
+                                                                                
+                                                                                IF NEW.ingresoegreso = 1 THEN
+                                                                                    UPDATE caja 
+
+                                                                                    SET totalIngreso = (totalIngreso - NEW.montocobrado),
+
+                                                                                             totalVentaEfectivo = (totalVentaEfectivo - NEW.montocobrado), 
+
+                                                                                            totalDisponible = (totalDisponible  - NEW.montocobrado)
+
+                                                                                    WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+                                                                                ELSE
+                                                                                    UPDATE caja 
+
+                                                                                               SET totalEgreso = (totalEgreso - NEW.montocobrado),
+
+                                                                                                       totalVentaEfectivo = (totalVentaEfectivo + NEW.montocobrado), 
+
+                                                                                                      totalDisponible = (totalDisponible  + NEW.montocobrado)
+
+                                                                                               WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+
+
+                                                                                END IF;
+                                                                                    
+
+                                                                             END IF;
+
+                                                                                
+
+                                                                              IF estadocaja = 0  THEN 
+
+                                                                                
+ 
+                                                                                IF NEW.ingresoegreso = 1 THEN
+                                                                                    UPDATE caja 
+
+                                                                                    SET totalIngreso = (totalIngreso - NEW.montocobrado),
+
+                                                                                             totalVentaEfectivo = (totalVentaEfectivo - NEW.montocobrado), 
+
+                                                                                            totalDisponible = (totalDisponible  - NEW.montocobrado)
+
+                                                                                    WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+                                                                                ELSE
+                                                                                    UPDATE caja 
+
+                                                                                               SET totalEgreso = (totalEgreso - NEW.montocobrado),
+
+                                                                                                      totalVentaEfectivo = (totalVentaEfectivo + NEW.montocobrado), 
+
+                                                                                                      totalDisponible = (totalDisponible  + NEW.montocobrado)
+
+                                                                                               WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+
+
+                                                                                END IF;
+                                                                                    
+
+                                                                             END IF; 
+
+                                                                END IF;   
+                                                                
+                                                                  IF NEW.codTipoPago =10  THEN  
+
+                                                                    UPDATE notacredito
+                                                                    SET abonado = abonado - NEW.montocobrado,
+                                                                    pendiente = pendiente + NEW.montocobrado, fechacancelado = NEW.fechapago,
+                                                                    cancelado = 0
+                                                                    WHERE codNotaI = NEW.codNotaCredito;
+
+                                                                  END IF;
+
+                                                                    
+                                                                    IF NEW.codTipoPago =12  THEN                
+
+
+
+                                                                            IF estadocaja = 1  THEN 
+
+                                                                                
+
+																															 UPDATE caja 
+
+																															 SET totalpendiente = (totalpendiente - NEW.montocobrado)
+
+																															 WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+
+                                                                                    
+
+                                                                             END IF;
+
+                                                                                
+
+                                                                              IF estadocaja = 0  THEN 
+
+                                                                                
+
+                                                                                               UPDATE caja 
+
+                                                                                               SET  totalpendiente= (totalpendiente - NEW.montocobrado)
+
+                                                                                               WHERE codcaja =  codigocaja AND codSucursal = codigosucursal AND codalmacen = NEW.codAlmacen;
+
+                                                                                    
+
+                                                                             END IF; 
+
+                                                                END IF;          
+
+                        
+
+                              END IF;
+
+                              
+
+                 END IF;       
+
+END
