@@ -1,0 +1,1041 @@
+
+==========================================
+--- PROCEDURE: ReporteVentasDiarioPdfCajaMovimiento ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ReporteVentasDiarioPdfCajaMovimiento`(IN `fecha` datetime, IN `codalma` int)
+BEGIN
+	
+	select 
+		fv.fecharegistro as fecha,
+		IF(td.descripcion="BOLETA DE VENTA","BOLETA",td.descripcion) AS doc,
+		CONCAT(fv.serie,"-",LPAD(fv.numDocumento,8	,"0")) as num_doc,
+		cli.nombre as cliente,
+		dfv.cantidad,
+		CONCAT(pro.referencia," - ",(um.descripcion)," - ",pro.descripcion) as descripcion,
+		dfv.preciounitario,
+		dfv.subtotal,
+		fv.total,
+		if(fv.formapago<>6,fp.descripcion,(select GROUP_CONCAT(DISTINCT((
+																	SELECT mp.descripcion from metodopago mp where mp.codMetodoPago = p.codTipoPago
+																))) 
+			from pago p where p.codNota = fv.codFacturaV and p.estado=1 GROUP BY p.codnota)) as metodos_pagos,
+		fv.codAlmacen as almacen,
+		(select almacen.descripcion from almacen where almacen.codAlmacen = fv.codAlmacen) as nom_alm,
+		(SELECT CASE fv.anulado WHEN 0 THEN "ACTIVO" WHEN 1 THEN (if((select count(*) from repositorio where codfacturaventa=fv.codfacturav)>0 and fv.codnotacredito>0,"ACTIVO CON NC","ANULADO"))END)  AS anulado,
+		p.color,
+		dfv.codproducto,
+		fv.codFacturaV
+
+	from factura_venta fv
+	left JOIN formapago fp ON fp.codFormaPago = fv.formapago
+	inner join detallefactura_venta dfv on dfv.codFacturaV = fv.codFacturaV
+	inner join producto pro on dfv.codProducto = pro.codProducto
+	inner join unidadmedida um on dfv.unidadingresada = um.codUnidadMedida
+	inner join tipodocumento td on td.codTipoDocumento = fv.codTipoDocumento
+	inner join cliente cli on cli.codCliente = fv.codCliente
+	LEFT join pago p on p.codNota =fv.codFacturaV
+	where   date(fv.fecharegistro) = date(fecha)
+	and (fv.codAlmacen in (select a.codalmacen from almacen a where a.ubicacion = (select ubicacion from almacen where codalmacen = codalma)))
+	
+	 GROUP BY  fv.codFacturaV
+	 order by fv.fecharegistro asc;
+	 
+END
+
+==========================================
+--- PROCEDURE: ReporteNotasCreditosExcel ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ReporteNotasCreditosExcel`(IN `fecha` datetime,IN `codalma` int)
+BEGIN
+select 
+		date(nc.fecharegistro) as fecha_nota_credito,
+		CONCAT("NC",nc.serie,"-",LPAD(nc.DocumentoFactura,8,"0")) as "num_doc_nota_credito",
+		date(fv.fecharegistro) as fecha_doc_ref,
+		CONCAT(IF(td.descripcion="BOLETA DE VENTA","B",
+								IF(td.descripcion="FACTURA","F",td.descripcion)),fv.serie,"-",LPAD(fv.numDocumento,8,"0")) 
+		as "num_doc_ref",
+		(case tnc.codigosunat when "07" then "PARCIAL" else "TOTAL" end) as tipo_pago,
+		dnc.cantidad,
+		CONCAT(pro.referencia," - ",(um.descripcion)," - ",pro.descripcion) as descripcion,
+		
+		dnc.preciounitario,
+		dnc.subtotal,
+		(select SUM(dnc1.subtotal) from detallenotacredito dnc1 where dnc1.codNotaCredito = dnc.codNotaCredito) as total,
+		nc.codalmacen as almacen
+FROM notacredito nc
+inner join factura_venta fv on fv.codFacturaV = nc.codReferencia
+inner join tipodocumento td on td.codTipoDocumento = fv.codTipoDocumento
+inner join detallenotacredito dnc on dnc.codNotaCredito = nc.codNotaCredito
+inner join producto pro on dnc.codProducto = pro.codProducto
+inner join unidadmedida um on dnc.unidadIngresada = um.codUnidadMedida
+INNER JOIN tipo_nota_credito tnc on tnc.codigosunat = nc.motivo
+where (nc.codTransaccion = 20 or nc.codTransaccion = 17) and date(nc.fecharegistro) = date(fecha)
+	and nc.codAlmacen in (select a.codalmacen from almacen a where a.ubicacion = (select ubicacion from almacen where codalmacen = codalma))
+order by nc.fecharegistro asc;
+END
+
+==========================================
+--- PROCEDURE: ReporteVentasDiarioExcelAgrup ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ReporteVentasDiarioExcelAgrup`(IN `fecha` datetime, IN `codalma` int)
+BEGIN
+	
+	select 
+		date(fv.fecharegistro) as fecha,
+		IF(td.descripcion="BOLETA DE VENTA","BOLETA",td.descripcion) AS doc,
+		CONCAT((case td.descripcion
+				when "BOLETA DE VENTA" then "B"
+				when "FACTURA" then "F"
+				else td.sigla end),fv.serie,"-",LPAD(fv.numDocumento,8	,"0")) as "num_doc",
+		cli.nombre as cliente,
+		dfv.cantidad,
+		pro.descripcion as descripcion,
+		dfv.preciounitario,
+		dfv.subtotal,
+		fv.total,
+		(	select GROUP_CONCAT(DISTINCT((
+																	SELECT mp.descripcion from metodopago mp where mp.codMetodoPago = p.codTipoPago
+																))) 
+			from pago p where p.codNota = fv.codFacturaV GROUP BY p.codnota) as metodos_pagos,
+		fv.codAlmacen as almacen,
+	(SELECT CASE fv.anulado WHEN 0 THEN "ACTIVO" WHEN 1 THEN (if((select count(*) from repositorio where codfacturaventa=fv.codfacturav)>0 and fv.codnotacredito>0,"ACTIVO CON NC","ANULADO"))END)  AS v_anulado
+	
+	from factura_venta fv
+	inner join detallefactura_venta dfv on dfv.codFacturaV = fv.codFacturaV
+	inner join producto pro on dfv.codProducto = pro.codProducto
+	inner join tipodocumento td on td.codTipoDocumento = fv.codTipoDocumento
+	inner join cliente cli on cli.codCliente = fv.codCliente
+	
+	where date(fv.fecharegistro) = date(fecha)
+	and fv.codAlmacen in (select a.codalmacen from almacen a where a.ubicacion = (select ubicacion from almacen where codalmacen = codalma))
+	and fv.anulado = 0
+	
+	
+	GROUP BY num_doc	
+	order by fv.fecharegistro asc;
+	
+END
+
+==========================================
+--- PROCEDURE: LIstadoAlmacenXUbicacionExcel ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `LIstadoAlmacenXUbicacionExcel`(`codalma` int)
+BEGIN
+	
+		select 
+			a.codalmacen,
+			SUBSTR(a.descripcion,9,6) as descripcion  
+		from almacen a where a.ubicacion = (select ubicacion from almacen where codalmacen = codalma)
+		order by a.codalmacen asc;
+
+END
+
+==========================================
+--- PROCEDURE: ListaCajaChicaDiaria ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ListaCajaChicaDiaria`(codSucur int(11), fecha1 date, codcaja_ex int(11),codalma int(11),estado_caja int(11))
+BEGIN
+
+		DECLARE filtroventa VARCHAR(200);
+  	SELECT valor INTO filtroventa FROM parametro WHERE codParametro = 1;
+		
+		if codcaja_ex <> 0 then
+			SELECT 		cm.codMovCaja, 
+								cm.codSucursal,
+								cm.codcaja,
+								IFNULL(cm.codPago,0) as codPago,
+								IF(	cm.concepto <> '' AND cm.concepto <> NULL, 
+										cm.concepto,
+										(	if(cm.codTipoPagoCaja=12, "PENDIENTE DE COBRO",
+
+										CASE cm.tipo
+											WHEN 1 THEN 
+												(	CASE cm.tipomovimiento 
+														WHEN 0 THEN 
+															"" 
+														WHEN 1 THEN 
+															"MONTO APERTURA CAJA" 
+														WHEN 2 THEN 
+															"MONTO INGRESO - COBRANZA" 
+														WHEN 3 THEN 
+															"MONTO CIERRE CAJA" 
+														WHEN 4 THEN 
+															"MONTO DE APORTE" 
+													END)
+											WHEN 2 THEN 
+												"MONTO EGRESO - PAGO" 
+											END))) AS concepto, 
+								FORMAT(cm.monto,2), 
+								cm.tipo,  
+								(CASE cm.tipo 
+									WHEN 1 THEN "INGRESO" 
+									WHEN 2 THEN "EGRESO" 
+								END) AS ingresoegreso, 
+								cm.tipomovimiento, 
+								(CASE cm.tipomovimiento 
+										WHEN 1 THEN "APERTURA" 
+										WHEN 2 THEN "MOVIMIENTO" 
+										WHEN 3 THEN "CIERRE" 
+										WHEN 4 THEN "APORTE CAPITAL" 
+									END) AS tipomovimientodescripcion, 
+							  
+								(p.fechapago) as fecharegistro,
+								cm.tipodocumento, 
+								IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),"") AS documento, 
+								cm.codSerie, 
+								cm.serie, 
+								if(cm.codTipoPagoCaja=10, 
+									(select concat("NC", nc.serie,"-",LPAD(nc.DocumentoFactura,8,'0')) from notacredito nc 
+										where nc.codNotaI=p.codnotacredito) ,
+									CONCAT(IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),""),
+													" ",
+													cm.serie,
+													"-",
+													LPAD(cm.codPago,9,0))) AS NumDocumento,
+								(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.razonsocial from facturacion fact 
+																			inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+																			where fact.codFactura = p.codNota),"---------") 
+									ELSE ifnull(cl.nombre,"--------") 
+								END) as nomcli,
+								
+								(CASE p.ingresoegreso 
+										WHEN 0 THEN ifnull((select prov1.ruc from facturacion fact 
+													inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+													where fact.codFactura = p.codNota),"---------") 
+										ELSE (case cl.ruc
+														when null then ifnull(cl.dni,"--------")
+														when "" then ifnull(cl.dni,"--------")
+														else ifnull(cl.ruc,"--------")
+													end) 
+										END) as doccli,
+								
+								(CASE cm.tipo
+											WHEN 1 THEN IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento),
+																													" ", 
+																													ns.serie, 
+																													" - ", 
+																													LPAD(ns.numDocumento,8,0)
+																												)
+																						FROM pago p 
+																						INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																						WHERE p.codPago = cm.codPago),
+																					(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																													" ", 
+																													p.serie, 
+																													" - ", 
+																													LPAD(p.numdocumento,8,0))
+																						FROM pago p 											
+																						WHERE p.codPago = cm.codPago))
+											WHEN 2 THEN IFNULL((SELECT ni.DocumentoFactura FROM pago p 
+																										INNER JOIN facturacion ni on ni.codFactura = p.codNota 
+																										WHERE p.codPago = cm.codPago),
+											
+											IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento),
+																													" ", 
+																													ns.serie, 
+																													" - ", 
+																													LPAD(ns.numDocumento,8,0)
+																												)
+																						FROM pago p 
+																						INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																						WHERE p.codPago = cm.codPago),
+																					(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																													" ", 
+																													p.serie, 
+																													" - ", 
+																													LPAD(p.numdocumento,8,0))
+																						FROM pago p 											
+																						WHERE p.codPago = cm.codPago))															
+																										
+																										
+																										)
+											END) AS documentorefencia, 
+								cm.toneladas, 
+								cm.codTipoPagoCaja, 
+								IFNULL((CASE cm.codTipoPagoCaja 
+															WHEN 5 THEN "EFECTIVO" 
+															WHEN 6 THEN "DEPOSITO" 
+															WHEN 7 THEN "CHEQUE" 
+															WHEN 8 THEN ifnull(Concat("TARJETA-",tp.tipo),Concat("TARJETA-",tp.tipo))
+															WHEN 9 THEN "TRANSFERENCIA" 
+															WHEN 10 THEN "NOTA DE CREDITO" 
+															WHEN 12 THEN "PENDIENTE" 
+												END),"") AS PAGOCAJA, 
+								0 AS SALDO,
+								cm.estado, 
+								cm.codUser, 
+								
+								(c.fechaapertura) as fecharegistro,
+								cm.codMoneda,
+								(CASE cm.codMoneda WHEN 1 THEN "SOLES" WHEN 2 THEN "DOLARES" END) AS moneda,
+								cm.tcVenta,
+								IFNULL(p.tipo_descripcion_ingreso,0) AS tipo_descripcion_ingreso,
+								p.color,
+								IFNULL(bc.descripcion,"-") as cuenta,
+								IFNULL(ct.cuentaCorriente,"-") as numcuenta
+			FROM 		caja c
+			INNER JOIN cajamovimiento cm ON cm.codcaja = c.codcaja
+			left outer join pago p on p.codpago=cm.codpago
+			left outer join factura_venta fv on fv.codfacturav=p.codnota
+			left outer join cliente cl on cl.codcliente=fv.codcliente
+			left outer join proveedor prov on prov.codProveedor = fv.codcliente
+			left outer join tarjetaspago tp on tp.codtarjeta=p.codtarjetaspago
+			left outer join ctacte ct on ct.codCuentaCorriente = p.codctacte
+			left outer join banco bc on bc.codBanco = ct.codBanco
+			WHERE 	c.codsucursal = codSucur 
+			AND 		DATE(c.fechaapertura) = DATE(fecha1)
+			AND 		c.codcaja = codcaja_ex
+			AND			c.codalmacen=codalma
+			AND     cm.tipodocumento <> 7
+			AND     cm.estado=1 and c.estado=estado_caja
+			and p.opcionSuma =1
+			ORDER BY cm.codmovcaja asc;
+		
+		end if;
+		if codcaja_ex=0 then
+			SELECT 	cm.codMovCaja, 
+							cm.codSucursal,
+							cm.codcaja,
+							IFNULL(cm.codPago,0) as codPago,
+							IF(cm.concepto <> '' and cm.concepto <> NULL, 
+								 cm.concepto,
+								 (if(cm.codTipoPagoCaja=12, "PENDIENTE DE COBRO" ,
+										CASE cm.tipo
+										WHEN 1 THEN (CASE cm.tipomovimiento 
+																		WHEN 0 THEN "" 
+																		WHEN 1 THEN CONCAT("MONTO APERTURA CAJA-",alma.nombre) 
+																		WHEN 2 THEN CONCAT("MONTO INGRESO - COBRANZA-",alma.nombre) 
+																		WHEN 3 THEN CONCAT("MONTO CIERRE CAJA-",alma.nombre) 
+																		WHEN 4 THEN CONCAT("MONTO DE APORTE-",alma.nombre) 
+																 END)
+										WHEN 2 THEN CONCAT("MONTO EGRESO - PAGO-",alma.nombre) 
+										END))) AS concepto, 
+							FORMAT(cm.monto,2), 
+							cm.tipo,  
+							(CASE cm.tipo WHEN 1 THEN "INGRESO" WHEN 2 THEN "EGRESO" END) AS ingresoegreso, 
+							cm.tipomovimiento, 
+							(CASE cm.tipomovimiento 
+									WHEN 1 THEN "APERTURA" 
+									WHEN 2 THEN "MOVIMIENTO" 
+									WHEN 3 THEN "CIERRE" 
+									WHEN 4 THEN "APORTE CAPITAL" 
+							END) AS tipomovimientodescripcion, 
+							
+							(p.fechapago) as fecharegistro,
+							cm.tipodocumento, 
+							IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),"") AS documento, 
+							cm.codSerie, 
+							cm.serie, 
+							if(cm.codTipoPagoCaja=10, 
+								(select concat("NC", nc.serie,"-",LPAD(nc.DocumentoFactura,8,'0')) from notacredito nc where nc.codNotaI=p.codnotacredito) ,
+								CONCAT(IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),""),
+											" ",
+											cm.serie, 
+											" - ",
+											LPAD(cm.codPago,9,0))) AS NumDocumento, 
+							(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.razonsocial from facturacion fact 
+																			inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+																			where fact.codFactura = p.codNota),"---------") 
+									ELSE ifnull(cl.nombre,"--------") 
+							END) as nomcli,
+							
+							(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.ruc from facturacion fact 
+													inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+													where fact.codFactura = p.codNota),"---------") 
+									ELSE (case cl.ruc
+													when null then ifnull(cl.dni,"--------")
+													when "" then ifnull(cl.dni,"--------")
+													else ifnull(cl.ruc,"--------")
+												end)
+									END) as doccli,
+							
+							(CASE cm.tipo
+									WHEN 1 THEN IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento), 
+																										" ", ns.serie, " - ", LPAD(ns.numDocumento,8,0)) 
+																			FROM pago p 
+																			INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																			WHERE p.codPago = cm.codPago),
+																			(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																											" ", p.serie, " - ", LPAD(p.numdocumento,8,0)) 
+																				FROM pago p 											
+																				WHERE p.codPago = cm.codPago))
+									WHEN 2 THEN IFNULL((SELECT ni.DocumentoFactura FROM pago p 
+																			INNER JOIN facturacion ni on ni.codFactura = p.codNota 
+																			WHERE p.codPago = cm.codPago),
+									
+									IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento), 
+																										" ", ns.serie, " - ", LPAD(ns.numDocumento,8,0)) 
+																			FROM pago p 
+																			INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																			WHERE p.codPago = cm.codPago),
+																			(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																											" ", p.serie, " - ", LPAD(p.numdocumento,8,0)) 
+																				FROM pago p 											
+																				WHERE p.codPago = cm.codPago))
+																			
+																			
+																			)
+									END) AS documentorefencia, 
+								cm.toneladas, 
+								cm.codTipoPagoCaja, 
+								IFNULL((CASE cm.codTipoPagoCaja 
+														WHEN 5 THEN "EFECTIVO" 
+														WHEN 6 THEN "DEPOSITO" 
+														WHEN 7 THEN "CHEQUE" 
+														WHEN 8 THEN ifnull(Concat("TARJETA-",tp.tipo),Concat("TARJETA-",tp.tipo))   
+														WHEN 9 THEN "TRANSFERENCIA" 
+														WHEN 10 THEN "NOTA DE CREDITO" 
+														WHEN 12 THEN "PENDIENTE" 
+												END),"") AS PAGOCAJA, 
+								0 AS SALDO, 
+								cm.estado, 
+								cm.codUser, 
+								
+								(c.fechaapertura) as fecharegistro,
+								cm.codMoneda,
+								(CASE cm.codMoneda WHEN 1 THEN "SOLES" WHEN 2 THEN "DOLARES" END) AS moneda,
+								cm.tcVenta,
+								IFNULL(p.tipo_descripcion_ingreso,0) AS tipo_descripcion_ingreso,
+								p.color,
+								IFNULL(bc.descripcion,"-") as cuenta,
+								IFNULL(ct.cuentaCorriente,"-") as numcuenta
+			FROM 		caja c
+			INNER JOIN cajamovimiento cm ON cm.codcaja = c.codcaja
+			left outer join pago p on p.codpago=cm.codpago
+			left outer join factura_venta fv on fv.codfacturav=p.codnota
+			left outer join cliente cl on cl.codcliente=fv.codcliente
+			left outer join proveedor prov on prov.codProveedor = fv.codcliente
+			left outer join tarjetaspago tp on tp.codtarjeta=p.codtarjetaspago
+			left outer join almacen alma on alma.codalmacen=cm.codalmacen
+			left outer join ctacte ct on ct.codCuentaCorriente = p.codctacte
+			left outer join banco bc on bc.codBanco = ct.codBanco
+			WHERE 	c.codsucursal in (select codsucursal from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																												(select substring(a.nombre from 1 for locate('-',a.nombre)) 
+																													from almacen a where codsucursal=codSucur)))
+			AND 		DATE(c.fechaapertura) = DATE(fecha1)
+			AND			c.codalmacen in (select codalmacen from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																											(select substring(a.nombre from 1 for locate('-',a.nombre)) from almacen a 
+																												where codsucursal=codSucur)))
+			AND     cm.tipodocumento <> 7 and c.estado=estado_caja
+			AND     cm.estado=1
+			and p.opcionSuma =1
+			ORDER BY cm.codmovcaja asc;
+		END IF;
+
+END
+
+==========================================
+--- PROCEDURE: ReporteVentasDiarioExcelPagosAgrup ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ReporteVentasDiarioExcelPagosAgrup`(IN `fecha` datetime, IN `codalma` int,IN `codTipoPago` int)
+BEGIN
+	
+	select 
+		date(fv.fecharegistro) as fecha,
+		IF(td.descripcion="BOLETA DE VENTA","BOLETA",td.descripcion) AS doc,
+		CONCAT(
+			(case td.descripcion
+				when "BOLETA DE VENTA" then "B"
+				when "FACTURA" then "F"
+				else td.sigla end)
+		,fv.serie,"-",LPAD(fv.numDocumento,8	,"0")) as "num_doc",
+		cli.nombre as cliente,
+		dfv.cantidad,
+		pro.descripcion as descripcion,
+		dfv.preciounitario,
+		dfv.subtotal,
+		fv.total,
+		 
+		mp.descripcion as metodos_pagos,
+		fv.codAlmacen as almacen,
+		p.montopagado,
+		(SELECT CASE fv.anulado 
+									WHEN 0 THEN "ACTIVO" 
+									WHEN 1 THEN (if((select count(*) from repositorio where codfacturaventa=fv.codfacturav)>0 and fv.codnotacredito>0,"ACTIVO CON NC","ANULADO"))END)  AS v_anulado,
+									(select sigla from banco where codBanco = p.codBanco) as banco,
+		p.numctacte,
+		p.color
+
+	from factura_venta fv
+	inner join pago p on p.codNota = fv.codFacturaV
+	inner join metodopago mp on mp.codMetodoPago = p.codTipoPago
+	inner join detallefactura_venta dfv on dfv.codFacturaV = fv.codFacturaV
+	inner join producto pro on dfv.codProducto = pro.codProducto
+	inner join tipodocumento td on td.codTipoDocumento = fv.codTipoDocumento
+	inner join cliente cli on cli.codCliente = fv.codCliente
+
+	where date(fv.fecharegistro) = date(fecha)
+	and fv.codAlmacen in (select a.codalmacen from almacen a where a.ubicacion = (select ubicacion from almacen where codalmacen = codalma))
+	and p.codTipoPago = codTipoPago and p.estado=1
+
+	 GROUP BY fv.codFacturaV,p.codPago
+
+	order by fv.fecharegistro asc;
+
+
+END
+
+==========================================
+--- PROCEDURE: ReporteVentasCreditoDiarioExcel ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ReporteVentasCreditoDiarioExcel`(IN `fecha` datetime, IN `codalma` int)
+BEGIN
+	
+	select 
+		date(fv.fecharegistro) as fecha,
+		IF(td.descripcion="BOLETA DE VENTA","BOLETA",td.descripcion) AS doc,
+		CONCAT((case td.descripcion
+				when "BOLETA DE VENTA" then "B"
+				when "FACTURA" then "F"
+				else td.sigla end),fv.serie,"-",LPAD(fv.numDocumento,8	,"0")) as "num_doc",
+		cli.nombre as cliente,
+		dfv.cantidad,
+		pro.descripcion as descripcion,
+		dfv.preciounitario,
+		dfv.subtotal,
+		fv.total,
+		(	select GROUP_CONCAT(DISTINCT((
+																	SELECT mp.descripcion from metodopago mp where mp.codMetodoPago = p.codTipoPago
+																))) 
+			from pago p where p.codNota = fv.codFacturaV GROUP BY p.codnota) as metodos_pagos,
+		fv.codAlmacen as almacen,
+		(select almacen.descripcion from almacen where almacen.codAlmacen = fv.codAlmacen) as nom_alm,
+		fv.formaPago as codFormaPago, 
+(select fp.descripcion from formapago fp where fp.codFormaPago = fv.formapago) as FormaPago,
+		(SELECT CASE fv.anulado WHEN 0 THEN "ACTIVO" WHEN 1 THEN (if((select count(*) from repositorio where codfacturaventa=fv.codfacturav)>0 and fv.codnotacredito>0,"ACTIVO CON NC","ANULADO"))END)  AS v_anulado
+
+	from factura_venta fv
+	inner join detallefactura_venta dfv on dfv.codFacturaV = fv.codFacturaV
+	inner join producto pro on dfv.codProducto = pro.codProducto
+	inner join tipodocumento td on td.codTipoDocumento = fv.codTipoDocumento
+	inner join cliente cli on cli.codCliente = fv.codCliente
+	
+	where date(fv.fecharegistro) = date(fecha)
+	and fv.codAlmacen in (select a.codalmacen from almacen a where a.ubicacion = (select ubicacion from almacen where codalmacen = codalma))
+	
+
+and fv.formapago <> 6
+GROUP BY num_doc
+	order by fv.fecharegistro asc;
+	
+END
+
+==========================================
+--- PROCEDURE: ListaCajaEgresos ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ListaCajaEgresos`(codSucur int(11), fecha1 date, codalma int(11))
+BEGIN
+	
+			SELECT 		p.tipo_descripcion_ingreso,
+								cm.codMovCaja, 
+								cm.codSucursal,
+								cm.codcaja,
+								IFNULL(cm.codPago,0) as codPago,
+								(p.observacion) AS concepto, 
+								die.descripcion,
+								(FORMAT(cm.monto,2)) AS monto, 
+								cm.tipo,  
+								(CASE cm.tipo 
+									WHEN 1 THEN "INGRESO" 
+									WHEN 2 THEN "EGRESO" 
+								END) AS ingresoegreso, 
+								cm.tipomovimiento, 								
+								cm.fecharegistro, 
+								cm.tipodocumento, 
+								IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),"") AS documento, 
+								cm.codSerie, 
+								cm.serie, 
+								if(cm.codTipoPagoCaja=10, 
+									(select concat("NC", nc.serie,"-",LPAD(nc.DocumentoFactura,8,'0')) from notacredito nc 
+										where nc.codNotaI=p.codnotacredito) ,
+									CONCAT(IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),""),
+													" ",
+													cm.serie,
+													"-",
+													LPAD(cm.codPago,9,0))) AS NumDocumento,
+								(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.razonsocial from facturacion fact 
+																			inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+																			where fact.codFactura = p.codNota),"---------") 
+									ELSE ifnull(cl.nombre,"--------") 
+								END) as nomcli,
+								
+								(CASE p.ingresoegreso 
+										WHEN 0 THEN ifnull((select prov1.ruc from facturacion fact 
+													inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+													where fact.codFactura = p.codNota),"---------") 
+										ELSE (case cl.ruc
+														when null then ifnull(cl.dni,"--------")
+														when "" then ifnull(cl.dni,"--------")
+														else ifnull(cl.ruc,"--------")
+													end) 
+										END) as doccli,							
+								(CASE cm.tipo
+											WHEN 1 THEN IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento),
+																													" ", 
+																													ns.serie, 
+																													" - ", 
+																													LPAD(ns.numDocumento,8,0)
+																												)
+																						FROM pago p 
+																						INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																						WHERE p.codPago = cm.codPago),
+																					(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																													" ", 
+																													p.serie, 
+																													" - ", 
+																													LPAD(p.numdocumento,8,0))
+																						FROM pago p 											
+																						WHERE p.codPago = cm.codPago))
+											WHEN 2 THEN IFNULL((SELECT ni.DocumentoFactura FROM pago p 
+																										INNER JOIN facturacion ni on ni.codFactura = p.codNota 
+																										WHERE p.codPago = cm.codPago),"")
+											END) AS documentorefencia, 					
+							
+								0 AS SALDO, cm.estado,
+								p.codAlmacen	
+							
+							
+			FROM 		caja c
+			INNER JOIN cajamovimiento cm ON cm.codcaja = c.codcaja
+			left outer join pago p on p.codpago=cm.codpago
+			INNER JOIN descripcion_ingreso_egreso die ON p.tipo_descripcion_ingreso = die.id
+			left outer join factura_venta fv on fv.codfacturav=p.codnota
+			left outer join cliente cl on cl.codcliente=fv.codcliente
+			left outer join proveedor prov on prov.codProveedor = fv.codcliente
+			left outer join tarjetaspago tp on tp.codtarjeta=p.codtarjetaspago
+			WHERE p.codNota = 0 and  p.notacredito =0 and p.ingresoegreso = 0 and p.codTipoDocumento !=0 and	c.codsucursal in (select codsucursal from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																												(select substring(a.nombre from 1 for locate('-',a.nombre)) 
+																													from almacen a where codsucursal=codSucur)))
+			AND 		DATE(c.fechaapertura) = DATE(fecha1)
+			AND			c.codalmacen in (select codalmacen from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																											(select substring(a.nombre from 1 for locate('-',a.nombre)) from almacen a 
+																												where codsucursal=codSucur)))
+			AND     cm.tipodocumento <> 7 
+			AND     cm.estado=1
+			
+			ORDER BY cm.codmovcaja asc;
+
+END
+
+==========================================
+--- PROCEDURE: ListaNotasCreditos ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ListaNotasCreditos`(codSucur int(11), fecha1 date, codalma int(11))
+BEGIN
+	
+			SELECT 		p.tipo_descripcion_ingreso,
+								cm.codMovCaja, 
+								cm.codSucursal,
+								cm.codcaja,
+								IFNULL(cm.codPago,0) as codPago,
+								(p.observacion) AS concepto, 								
+								FORMAT(cm.monto,2) AS monto, 
+								cm.tipo,  
+								(CASE cm.tipo 
+									WHEN 1 THEN "INGRESO" 
+									WHEN 2 THEN "EGRESO" 
+								END) AS ingresoegreso, 
+								cm.tipomovimiento, 								
+								cm.fecharegistro, 
+								cm.tipodocumento, 
+								IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),"") AS documento, 
+								cm.codSerie, 
+								cm.serie, 
+								if(cm.codTipoPagoCaja=10, 
+									(select concat("NC", nc.serie,"-",LPAD(nc.DocumentoFactura,8,'0')) from notacredito nc 
+										where nc.codNotaI=p.codnotacredito) ,
+									CONCAT(IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),""),
+													" ",
+													cm.serie,
+													"-",
+													LPAD(cm.codPago,9,0))) AS NumDocumento,
+								(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.razonsocial from facturacion fact 
+																			inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+																			where fact.codFactura = p.codNota),"---------") 
+									ELSE ifnull(cl.nombre,"--------") 
+								END) as nomcli,
+								
+								(CASE p.ingresoegreso 
+										WHEN 0 THEN ifnull((select prov1.ruc from facturacion fact 
+													inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+													where fact.codFactura = p.codNota),"---------") 
+										ELSE (case cl.ruc
+														when null then ifnull(cl.dni,"--------")
+														when "" then ifnull(cl.dni,"--------")
+														else ifnull(cl.ruc,"--------")
+													end) 
+										END) as doccli,							
+								(CASE cm.tipo
+											WHEN 1 THEN IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento),
+																													" ", 
+																													ns.serie, 
+																													" - ", 
+																													LPAD(ns.numDocumento,8,0)
+																												)
+																						FROM pago p 
+																						INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																						WHERE p.codPago = cm.codPago),
+																					(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																													" ", 
+																													p.serie, 
+																													" - ", 
+																													LPAD(p.numdocumento,8,0))
+																						FROM pago p 											
+																						WHERE p.codPago = cm.codPago))
+											WHEN 2 THEN IFNULL((SELECT ni.DocumentoFactura FROM pago p 
+																										INNER JOIN facturacion ni on ni.codFactura = p.codNota 
+																										WHERE p.codPago = cm.codPago),"")
+											END) AS documentorefencia, 					
+							
+								0 AS SALDO, cm.estado,
+								p.codAlmacen	
+							
+							
+			FROM 		caja c
+			INNER JOIN cajamovimiento cm ON cm.codcaja = c.codcaja
+			left outer join pago p on p.codpago=cm.codpago			
+			left outer join factura_venta fv on fv.codfacturav=p.codnota
+			left outer join cliente cl on cl.codcliente=fv.codcliente
+			left outer join proveedor prov on prov.codProveedor = fv.codcliente
+			left outer join tarjetaspago tp on tp.codtarjeta=p.codtarjetaspago
+			WHERE p.codNota != 0 and  p.notacredito != 0 and p.ingresoegreso = 1 and p.codTipoDocumento !=0 and p.codTipoPago =10 and	c.codsucursal in (select codsucursal from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																												(select substring(a.nombre from 1 for locate('-',a.nombre)) 
+																													from almacen a where codsucursal=codSucur)))
+			AND 		DATE(c.fechaapertura) = DATE(fecha1)
+			AND			c.codalmacen in (select codalmacen from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																											(select substring(a.nombre from 1 for locate('-',a.nombre)) from almacen a 
+																												where codsucursal=codSucur)))
+			AND     cm.tipodocumento <> 7 
+			AND     cm.estado=1 and p.opcionSuma = 1
+			
+			ORDER BY cm.codmovcaja asc;
+
+END
+
+==========================================
+--- PROCEDURE: ListaCajaIngresos ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ListaCajaIngresos`(codSucur int(11), fecha1 date, codalma int(11))
+BEGIN
+	
+			SELECT 		p.tipo_descripcion_ingreso,
+								cm.codMovCaja, 
+								cm.codSucursal,
+								cm.codcaja,
+								IFNULL(cm.codPago,0) as codPago,
+								(p.observacion) AS concepto, 
+								die.descripcion,
+								(FORMAT(cm.monto,2)) AS monto, 
+								cm.tipo,  
+								(CASE cm.tipo 
+									WHEN 1 THEN "INGRESO" 
+									WHEN 2 THEN "EGRESO" 
+								END) AS ingresoegreso, 
+								cm.tipomovimiento, 								
+								cm.fecharegistro, 
+								cm.tipodocumento, 
+								IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),"") AS documento, 
+								cm.codSerie, 
+								cm.serie, 
+								if(cm.codTipoPagoCaja=10, 
+									(select concat("NC", nc.serie,"-",LPAD(nc.DocumentoFactura,8,'0')) from notacredito nc 
+										where nc.codNotaI=p.codnotacredito) ,
+									CONCAT(IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),""),
+													" ",
+													cm.serie,
+													"-",
+													LPAD(cm.codPago,9,0))) AS NumDocumento,
+								(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.razonsocial from facturacion fact 
+																			inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+																			where fact.codFactura = p.codNota),"---------") 
+									ELSE ifnull(cl.nombre,"--------") 
+								END) as nomcli,
+								
+								(CASE p.ingresoegreso 
+										WHEN 0 THEN ifnull((select prov1.ruc from facturacion fact 
+													inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+													where fact.codFactura = p.codNota),"---------") 
+										ELSE (case cl.ruc
+														when null then ifnull(cl.dni,"--------")
+														when "" then ifnull(cl.dni,"--------")
+														else ifnull(cl.ruc,"--------")
+													end) 
+										END) as doccli,							
+								(CASE cm.tipo
+											WHEN 1 THEN IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento),
+																													" ", 
+																													ns.serie, 
+																													" - ", 
+																													LPAD(ns.numDocumento,8,0)
+																												)
+																						FROM pago p 
+																						INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																						WHERE p.codPago = cm.codPago),
+																					(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																													" ", 
+																													p.serie, 
+																													" - ", 
+																													LPAD(p.numdocumento,8,0))
+																						FROM pago p 											
+																						WHERE p.codPago = cm.codPago))
+											WHEN 2 THEN IFNULL((SELECT ni.DocumentoFactura FROM pago p 
+																										INNER JOIN facturacion ni on ni.codFactura = p.codNota 
+																										WHERE p.codPago = cm.codPago),"")
+											END) AS documentorefencia, 					
+							
+								0 AS SALDO, cm.estado,
+								p.codAlmacen,
+							p.color	
+							
+							
+			FROM 		caja c
+			INNER JOIN cajamovimiento cm ON cm.codcaja = c.codcaja
+			left outer join pago p on p.codpago=cm.codpago
+			INNER JOIN descripcion_ingreso_egreso die ON p.tipo_descripcion_ingreso = die.id
+			left outer join factura_venta fv on fv.codfacturav=p.codnota
+			left outer join cliente cl on cl.codcliente=fv.codcliente
+			left outer join proveedor prov on prov.codProveedor = fv.codcliente
+			left outer join tarjetaspago tp on tp.codtarjeta=p.codtarjetaspago
+			WHERE p.codNota = 0 and  p.notacredito =0 and p.ingresoegreso = 1 and p.codTipoDocumento !=0 and	c.codsucursal in (select codsucursal from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																												(select substring(a.nombre from 1 for locate('-',a.nombre)) 
+																													from almacen a where codsucursal=codSucur)))
+			AND 		DATE(c.fechaapertura) = DATE(fecha1)
+			AND			c.codalmacen in (select codalmacen from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																											(select substring(a.nombre from 1 for locate('-',a.nombre)) from almacen a 
+																												where codsucursal=codSucur)))
+			AND     p.codTipoPago = 5 
+			AND     cm.estado=1
+			
+			ORDER BY cm.codmovcaja asc;
+
+END
+
+==========================================
+--- PROCEDURE: ListaCajaIngresosTarjeta ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ListaCajaIngresosTarjeta`(codSucur int(11), fecha1 date, codalma int(11))
+BEGIN
+	
+			SELECT 		p.tipo_descripcion_ingreso,
+								cm.codMovCaja, 
+								cm.codSucursal,
+								cm.codcaja,
+								IFNULL(cm.codPago,0) as codPago,
+								(p.observacion) AS concepto, 
+								die.descripcion,
+								(FORMAT(cm.monto,2)) AS monto, 
+								cm.tipo,  
+								(CASE cm.tipo 
+									WHEN 1 THEN "INGRESO" 
+									WHEN 2 THEN "EGRESO" 
+								END) AS ingresoegreso, 
+								cm.tipomovimiento, 								
+								cm.fecharegistro, 
+								cm.tipodocumento, 
+								IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),"") AS documento, 
+								cm.codSerie, 
+								cm.serie, 
+								if(cm.codTipoPagoCaja=10, 
+									(select concat("NC", nc.serie,"-",LPAD(nc.DocumentoFactura,8,'0')) from notacredito nc 
+										where nc.codNotaI=p.codnotacredito) ,
+									CONCAT(IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),""),
+													" ",
+													cm.serie,
+													"-",
+													LPAD(cm.codPago,9,0))) AS NumDocumento,
+								(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.razonsocial from facturacion fact 
+																			inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+																			where fact.codFactura = p.codNota),"---------") 
+									ELSE ifnull(cl.nombre,"--------") 
+								END) as nomcli,
+								
+								(CASE p.ingresoegreso 
+										WHEN 0 THEN ifnull((select prov1.ruc from facturacion fact 
+													inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+													where fact.codFactura = p.codNota),"---------") 
+										ELSE (case cl.ruc
+														when null then ifnull(cl.dni,"--------")
+														when "" then ifnull(cl.dni,"--------")
+														else ifnull(cl.ruc,"--------")
+													end) 
+										END) as doccli,							
+								(CASE cm.tipo
+											WHEN 1 THEN IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento),
+																													" ", 
+																													ns.serie, 
+																													" - ", 
+																													LPAD(ns.numDocumento,8,0)
+																												)
+																						FROM pago p 
+																						INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																						WHERE p.codPago = cm.codPago),
+																					(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																													" ", 
+																													p.serie, 
+																													" - ", 
+																													LPAD(p.numdocumento,8,0))
+																						FROM pago p 											
+																						WHERE p.codPago = cm.codPago))
+											WHEN 2 THEN IFNULL((SELECT ni.DocumentoFactura FROM pago p 
+																										INNER JOIN facturacion ni on ni.codFactura = p.codNota 
+																										WHERE p.codPago = cm.codPago),"")
+											END) AS documentorefencia, 					
+							
+								0 AS SALDO, cm.estado,
+								p.codAlmacen,
+									(select sigla from banco where codBanco = p.codBanco) as banco,
+								p.color	
+							
+							
+			FROM 		caja c
+			INNER JOIN cajamovimiento cm ON cm.codcaja = c.codcaja
+			left outer join pago p on p.codpago=cm.codpago
+			INNER JOIN descripcion_ingreso_egreso die ON p.tipo_descripcion_ingreso = die.id
+			left outer join factura_venta fv on fv.codfacturav=p.codnota
+			left outer join cliente cl on cl.codcliente=fv.codcliente
+			left outer join proveedor prov on prov.codProveedor = fv.codcliente
+			left outer join tarjetaspago tp on tp.codtarjeta=p.codtarjetaspago
+			WHERE  p.codNota = 0 and  p.ingresoegreso = 1  and	c.codsucursal in (select codsucursal from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																												(select substring(a.nombre from 1 for locate('-',a.nombre)) 
+																													from almacen a where codsucursal=codSucur)))
+			AND 		DATE(c.fechaapertura) = DATE(fecha1)
+			AND			c.codalmacen in (select codalmacen from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																											(select substring(a.nombre from 1 for locate('-',a.nombre)) from almacen a 
+																												where codsucursal=codSucur)))
+			AND     p.codTipoPago = 8 
+			AND     cm.estado=1
+			
+			ORDER BY cm.codmovcaja asc;
+
+END
+
+==========================================
+--- PROCEDURE: ListaCajaIngresosTransferencia ---
+==========================================
+CREATE DEFINER=`root`@`%` PROCEDURE `ListaCajaIngresosTransferencia`(codSucur int(11), fecha1 date, codalma int(11))
+BEGIN
+	
+			SELECT 		p.tipo_descripcion_ingreso,
+								cm.codMovCaja, 
+								cm.codSucursal,
+								cm.codcaja,
+								IFNULL(cm.codPago,0) as codPago,
+								(p.observacion) AS concepto, 
+								die.descripcion,
+								(FORMAT(cm.monto,2)) AS monto, 
+								cm.tipo,  
+								(CASE cm.tipo 
+									WHEN 1 THEN "INGRESO" 
+									WHEN 2 THEN "EGRESO" 
+								END) AS ingresoegreso, 
+								cm.tipomovimiento, 								
+								cm.fecharegistro, 
+								cm.tipodocumento, 
+								IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),"") AS documento, 
+								cm.codSerie, 
+								cm.serie, 
+								if(cm.codTipoPagoCaja=10, 
+									(select concat("NC", nc.serie,"-",LPAD(nc.DocumentoFactura,8,'0')) from notacredito nc 
+										where nc.codNotaI=p.codnotacredito) ,
+									CONCAT(IFNULL((SELECT sigla FROM tipodocumento WHERE codTipoDocumento = cm.tipodocumento),""),
+													" ",
+													cm.serie,
+													"-",
+													LPAD(cm.codPago,9,0))) AS NumDocumento,
+								(CASE p.ingresoegreso 
+									WHEN 0 THEN ifnull((select prov1.razonsocial from facturacion fact 
+																			inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+																			where fact.codFactura = p.codNota),"---------") 
+									ELSE ifnull(cl.nombre,"--------") 
+								END) as nomcli,
+								
+								(CASE p.ingresoegreso 
+										WHEN 0 THEN ifnull((select prov1.ruc from facturacion fact 
+													inner join proveedor prov1 on prov1.codProveedor = fact.codProveedor 
+													where fact.codFactura = p.codNota),"---------") 
+										ELSE (case cl.ruc
+														when null then ifnull(cl.dni,"--------")
+														when "" then ifnull(cl.dni,"--------")
+														else ifnull(cl.ruc,"--------")
+													end) 
+										END) as doccli,							
+								(CASE cm.tipo
+											WHEN 1 THEN IFNULL((SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = ns.codTipoDocumento),
+																													" ", 
+																													ns.serie, 
+																													" - ", 
+																													LPAD(ns.numDocumento,8,0)
+																												)
+																						FROM pago p 
+																						INNER JOIN factura_venta ns on ns.codFacturaV = p.codNota 
+																						WHERE p.codPago = cm.codPago),
+																					(SELECT CONCAT((SELECT t.sigla FROM tipodocumento t WHERE t.codTipoDocumento = p.codTipoDocumento ), 
+																													" ", 
+																													p.serie, 
+																													" - ", 
+																													LPAD(p.numdocumento,8,0))
+																						FROM pago p 											
+																						WHERE p.codPago = cm.codPago))
+											WHEN 2 THEN IFNULL((SELECT ni.DocumentoFactura FROM pago p 
+																										INNER JOIN facturacion ni on ni.codFactura = p.codNota 
+																										WHERE p.codPago = cm.codPago),"")
+											END) AS documentorefencia, 					
+							
+								0 AS SALDO, cm.estado,
+								p.codAlmacen,
+								(select sigla from banco where codBanco = p.codBanco) as banco,
+									p.color
+							
+							
+			FROM 		caja c
+			INNER JOIN cajamovimiento cm ON cm.codcaja = c.codcaja
+			left outer join pago p on p.codpago=cm.codpago
+			INNER JOIN descripcion_ingreso_egreso die ON p.tipo_descripcion_ingreso = die.id
+			left outer join factura_venta fv on fv.codfacturav=p.codnota
+			left outer join cliente cl on cl.codcliente=fv.codcliente
+			left outer join proveedor prov on prov.codProveedor = fv.codcliente
+			left outer join tarjetaspago tp on tp.codtarjeta=p.codtarjetaspago
+			WHERE  p.codNota = 0 and  p.ingresoegreso = 1 AND c.codsucursal in (select codsucursal from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																												(select substring(a.nombre from 1 for locate('-',a.nombre)) 
+																													from almacen a where codsucursal=codSucur)))
+			AND 		DATE(c.fechaapertura) = DATE(fecha1)
+			AND			c.codalmacen in (select codalmacen from almacen
+																where codsucursal in (select codsucursal from almacen a 
+																											where substring(nombre from 1 for locate('-',nombre)) in 
+																											(select substring(a.nombre from 1 for locate('-',a.nombre)) from almacen a 
+																												where codsucursal=codSucur)))
+			AND     p.codTipoPago = 9 
+			AND     cm.estado=1
+			
+			ORDER BY cm.codmovcaja asc;
+
+END
