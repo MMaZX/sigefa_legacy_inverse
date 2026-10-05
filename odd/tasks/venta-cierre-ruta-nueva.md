@@ -56,7 +56,7 @@ Cada tarea cierra con un commit de unidad de trabajo (Conventional Commit) y reg
 
 ### Pre-requisito P0 (quien tome T1)
 - [x] Rama `feat/venta-cierre-ruta-nueva` creada desde `main` (2026-10-05). Todo commit va en esta rama; nunca en `main`.
-- [ ] Confirmar en `SIGEFA.csproj` (SDK-style) que los `.cs` nuevos se incluyen por globbing; si no, agregarlos.
+- [x] Confirmado en `SIGEFA.csproj` (SDK-style, 2026-10-05): sin `Compile Include`, solo `Remove`; los `.cs` nuevos se incluyen por globbing, nada que agregar.
 
 ### T1 — Contrato (opencode, ~8 min)
 Archivos nuevos en `SIGEFA.Administradores/VentaCierre/`:
@@ -66,6 +66,7 @@ Archivos nuevos en `SIGEFA.Administradores/VentaCierre/`:
 - `VentaCierreException.cs`: `paso`, `procedimiento`, `itemIndice`, `productoId`, `mysqlNumero`, `sqlState`, `mysqlMensaje`, `parametros`; conserva la causa como `InnerException`.
 - `BorradorPago.cs`: copia en memoria de los datos de un pago (los campos de `clsPago` usados por `GuardaPago`).
 - Aceptación: sin lógica de negocio ni acceso a datos; todas las clases con comentarios; nombres camelCase de dominio.
+- [x] Implementada en `1fc20a3` (2026-10-05): 5 archivos en `SIGEFA.Administradores/VentaCierre/`; verificación funcional pendiente de compilación en la VM Windows (T7, no se compila en Linux).
 
 ### T2 — Repositorio (antigravity, ~10 min)
 `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs`. Cada método recibe `(MySqlConnection conexion, MySqlTransaction transaccion, ...)` y no abre conexión propia:
