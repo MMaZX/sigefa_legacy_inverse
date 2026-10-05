@@ -243,7 +243,7 @@ T13a y T13b se serializan (comparten `VentaCierre/*` y el flujo de `guardaVenta`
 - `esMetodoSoportado` pasa a `5, 6, 8, 9`. El 7 (depósito por cheque), 10 y 12 siguen con el aviso y el flujo viejo (T10b/T11 habilitan 10 y 12).
 - Actualizar el comentario (ya no es cierto que `GuardaPagoPendiente` bloquee: es no-op en venta nueva; ver Evidencia). Mantener el bloqueo de mezcla de borradores con métodos no soportados.
 - No tocar servicio, repositorio ni `BorradorPago`. Confirmar que `Pag.codCtaCte`, `CtaCte`, `CodBanco`, `CodTarjeta`, `NOperacion` viajan al borrador (ya lo hace `desdePago`).
-- [ ] Implementar. Verificación: compilar en VM (B2). Humo manual: un depósito, una transferencia, una tarjeta y un pago mixto efectivo + transferencia; revisar `pago` y `ctactemovimientos` en la BD local.
+- [x] Implementada en `efc68da` (2026-10-05): `esMetodoSoportado` pasa a `5, 6, 8, 9` con comentario actualizado (GuardaPagoPendiente es no-op en venta nueva); 7, 10 y 12 conservan aviso y flujo viejo, y el bloqueo de mezcla con borradores queda intacto. Confirmado por lectura que `desdePago` ya lleva `codCtaCte`, `CtaCte`, `CodBanco`, `CodTarjeta` y `NOperacion` al borrador; sin tocar servicio, repositorio ni `BorradorPago`. Verificación: no se compila en Linux; compilar en VM (B2) y humo manual pendientes: un depósito, una transferencia, una tarjeta y un mixto efectivo + transferencia, revisando `pago` y `ctactemovimientos` en BD local.
 
 ### T10a — Reserva y validación de nota de crédito en el servicio (antigravity, ~12 min)
 - **Alcance:** `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs`, su interfaz, `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` y `VentaCierrePaso.cs`. Sin UI.
