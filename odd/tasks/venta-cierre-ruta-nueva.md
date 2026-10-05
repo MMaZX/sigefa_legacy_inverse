@@ -135,6 +135,13 @@ Mecanismo (decidido por el usuario): **por SSH a la VM, sin subir nada a GitHub*
 ### RV-B — Revisión de T4+T5+T6 (codex, solo lectura, ~5 min)
 Revisar que la ruta vieja no cambió (diff solo agrega ramas detrás del flag), que el diálogo no se puede cerrar antes de terminar, que los borradores no se persisten por ninguna rama no soportada y que no hay `static` de estado de venta.
 
+#### Resultado de RV-B y revisión final (claude + codex, 2026-10-05)
+- **RV-B (codex, T4+T5+T6):** T4 OK; hallazgos T6 corregidos en `7aa4f81` (modo captura solo para efectivo, `CodNota` original en legacy, borradores sin duplicar, impresión bloqueada en captura, aviso al no pagar el restante). **Hallazgo propio:** depósito/cheque/tarjeta/transferencia (6–9) crean además `GuardaPagoPendiente` en la ruta vieja y la nueva no lo replica → esos métodos usan el flujo viejo.
+- **Revisión final (codex, `main...HEAD`):** **la ruta vieja no cambia** con el flag ausente o en `legacy`. Hallazgos: (alta) el mensaje "Pago Realizado Correctamente" se mostraba al capturar en memoria → cambiado a "Pago capturado…" (`000800e`); (baja) borradores residuales → `borradoresPago.Clear()` al iniciar captura (`000800e`); (media) **el cierre no es atómico entre almacenes** → límite aceptado y documentado: cada almacén es una transacción y la compensación entre almacenes es la del flujo original.
+- **Build final (T7, VM, `Debug|x86`, directorio aparte `sigefa_build`) sobre `000800e`:** `exit=0`, **0 errores**. Nada se subió a GitHub.
+- **Límites conocidos de la ruta nueva:** contado nuevo solo en efectivo; pago parcial ("No" a pagar el restante) cancela sin guardar; sin impresión del comprobante de pago desde el formulario en captura; la anulación de compensación puede mostrar `MessageBox`.
+- **No verificado:** ejecución real (UI, base de datos, ventas con más de 11 ítems). Humo manual pendiente (lo hace el usuario con el flag `nueva` en la VM, nunca contra producción).
+
 ### T7 — Compilación y revisión final (claude, ~6 min)
 - [ ] En la VM Windows (`C:\Users\qemu\Documents\sigefa_legacy`): el árbol tiene 4 archivos modificados (`frmLogin.cs`, `MysqlEmpresa.cs`, `MysqlSucursal.cs`, `MysqlUsuario.cs`) y 2 sin seguimiento. Antes de traer la rama: inspeccionar esas diferencias y preservarlas (stash o confirmar con el usuario); no sobrescribir.
 - [ ] Llevar la rama con el mecanismo de B1 (`git bundle` + `scp`, sin subir a GitHub), compilar con MSBuild 18.6 (`Debug|x86`) en el directorio aparte. Errores de compilación: corregir en una ronda acotada; declarar cualquier error restante.
