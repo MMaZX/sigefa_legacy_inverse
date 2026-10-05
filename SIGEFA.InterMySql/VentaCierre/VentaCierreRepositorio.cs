@@ -18,10 +18,14 @@ namespace SIGEFA.InterMySql.VentaCierre
         // Bloquea la fila de la serie con SELECT ... FOR UPDATE. Debe ser la primera lectura.
         int bloquearSerie(MySqlConnection conexion, MySqlTransaction transaccion, int serieId);
 
-        // Bloquea las filas de productoalmacen en orden ascendente de productoId por clave primaria.
+        // Bloquea las filas de productoalmacen en orden ascendente de productoId por clave primaria
+        // y revalida codAlmacen y codProducto en la misma lectura que bloquea con FOR UPDATE.
         void bloquearStock(MySqlConnection conexion, MySqlTransaction transaccion, int almacenId, IEnumerable<int> productoIds);
 
-        // Inserta la cabecera mediante GuardaFacturaVenta y devuelve el id generado.
+        // Inserta la cabecera mediante GuardaFacturaVenta y devuelve el id generado y el número de documento asignado.
+        int guardarFacturaVenta(MySqlConnection conexion, MySqlTransaction transaccion, clsFacturaVenta venta, out string numeroDocumento);
+
+        // Sobrecarga de conveniencia que devuelve el id generado de la cabecera.
         int guardarFacturaVenta(MySqlConnection conexion, MySqlTransaction transaccion, clsFacturaVenta venta);
 
         // Inserta un ítem mediante GuardaDetalleFacturaVenta y devuelve el id generado.
@@ -87,7 +91,8 @@ namespace SIGEFA.InterMySql.VentaCierre
         // Bloquea las filas de productoalmacen para los productos indicados.
         // Para evitar deadlocks entre transacciones concurrentes, primero elimina duplicados,
         // ordena los productos ascendentemente por productoId, obtiene codProductoAlmacen y
-        // finalmente ejecuta SELECT ... FOR UPDATE por clave primaria. Valida existencia y lectura de stock.
+        // finalmente ejecuta SELECT ... FOR UPDATE por clave primaria revalidando codAlmacen y codProducto
+        // en la misma lectura bloqueante. Valida existencia y lectura de stock.
         // Espera: almacenId válido y colección de productoIds de la venta.
         public void bloquearStock(MySqlConnection conexion, MySqlTransaction transaccion, int almacenId, IEnumerable<int> productoIds)
         {
@@ -133,12 +138,14 @@ namespace SIGEFA.InterMySql.VentaCierre
                         codProductoAlmacen = Convert.ToInt32(valorId);
                     }
 
-                    // Paso 2: bloquear por clave primaria con SELECT ... FOR UPDATE y validar lectura de stock
-                    const string sqlBloqueo = "SELECT codProductoAlmacen, stockactual, stockdisponible FROM productoalmacen WHERE codProductoAlmacen = @codProductoAlmacen FOR UPDATE;";
+                    // Paso 2: bloquear por clave primaria con FOR UPDATE y revalidar codAlmacen y codProducto en la misma lectura
+                    const string sqlBloqueo = "SELECT codProductoAlmacen, stockactual, stockdisponible FROM productoalmacen WHERE codProductoAlmacen = @codProductoAlmacen AND codAlmacen = @almacenId AND codProducto = @productoId FOR UPDATE;";
                     using (MySqlCommand cmdBloqueo = new MySqlCommand(sqlBloqueo, conexion, transaccion))
                     {
                         cmdBloqueo.CommandType = CommandType.Text;
                         cmdBloqueo.Parameters.AddWithValue("@codProductoAlmacen", codProductoAlmacen);
+                        cmdBloqueo.Parameters.AddWithValue("@almacenId", almacenId);
+                        cmdBloqueo.Parameters.AddWithValue("@productoId", productoId);
 
                         using (MySqlDataReader dr = cmdBloqueo.ExecuteReader())
                         {
@@ -149,7 +156,7 @@ namespace SIGEFA.InterMySql.VentaCierre
                                     "bloquearStock",
                                     0,
                                     string.Empty,
-                                    "No se pudo bloquear el registro de stock para el producto " + productoId + " (codProductoAlmacen " + codProductoAlmacen + ")",
+                                    "No se pudo bloquear o revalidar el registro de stock para el producto " + productoId + " en el almacén " + almacenId + " (codProductoAlmacen " + codProductoAlmacen + ")",
                                     null,
                                     null,
                                     productoId,
@@ -191,10 +198,11 @@ namespace SIGEFA.InterMySql.VentaCierre
 
         // Guarda la cabecera de la factura de venta invocando al procedimiento GuardaFacturaVenta.
         // Envía exactamente los 55 parámetros estipulados en el contrato (omitiendo entregado_ex).
-        // Mapea newid <= 0 a CabeceraNoCreada y captura numeraDoc generado.
+        // Mapea newid <= 0 a CabeceraNoCreada y devuelve numeraDoc generado en el parámetro out.
+        // NO modifica las propiedades de la entidad hasta que la transacción se confirme en el servicio.
         // Espera: entidad clsFacturaVenta con datos completos de cabecera.
         // Devuelve: facturaVentaId (newid generado por LAST_INSERT_ID()).
-        public int guardarFacturaVenta(MySqlConnection conexion, MySqlTransaction transaccion, clsFacturaVenta venta)
+        public int guardarFacturaVenta(MySqlConnection conexion, MySqlTransaction transaccion, clsFacturaVenta venta, out string numeroDocumento)
         {
             if (venta == null)
             {
@@ -241,7 +249,8 @@ namespace SIGEFA.InterMySql.VentaCierre
                     cmd.Parameters.AddWithValue("codven", venta.CodVendedor);
                     cmd.Parameters.AddWithValue("codCoti", venta.CodCotizacion);
                     cmd.Parameters.AddWithValue("codusu", venta.CodUser);
-                    cmd.Parameters.AddWithValue("docreferencia", !string.IsNullOrEmpty(venta.DocumentoReferencia) ? (object)venta.DocumentoReferencia : DBNull.Value);
+                    // Hallazgo 6: docreferencia solo se envía NULL si es null; la cadena vacía se conserva
+                    cmd.Parameters.AddWithValue("docreferencia", (venta.DocumentoReferencia != null) ? (object)venta.DocumentoReferencia : DBNull.Value);
                     cmd.Parameters.AddWithValue("motiv", !string.IsNullOrEmpty(venta.Motivo) ? (object)venta.Motivo : DBNull.Value);
                     cmd.Parameters.AddWithValue("detcoment", !string.IsNullOrEmpty(venta.Detallecomentario) ? (object)venta.Detallecomentario : DBNull.Value);
                     cmd.Parameters.AddWithValue("consultorext", venta.Consultorext);
@@ -315,12 +324,9 @@ namespace SIGEFA.InterMySql.VentaCierre
                             parametrosInfo);
                     }
 
-                    string numeraDoc = Convert.ToString(cmd.Parameters["numeraDoc"].Value);
+                    numeroDocumento = Convert.ToString(cmd.Parameters["numeraDoc"].Value);
 
-                    // Asignación de compatibilidad en la entidad
-                    venta.CodFacturaVenta = facturaVentaId.ToString();
-                    venta.NumDoc = numeraDoc;
-
+                    // Hallazgo 5: NO mutar venta.CodFacturaVenta ni venta.NumDoc aquí antes de Commit
                     return facturaVentaId;
                 }
             }
@@ -339,9 +345,17 @@ namespace SIGEFA.InterMySql.VentaCierre
             }
         }
 
+        // Sobrecarga de conveniencia sin parámetro out para compatibilidad con llamadas que solo necesitan el id.
+        public int guardarFacturaVenta(MySqlConnection conexion, MySqlTransaction transaccion, clsFacturaVenta venta)
+        {
+            string numDocGenerado;
+            return guardarFacturaVenta(conexion, transaccion, venta, out numDocGenerado);
+        }
+
         // Guarda un ítem del detalle de venta invocando al procedimiento GuardaDetalleFacturaVenta.
         // Envía exactamente los 32 parámetros del contrato (omitiendo entregado_ex).
         // Mapea newid: >0 éxito, -1 StockInsuficiente, NULL DetalleSinFactura.
+        // NO asigna CodDetalleVenta a la entidad hasta que la transacción se confirme en el servicio.
         // Espera: entidad clsDetalleFacturaVenta, facturaVentaId de la cabecera e itemIndice base 1.
         // Devuelve: detalleFacturaVentaId generado.
         public int guardarDetalle(MySqlConnection conexion, MySqlTransaction transaccion, clsDetalleFacturaVenta detalle, int facturaVentaId, int itemIndice)
@@ -449,7 +463,7 @@ namespace SIGEFA.InterMySql.VentaCierre
                             parametrosInfo);
                     }
 
-                    detalle.CodDetalleVenta = newId;
+                    // Hallazgo 5: NO mutar detalle.CodDetalleVenta aquí antes de Commit
                     return newId;
                 }
             }
