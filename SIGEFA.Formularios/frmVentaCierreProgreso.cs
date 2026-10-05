@@ -318,7 +318,11 @@ public partial class frmVentaCierreProgreso : Form
             VentaCierreResultado primerRes = resultadosObtenidos[0];
             ejecucion.facturaId = primerRes.facturaVentaId.ToString();
             ejecucion.serieNumero = primerRes.numeroDocumento;
-            ejecucion.almacen = primerRes.almacenNombre;
+            // VentaCierreResultado no lleva el nombre del almacen: se toma del primer
+            // bloque (con varios documentos el contexto fino por documento queda pendiente).
+            ejecucion.almacen = (bloques != null && bloques.Count > 0 && bloques[0] != null)
+                ? bloques[0].almacenNombre
+                : null;
         }
 
         if (bloques != null && bloques.Count > 0 && bloques[0].venta != null)

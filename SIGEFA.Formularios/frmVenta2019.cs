@@ -3496,6 +3496,8 @@ public class frmVenta2019 : Office2007Form
 	{
 		Cursor = Cursors.WaitCursor;
 		bool bandTerminoGuardadoVenta = false;
+		// Alcance de metodo: se escribe dentro del try (ruta nueva) y se lee despues del finally.
+		bool postCierreEnDialogo = false;
 		try
 		{
 			anulados = 0;
@@ -3546,9 +3548,6 @@ public class frmVenta2019 : Office2007Form
 							return;
 						}
 					}
-					// T13b / T13c: en la ruta nueva los 4 pasos post-cierre los ejecuta el dialogo;
-					// al volver solo se limpia la vista. Con legacy o sin flag queda en false.
-					bool postCierreEnDialogo = false;
 					string ventaCierreRutaGlobal = ConfigurationManager.AppSettings["VentaCierreRuta"];
 
 					if (ventaCierreRutaGlobal == "nueva")
