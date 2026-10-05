@@ -640,20 +640,20 @@ public class frmCancelarPago : Office2007Form
 		if (modoCaptura)
 		{
 			int metodoSeleccionado = Convert.ToInt32(cmbMetodoPago.SelectedValue);
-			// Métodos soportados en modo captura: 5 (Efectivo), 6 (Banco), 7 (Cheque), 8 (Tarjeta), 9 (Banco/CtaCte)
-			bool esMetodoSoportado = metodoSeleccionado == 5 || metodoSeleccionado == 6 ||
-			                         metodoSeleccionado == 7 || metodoSeleccionado == 8 ||
-			                         metodoSeleccionado == 9;
+			// En modo captura solo se soporta efectivo (método 5). Depósito (6), cheque (7),
+			// tarjeta (8) y transferencia (9) usan el flujo viejo con el aviso existente, porque
+			// la ruta vieja crea además GuardaPagoPendiente (insertPagoPendiente) y la ruta nueva no lo replica.
+			bool esMetodoSoportado = metodoSeleccionado == 5;
 			if (!esMetodoSoportado)
 			{
 				if (borradoresPago.Count > 0)
 				{
-					MessageBox.Show("No se pueden combinar pagos en borrador con métodos de persistencia directa (nota de crédito o pendiente). Complete el pago con los métodos permitidos o cancele la operación.", "Operación no permitida", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					MessageBox.Show("No se pueden combinar pagos en borrador con métodos de persistencia directa. Complete el pago en efectivo o cancele la operación.", "Operación no permitida", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 					return;
 				}
 				else
 				{
-					MessageBox.Show("El método de pago seleccionado no está soportado en la ruta nueva de cierre de venta. Se utilizará el flujo tradicional para esta venta.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					MessageBox.Show("El método de pago seleccionado no está soportado en el modo captura de la ruta nueva. Se utilizará el flujo tradicional para esta venta.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
 					modoCaptura = false;
 				}
 			}
@@ -986,7 +986,14 @@ public class frmCancelarPago : Office2007Form
 							return;
 						}
 						montoPag = 1;
-						Pag.CodNota = (!modoCaptura && venta.CodFacturaVenta != null) ? venta.CodFacturaVenta.ToString() : "";
+						if (modoCaptura)
+						{
+							Pag.CodNota = "";
+						}
+						else
+						{
+							Pag.CodNota = venta.CodFacturaVenta.ToString();
+						}
 						Pag.CodLetra = letra.CodLetra;
 						Pag.CodTipoPago = Convert.ToInt32(cmbMetodoPago.SelectedValue);
 						Pag.CodMoneda = Convert.ToInt32(cmbMoneda.SelectedValue);
@@ -1105,7 +1112,14 @@ public class frmCancelarPago : Office2007Form
 						}
 						return;
 					}
-					Pag.CodNota = (!modoCaptura && venta.CodFacturaVenta != null) ? venta.CodFacturaVenta.ToString() : "";
+					if (modoCaptura)
+					{
+						Pag.CodNota = "";
+					}
+					else
+					{
+						Pag.CodNota = venta.CodFacturaVenta.ToString();
+					}
 					Pag.CodLetra = letra.CodLetra;
 					Pag.CodTipoPago = Convert.ToInt32(cmbMetodoPago.SelectedValue);
 					Pag.CodMoneda = Convert.ToInt32(cmbMoneda.SelectedValue);
@@ -1283,6 +1297,7 @@ public class frmCancelarPago : Office2007Form
 
 	private void Pagar()
 	{
+		BorradorPago borradorCapturado = null;
 		try
 		{
 			if (Convert.ToInt32(cmbMetodoPago.SelectedValue) != 6 && Convert.ToInt32(cmbMetodoPago.SelectedValue) != 7 && Convert.ToInt32(cmbMetodoPago.SelectedValue) != 9)
@@ -1299,8 +1314,16 @@ public class frmCancelarPago : Office2007Form
 			}
 			if (modoCaptura)
 			{
-				borradoresPago.Add(BorradorPago.desdePago(Pag));
+				// Validar montos y armar el borrador antes de registrarlo en la lista en memoria
+				decimal montoPendienteCalculado = Convert.ToDecimal(txtMontoPendiente.Text);
+				decimal montoPagoCalculado = Convert.ToDecimal(txtMontoPago.Text);
+				decimal nuevoPendiente = montoPendienteCalculado - montoPagoCalculado;
+
+				borradorCapturado = BorradorPago.desdePago(Pag);
+				borradoresPago.Add(borradorCapturado);
 				MessageBox.Show("Pago Realizado Correctamente", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+
+				txtMontoPendiente.Text = Convert.ToString(nuevoPendiente);
 			}
 			else
 			{
@@ -1312,8 +1335,8 @@ public class frmCancelarPago : Office2007Form
 					}
 					cargaPago(Pag);
 				}
+				txtMontoPendiente.Text = Convert.ToString(Convert.ToDecimal(txtMontoPendiente.Text) - Convert.ToDecimal(txtMontoPago.Text));
 			}
-			txtMontoPendiente.Text = Convert.ToString(Convert.ToDecimal(txtMontoPendiente.Text) - Convert.ToDecimal(txtMontoPago.Text));
 			if (Convert.ToDouble(txtMontoPendiente.Text) != 0.0)
 			{
 				DialogResult d = MessageBox.Show("Desea pagar el restante?", "Aviso", MessageBoxButtons.YesNo);
@@ -1325,6 +1348,10 @@ public class frmCancelarPago : Office2007Form
 				}
 				else
 				{
+					if (modoCaptura)
+					{
+						MessageBox.Show("La venta no se guardará hasta completar el pago total en la ruta nueva.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					}
 					Deshabilita_botones(Estado: false);
 					Close();
 				}
@@ -1338,6 +1365,11 @@ public class frmCancelarPago : Office2007Form
 		}
 		catch (Exception ex)
 		{
+			// Si ocurrió un error posterior a la captura, retirar el borrador para evitar duplicados en reintentos
+			if (modoCaptura && borradorCapturado != null)
+			{
+				borradoresPago.Remove(borradorCapturado);
+			}
 			MessageBox.Show(ex.Message.ToString());
 		}
 	}
@@ -2163,6 +2195,11 @@ public class frmCancelarPago : Office2007Form
 	{
 		try
 		{
+			if (modoCaptura)
+			{
+				MessageBox.Show("En modo captura no se imprime el comprobante desde este formulario. La venta y los comprobantes se emiten tras confirmar la orden en la ruta nueva.", "Impresión de Pago", MessageBoxButtons.OK, MessageBoxIcon.Information);
+				return;
+			}
 			if (tip == 3)
 			{
 				if ((Convert.ToInt32(cmbMetodoPago.SelectedValue) == 5 || Convert.ToInt32(cmbMetodoPago.SelectedValue) == 8) && Convert.ToDecimal(txtMontoPendiente.Text) == 0m)
