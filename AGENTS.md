@@ -37,8 +37,10 @@ Formularios (WinForms UI) → Administradores (Business Logic)
 
 ## Database
 
-- MySQL 8.x via `MySql.Data`. Connection string in `SIGEFA/app.config` (`ConnNegocio`).
-- Active server: `192.168.100.51:3307`, db: `database_multi_final`, user: `root` (plaintext password).
+- MySQL 8.x / MariaDB / MySQL 5.7 via `MySql.Data`. Connection string in `SIGEFA/app.config` (`ConnNegocio`).
+- Active local server: `127.0.0.1:3307` (Docker `manager_mysql`), db: `database_multi_final`, user: `root`, password: `fulanito`.
+- Production server (READ-ONLY): `192.168.1.3:3306`, db: `database_multi_final`, user: `ia-model-user`, password: `9isxDFsQSMqQWT1PUOcCBAw7`. Para consultar producción usar SIEMPRE estas credenciales de solo lectura. Están traqueadas en git a propósito (usuario sin permisos de escritura).
+- Config file for scripts/tools: `db_config.yaml` (extracted from `/home/fulanito/www/gruporicardoapi/.env`).
 - DNI/RUC lookup via `https://sgesystems.com/consulta_*?api_token=948961635` (also in app.config).
 - No schema/migration files — schema assumed to exist externally.
 
