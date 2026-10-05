@@ -38,15 +38,17 @@ Crear una ruta **nueva y paralela** para cerrar una venta en `frmVenta2019`, sin
 |---|---|---|
 | **opencode** | T1, T4, T5 | Código acotado y mecánico: DTOs, diálogo, integración de crédito |
 | **antigravity** | T2, T3, T6 | Núcleo transaccional y modo captura (lo más delicado) |
-| **codex** | RV-A, RV-B | Revisión independiente de solo lectura (no escribe código) |
-| **claude** | T7 (+ orquestación) | Compilar en la VM, revisión final con codex, corrección acotada |
+| **codex** | RV-A, RV-B | Revisión independiente de solo lectura (no escribe código); la lanza y coordina claude |
+| **claude** | B1, T7 (+ orquestación) | Compilar en la VM Windows por SSH (punto de control B1 tras T3 y build final en T7), coordinar a codex, corrección acotada |
 
-Orden y paralelismo (planificado, requiere OK del usuario para worktrees):
+Orden (decidido por el usuario: en serie, en una sola rama; el worktree para T4 NO fue aprobado):
 
 ```
-T1 (opencode, 8) ─┬─> T2→T3 (antigravity, 20) ──> RV-A (codex, 5) ─┐
-                  └─> T4 (opencode, 10, worktree aparte)           ├─> T5 (opencode, 4) ─> T6 (antigravity, 12) ─> RV-B (codex, 5) ─> T7 (claude, 6)
+T1 (opencode) ─> T2→T3 (antigravity) ─> [RV-A (codex, vía claude) + B1 (claude, build en VM)] ─> correcciones (antigravity, 1 ronda)
+  ─> T4 (opencode) ─> T5 (opencode) ─> T6 (antigravity) ─> [RV-B (codex, vía claude)] ─> T7 (claude, build final + revisión final)
 ```
+
+**Punto de control B1 (decidido por el usuario, 2026-10-05):** tras T3 se compila en la VM antes de seguir, para detectar errores de compilación temprano (T1 usa namespace de archivo, C# 10; solo el build lo confirma). RV-A y B1 se ejecutan juntos; los hallazgos y errores vuelven a antigravity en una sola ronda de corrección.
 
 T4 toca solo `frmVentaCierreProgreso*`; T2/T3 tocan solo `VentaCierre/*`. No comparten archivos. Si el usuario no aprueba worktrees, se ejecuta en serie y el total sube a ~70 min (el corte limpio es T1–T5: cubre el caso del error reportado).
 
@@ -87,7 +89,15 @@ Archivos nuevos en `SIGEFA.Administradores/VentaCierre/`:
 ### RV-A — Revisión de T2+T3 (codex, solo lectura, ~5 min)
 Revisar el diff de T2 y T3 contra `docs/venta-cierre/contrato-sp.md`: orden y tipo de parámetros, orden de bloqueo, rollback en todos los caminos, ausencia de `TransactionScope`, `throw;`, nombres. Entregar lista de hallazgos con archivo:línea; **no editar**. Correcciones las hace antigravity (una ronda).
 
-### T4 — Diálogo tasklist (opencode, ~10 min, worktree aparte si se aprueba)
+### B1 — Build de control tras T3 (claude, ~8 min)
+Mecanismo (decidido por el usuario): **por SSH a la VM, sin subir nada a GitHub**.
+- [ ] En el host: `git bundle create` de la rama `feat/venta-cierre-ruta-nueva` (en el scratchpad de la sesión, no en el repo) y `scp` a la VM.
+- [ ] En la VM: **no tocar** `C:\Users\qemu\Documents\sigefa_legacy` (tiene 4 archivos modificados). Importar el bundle en un directorio aparte, **hermano de `Debug_gr`** (el proyecto referencia `..\Debug_gr`; confirmar la ubicación antes), por ejemplo `C:\Users\qemu\Documents\sigefa_build`.
+- [ ] Compilar `Debug|x86` con MSBuild 18.6 y registrar **todos** los errores (código, archivo, línea), no solo el primero. Compilar sin `-m` si hace falta para ver el orden de errores.
+- [ ] Errores de T1–T3 vuelven a antigravity en una sola ronda. Los errores preexistentes del repo base (≈200 warnings, 0 errores según `build_warnings.md`) no son de esta rama.
+- Los datos de acceso a la VM viven en `try-print-go/usqay-print-client/windows-test.yaml` (ignorado por git); nunca se imprimen, ni se escriben en commits o informes.
+
+### T4 — Diálogo tasklist (opencode, ~10 min, en serie en esta rama)
 `SIGEFA.Formularios/frmVentaCierreProgreso.cs` (+ `.Designer.cs`):
 - Modal con `FormBorderStyle=FixedDialog`, `ControlBox=false`, `ShowInTaskbar=false`; sin `CancelButton`; `FormClosing` con `e.Cancel = true` mientras no haya terminado (cubre X, Alt+F4 y `Close()`).
 - Lista de pasos con estado (pendiente, en curso, listo, error), encabezado "Bloque k/n (almacén)", y avance por ítem.
@@ -111,7 +121,7 @@ Revisar que la ruta vieja no cambió (diff solo agrega ramas detrás del flag), 
 
 ### T7 — Compilación y revisión final (claude, ~6 min)
 - [ ] En la VM Windows (`C:\Users\qemu\Documents\sigefa_legacy`): el árbol tiene 4 archivos modificados (`frmLogin.cs`, `MysqlEmpresa.cs`, `MysqlSucursal.cs`, `MysqlUsuario.cs`) y 2 sin seguimiento. Antes de traer la rama: inspeccionar esas diferencias y preservarlas (stash o confirmar con el usuario); no sobrescribir.
-- [ ] Traer la rama (requiere que el usuario la haya subido al remoto) y compilar con MSBuild 18.6 (`Debug|x86`). Errores de compilación: corregir en una ronda acotada; declarar cualquier error restante.
+- [ ] Llevar la rama con el mecanismo de B1 (`git bundle` + `scp`, sin subir a GitHub), compilar con MSBuild 18.6 (`Debug|x86`) en el directorio aparte. Errores de compilación: corregir en una ronda acotada; declarar cualquier error restante.
 - [ ] Revisión final con codex sobre el diff completo; una ronda de corrección máxima.
 - [ ] Informe: qué se verificó, qué no (humo manual en UI queda para el usuario), riesgos abiertos.
 - Los datos de acceso a la VM viven en `try-print-go/usqay-print-client/windows-test.yaml` (ignorado por git); nunca se imprimen ni se copian.
@@ -124,7 +134,7 @@ Prompt de arranque (ejemplo para el agente de T2): "Implementa la tarea T2 de `o
 
 ## Riesgos y decisiones
 
-- **Compilación tardía:** nadie compila hasta T7 y el proyecto no se puede compilar en Linux. Los errores se acumulan. Mitigación opcional: un punto de control de compilación en la VM tras T3 (requiere subir la rama).
+- **Compilación tardía:** el proyecto no se puede compilar en Linux. Mitigado: punto de control B1 tras T3 y build final en T7, ambos por SSH con `git bundle` (nada sube a GitHub).
 - **Modal dentro de modal** (`frmVentaCierreProgreso` sobre `frmCancelarPago`): debería funcionar con `ShowDialog(this)`; solo se confirma al compilar y probar en la VM.
 - **Cuerpos de SP/triggers**: leídos de la base local; la igualdad con producción no está verificada.
 - **Deadlocks con la ruta vieja:** el orden estable solo protege entre ventas de la ruta nueva. Un 1213 debe mostrarse con el mensaje exacto; el reintento automático es decisión del usuario.
