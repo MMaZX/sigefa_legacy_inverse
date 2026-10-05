@@ -122,6 +122,7 @@ Mecanismo (decidido por el usuario): **por SSH a la VM, sin subir nada a GitHub*
 ### T5 — Integración de crédito (opencode, ~4 min)
 `frmVenta2019.cs` en la rama de crédito (`:3590`): `if (VentaCierreRuta == "nueva") { ... frmVentaCierreProgreso ... } else { AdmVenta.insertComprobante(this.venta) ... }`. La rama `else` es el código actual **sin cambios**. Reutilizar `lista_facturas` y el `catch` existente para la compensación.
 - Aceptación: con el flag en `legacy` o ausente el comportamiento es idéntico.
+- [x] Implementada en `2a79c22` (2026-10-05): rama `nueva` en `guardaVenta` (crédito) con bloque + `ShowDialog(this)`, mismo flujo posterior (CodVenta, lista_facturas, impresión, FE); `else` legacy idéntico salvo indentación (`git diff -w` solo muestra agregados); clave `VentaCierreRuta=legacy` en `app.config`. Nota: el diálogo expone `fueExitoso` pero no el mensaje exacto (T4 sin modificar), así que ante fallo se relanza un error legible y el detalle MySQL queda en el diálogo (ya mostrado con Copiar detalle); el catch existente compensa con `lista_facturas`. Verificación funcional pendiente de compilación en la VM (T7, no se compila en Linux).
 
 ### T6 — Modo captura en contado (antigravity, ~12 min)
 `frmCancelarPago.cs`, solo con el flag `nueva` y solo para efectivo, tarjeta, banco y cheque:
