@@ -281,6 +281,10 @@ public class frmCancelarPago : Office2007Form
 	// Lista en memoria de borradores de pagos capturados.
 	public List<BorradorPago> borradoresPago { get; } = new List<BorradorPago>();
 
+	// Métodos de pago soportados en modo captura (ruta nueva). Cheque (7), nota de
+	// crédito (10) y pendiente (12) usan el flujo viejo (T10b/T11 habilitan 10 y 12).
+	private static readonly int[] metodosSoportadosEnCaptura = new int[] { 5, 6, 8, 9 };
+
 	public frmCancelarPago()
 	{
 		InitializeComponent();
@@ -647,7 +651,7 @@ public class frmCancelarPago : Office2007Form
 			// métodos y GuardaPagoPendiente es no-op en venta nueva (solo descuenta
 			// de un pago tipo 12 ya existente para esa factura). Cheque (7), nota de
 			// crédito (10) y pendiente (12) usan el flujo viejo con el aviso existente.
-			bool esMetodoSoportado = metodoSeleccionado == 5 || metodoSeleccionado == 6 || metodoSeleccionado == 8 || metodoSeleccionado == 9;
+			bool esMetodoSoportado = Array.IndexOf(metodosSoportadosEnCaptura, metodoSeleccionado) >= 0;
 			if (!esMetodoSoportado)
 			{
 				if (borradoresPago.Count > 0)
