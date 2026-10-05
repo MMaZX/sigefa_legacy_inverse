@@ -370,6 +370,8 @@ public class frmCancelarPago : Office2007Form
 		if (flagRuta == "nueva" && VentComp == 1 && tipo == 3 && venta != null && venta.CodFacturaVenta == null)
 		{
 			modoCaptura = true;
+			// Captura nueva: nunca arrastrar borradores de un uso anterior del formulario.
+			borradoresPago.Clear();
 		}
 		else
 		{
@@ -1321,7 +1323,8 @@ public class frmCancelarPago : Office2007Form
 
 				borradorCapturado = BorradorPago.desdePago(Pag);
 				borradoresPago.Add(borradorCapturado);
-				MessageBox.Show("Pago Realizado Correctamente", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+				// El pago solo está en memoria: se guarda junto con la venta al completar el total.
+				MessageBox.Show("Pago capturado. Se guardará junto con la venta cuando se complete el total.", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
 				txtMontoPendiente.Text = Convert.ToString(nuevoPendiente);
 			}
