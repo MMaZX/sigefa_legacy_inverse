@@ -77,6 +77,7 @@ Archivos nuevos en `SIGEFA.Administradores/VentaCierre/`:
 - `guardarFacturaVenta`, `guardarDetalle`, `guardarPago`: parámetros **exactos** de `docs/venta-cierre/contrato-sp.md` (sin `entregado_ex`). Mapear `newid`: cabecera inválida → `CabeceraNoCreada`; detalle `-1` → `StockInsuficiente`; `NULL` → `DetalleSinFactura`; pago `0` filas → `PagoNoCreado`.
 - Cada método envuelve su `ExecuteNonQuery` en `try/catch (MySqlException)` y lanza `VentaCierreException` con procedure, ítem, producto, `Number`, `SqlState` y `Message` exactos. Parámetros registrados sin secretos.
 - Aceptación: ninguna llamada a `MessageBox`; ningún `throw ex;`; cada SP con su comentario de qué espera y qué devuelve.
+- [x] Implementada en `7c0f619` (2026-10-05): `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs` con `bloquearSerie`, `bloquearStock` (orden estable ascendente de productoId y bloqueo por PK en productoalmacen), `guardarFacturaVenta` (55 params exactos), `guardarDetalle` (32 params exactos, mapeo newid: -1 StockInsuficiente, NULL DetalleSinFactura) y `guardarPago` (39 params exactos, 0 filas PagoNoCreado). Sin MessageBox, sin throw ex, envuelto en try/catch MySqlException hacia VentaCierreException.
 
 ### T3 — Servicio (antigravity, ~10 min)
 `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs`:
@@ -85,6 +86,7 @@ Archivos nuevos en `SIGEFA.Administradores/VentaCierre/`:
 - `ejecutarOrden(bloques, progreso)`: recorre un bloque por almacén (una transacción por bloque). Si el bloque k falla, compensa los bloques ya confirmados llamando a la anulación **existente** (`AnulandoVentaEnTryCatchGeneracionVenta` / `ValidaAnulacionVenta`); no se reescribe la anulación.
 - SUNAT, impresión y despacho **no** forman parte de la transacción (siguen después del commit, como hoy).
 - Aceptación: sin referencias a `System.Windows.Forms`; dependencias (repositorio, anulación) recibidas por constructor simple, sin contenedor.
+- [x] Implementada en `48c7b2a` (2026-10-05): `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` con `ejecutarBloque` (aislamiento RepeatableRead, orden estricto: serie -> stock -> cabecera -> detalle -> pago -> commit; rollback explícito ante cualquier excepción y registro en conexión aparte) y `ejecutarOrden` (recorrido multialmacén con compensación llamando a la anulación existente si falla el bloque k). Sin dependencias de System.Windows.Forms ni contenedor DI.
 
 ### RV-A — Revisión de T2+T3 (codex, solo lectura, ~5 min)
 Revisar el diff de T2 y T3 contra `docs/venta-cierre/contrato-sp.md`: orden y tipo de parámetros, orden de bloqueo, rollback en todos los caminos, ausencia de `TransactionScope`, `throw;`, nombres. Entregar lista de hallazgos con archivo:línea; **no editar**. Correcciones las hace antigravity (una ronda).
