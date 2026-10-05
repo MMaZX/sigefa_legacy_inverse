@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -20,6 +21,7 @@ using DevComponents.Editors.DateTimeAdv;
 using FinalXML.Librerias;
 using Microsoft.VisualBasic;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.VentaCierre;
 using SIGEFA.Data;
 using SIGEFA.Entidades;
 using SIGEFA.Librerias;
@@ -3587,23 +3589,74 @@ public class frmVenta2019 : Office2007Form
 							dtpFechaPago.Value = dtpFecha.Value.AddDays(fpago.Dias);
 							if (fpago.Dias > 0 && this.venta.CodTipoTransaccion == 7)
 							{
-								if (!AdmVenta.insertComprobante(this.venta))
+								// La ruta nueva cierra la venta con transacción explícita y muestra
+								// los errores exactos de MySQL. Con "legacy" o sin el flag se usa
+								// la ruta vieja sin ningún cambio.
+								string ventaCierreRuta = ConfigurationManager.AppSettings["VentaCierreRuta"];
+								if (ventaCierreRuta == "nueva")
 								{
-									throw new Exception("VENTA AL CREDITO INCOMPLETA\nOcurrio un error al guardar venta al credito.");
+									// Nombre del almacén para el encabezado del diálogo; si no se
+									// encuentra se deja vacío (el diálogo igual funciona).
+									string nombreAlmacenCierre = string.Empty;
+									foreach (DataRow filaAlmacen in aux.Rows)
+									{
+										if (filaAlmacen.ItemArray[0].ToString() == e.ToString())
+										{
+											nombreAlmacenCierre = filaAlmacen.ItemArray[1].ToString();
+											break;
+										}
+									}
+									// El bloque lleva la venta del almacén actual sin pagos (al
+									// crédito no hay cobro). El servicio asigna CodFacturaVenta y
+									// NumDoc a esta misma instancia tras el Commit.
+									VentaCierreService servicioCierre = new VentaCierreService();
+									VentaCierreDatosBloque bloqueCierre = new VentaCierreDatosBloque(this.venta, nombreAlmacenCierre);
+									List<VentaCierreDatosBloque> bloquesCierre = new List<VentaCierreDatosBloque>();
+									bloquesCierre.Add(bloqueCierre);
+									// El diálogo ejecuta la orden en un hilo de fondo y ya mostró el
+									// error exacto de MySQL con botón para copiarlo; si falló se
+									// relanza un error legible para que lo capture el catch actual
+									// y compense con lista_facturas los bloques ya confirmados.
+									frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre);
+									dialogoCierre.ShowDialog(this);
+									if (!dialogoCierre.fueExitoso)
+									{
+										throw new Exception("VENTA AL CREDITO INCOMPLETA\nOcurrio un error al guardar la venta al credito en la ruta nueva. El detalle exacto de MySQL se mostro en el dialogo de progreso.");
+									}
+									CodVenta = this.venta.CodFacturaVenta;
+									lista_facturas.Add(this.venta);
+									if (this.venta.FormaPago != 6)
+									{
+										toolStripImprimir.Visible = true;
+									}
+									if (!chkTicket.Checked)
+									{
+										await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
+										this.venta.Qr = facturacion.LogoEmp;
+									}
+									frmMensajeCredito men = new frmMensajeCredito();
+									men.ShowDialog();
 								}
-								CodVenta = this.venta.CodFacturaVenta;
-								lista_facturas.Add(this.venta);
-								if (this.venta.FormaPago != 6)
+								else
 								{
-									toolStripImprimir.Visible = true;
+									if (!AdmVenta.insertComprobante(this.venta))
+									{
+										throw new Exception("VENTA AL CREDITO INCOMPLETA\nOcurrio un error al guardar venta al credito.");
+									}
+									CodVenta = this.venta.CodFacturaVenta;
+									lista_facturas.Add(this.venta);
+									if (this.venta.FormaPago != 6)
+									{
+										toolStripImprimir.Visible = true;
+									}
+									if (!chkTicket.Checked)
+									{
+										await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
+										this.venta.Qr = facturacion.LogoEmp;
+									}
+									frmMensajeCredito men = new frmMensajeCredito();
+									men.ShowDialog();
 								}
-								if (!chkTicket.Checked)
-								{
-									await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
-									this.venta.Qr = facturacion.LogoEmp;
-								}
-								frmMensajeCredito men = new frmMensajeCredito();
-								men.ShowDialog();
 							}
 							else
 							{
