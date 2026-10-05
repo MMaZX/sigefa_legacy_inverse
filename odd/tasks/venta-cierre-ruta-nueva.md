@@ -117,6 +117,7 @@ Mecanismo (decidido por el usuario): **por SSH a la VM, sin subir nada a GitHub*
 - Lista de pasos con estado (pendiente, en curso, listo, error), encabezado "Bloque k/n (almacén)", y avance por ítem.
 - Ejecuta `await Task.Run(() => servicio.ejecutarOrden(...))` con `Progress<VentaCierreProgreso>` creado en el hilo de UI. Al error muestra **tal cual** paso, procedimiento, ítem, número y mensaje de MySQL, con botón "Copiar detalle" y botón "Cerrar" (habilitado solo al terminar).
 - Sin rediseño estético del resto del sistema. Depende solo de T1.
+- [x] Implementada en `dad00a7` (2026-10-05): `SIGEFA.Formularios/frmVentaCierreProgreso.cs` + `.Designer.cs`; modal FixedDialog sin ControlBox ni CancelButton, cierre bloqueado hasta terminar, lista de 7 pasos con estado, encabezado Bloque k/n, `Task.Run(ejecutarOrden)` con `Progress` en UI, error MySQL tal cual con Copiar detalle; verificación funcional pendiente de compilación en la VM (T7, no se compila en Linux).
 
 ### T5 — Integración de crédito (opencode, ~4 min)
 `frmVenta2019.cs` en la rama de crédito (`:3590`): `if (VentaCierreRuta == "nueva") { ... frmVentaCierreProgreso ... } else { AdmVenta.insertComprobante(this.venta) ... }`. La rama `else` es el código actual **sin cambios**. Reutilizar `lista_facturas` y el `catch` existente para la compensación.
