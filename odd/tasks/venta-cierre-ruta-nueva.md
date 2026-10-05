@@ -149,6 +149,130 @@ Revisar que la ruta vieja no cambió (diff solo agrega ramas detrás del flag), 
 - [ ] Informe: qué se verificó, qué no (humo manual en UI queda para el usuario), riesgos abiertos.
 - Los datos de acceso a la VM viven en `try-print-go/usqay-print-client/windows-test.yaml` (ignorado por git); nunca se imprimen ni se copian.
 
+### T8 — Contador de ítems y scroll en `frmVenta2019` (agregada 2026-10-05, a pedido del usuario durante la prueba en VM)
+- **Alcance:** solo `SIGEFA.Formularios/frmVenta2019.cs`. Sin tocar servicio, repositorio ni `frmCancelarPago`.
+- **Contador:** no se toca ninguno de los ~12 puntos que mutan `dgvdetalle` (líneas 1396, 2099, 3256, 4896–4908, 5492, 5830, 5957…). Se suscribe `RowsAdded`/`RowsRemoved` (cubre agregar, actualizar por recarga, quitar y `Rows.Clear()`) a un único método `ActualizarContadorItems()` que escribe "Ítems: N" y, como dato adicional, la suma de cantidades. Ubicación propuesta: dentro del groupBox "DETALLE ORDEN" (`groupBox3`, 878×153, `Anchor` Top|Left|Right) en el borde inferior o en el título, sin mover controles existentes.
+- **Scroll:** `dgvdetalle` ya tiene scroll propio; el panel que queda corto es otro. Pendiente confirmar cuál (candidato: `groupBox10` "DETALLE PRODUCTO", 475×114, con `dgvStockAlmacenes`). Solución prevista: `AutoScroll = true` en el contenedor, sin cambiar tamaños ni `Dock` de sus hijos. Aplica solo con la confirmación del usuario.
+- **Riesgo:** el form es de layout absoluto y decompilado (`.Designer` embebido en el `.cs`); un control nuevo mal anclado puede solaparse a otra resolución. Mitigación: `Anchor` Bottom|Right, valor inicial "Ítems: 0", y prueba visual en la VM.
+- **Comportamiento con flag:** independiente de `VentaCierreRuta`; es solo presentación.
+- [ ] Implementar (pendiente de confirmar el panel del scroll). Verificación: compilar en VM (T7) y prueba visual con 1, 12 y 30 ítems.
+- **Pospuesta por el usuario (2026-10-05):** es de diseño, no bloquea. No tomar hasta nueva orden.
+
+## Ampliación de métodos de pago en captura (T13d [ex T9], T10a, T10b, T11, T12, agregada 2026-10-05, a pedido del usuario)
+
+**Decisión del usuario:** probar en la ruta nueva efectivo, depósito, transferencia, nota de crédito y pendiente. **Depósito por cheque (7) se queda en el flujo viejo** (sin lógica nueva). Tarjeta (8) entra porque comparte mecánica con 6 y 9.
+
+**Evidencia (mapeo de solo lectura, 2026-10-05, BD local 3307; igualdad con producción NO verificada):**
+- `GuardaPagoPendiente` solo descuenta de un pago tipo 12 ya existente para esa factura: en venta nueva es no-op. La restricción de T6 a solo efectivo era sobre-conservadora para 6, 8 y 9. `GuardaPago` ya inserta `ctactemovimientos` para 6–9.
+- **Nota de crédito (10):** todos los efectos reales ocurren en el trigger `ActualizaNotaInsertPago` (AFTER INSERT en `pago`): descuenta `notacredito.pendiente/abonado`, marca `cancelado`, setea `factura_venta.codNotaCredito`, inserta `cajamovimiento` tipo 10. Corre en la transacción del servicio; **no hay nada post-commit**. `ActualizaPendienteCredito` y `ActualizaNCreditoVentaSinAplicar` de la ruta vieja son código muerto (`notaI` nunca se llena, afectan 0 filas): no se replican. `BorradorPago` y `guardarPago` ya llevan `notacre` y `codnotac`.
+- **Riesgos NC:** (1) `Pag` es campo único y nunca se resetea: tras una NC, un efectivo capturado después saldría con `notacre=1` y la misma `codnotac` (consumiría la NC dos veces). (2) No hay reserva: se puede elegir la misma NC dos veces en la misma captura, o dos cajeros a la vez; el trigger recorta a 0 en silencio (sobre-consumo sin error). Falta `SELECT pendiente FROM notacredito WHERE codNotaI=? FOR UPDATE` dentro de la transacción y validar monto <= pendiente.
+- **Pendiente (12):** no requiere cambios de cabecera (`guardarFacturaVenta` no envía `cancelado`; `pendiente = total`, igual que la ruta vieja). El trigger no toca `abonado/pendiente/cancelado` para tipo 12; crea `pago` 12 + `cajamovimiento` 12. Solo falta habilitarlo. Borde: un 12 seguido de otro método obligaría a replicar `GuardaPagoPendiente` en la transacción.
+- Saldo de cuenta del método 9: no aplica en contado (`tipo==3`), tampoco en la ruta vieja.
+
+**Supuestos adoptados (el usuario puede revertirlos):**
+1. **12 solo como último borrador**: se exige `txtMontoPago == txtMontoPendiente` al elegir 12, así nunca hay un 12 previo a otro método y no hace falta replicar `GuardaPagoPendiente`.
+2. La NC se bloquea con `FOR UPDATE` dentro de la transacción (cambia una carrera que ya existe, pero ahora con ventana más larga).
+3. Revalidar la caja al commitear queda **fuera de alcance** (hoy se lee al capturar).
+4. Depósito por cheque (7) conserva el aviso y el flujo viejo.
+
+**Ruta de ejecución declarada:** T13d (ex T9) → opencode (delegado, un archivo, mecánico); T10a, T10b → antigravity (núcleo transaccional); T11 → opencode; RV-C → codex (solo lectura, vía claude); T12 → claude (build en VM + informe). Disparadores: T10a toca 4 archivos no triviales; T13d/T10b/T11 comparten `frmCancelarPago.cs` (un solo escritor a la vez sobre ese archivo).
+
+**Prioridad (decidida por el usuario, 2026-10-05): T13a/T13b (pasos post-cierre visibles y registro de errores) van ANTES del trabajo de métodos de pago (T10a, T10b, T11). Excepción aprobada por el usuario: T13d (ex T9, un cambio de ~5 líneas en `frmCancelarPago.cs`) se adelanta y corre en paralelo con T13a porque no comparten archivos.** El orden queda así:
+
+```
+1. T13a (agy: VentaCierre/* + diálogo) ─> T13b (agy: frmVenta2019 + Facturacion) ─> T13c (agy: cierre multialmacén atómico) ─> B1' (build VM + prueba del usuario)
+2. Recién entonces métodos de pago:
+   agy:      T10a (VentaCierre/*) ─> T10b (frmCancelarPago)
+   opencode: T13d [ex T9] (frmCancelarPago; en paralelo con T13a) ─> T11 (frmCancelarPago)
+   B2 (build VM) ─> RV-C (codex) ─> T12 (claude, build final)
+```
+T13a y T13b se serializan (comparten `VentaCierre/*` y el flujo de `guardaVenta`). T13d corre en paralelo con T13a (archivos disjuntos, `git add <rutas>` explícitas y commits secuenciales). Una vez cerrado T13, T10a (agy) puede correr en paralelo con lo que quede de opencode. T10b y T11 esperan a T13d y a T10a.
+
+### T13a — Pasos "Después de guardar" y registro de errores por paso (antigravity, ~15 min)
+**Decisiones del usuario (2026-10-05):** las 4 acciones que hoy corren al pulsar "Cerrar" deben ser pasos visibles; ninguna anula la venta; hay que saber **por qué** falló cada una.
+
+**Orden de los pasos post-cierre** (el despacho primero; la impresión después de la facturación electrónica porque el comprobante impreso lleva el QR/firma de `venta.Qr`, que sale de `facturacion.LogoEmp`):
+1. Crear despacho (se muestra "Omitido: sin requerimiento" si el pedido no tiene; hoy crea e imprime el despacho, se conserva).
+2. Guardar código de barras del pedido (`GuardaCodigoBarras`: UPDATE de `pedidosventa.codigobarras`; es solo una etiqueta).
+3. Generar y firmar comprobante electrónico (XML, firma, PDF, `registrar_repositorio`; **no envía a SUNAT**, eso es `frmEnvioSunat`).
+4. Imprimir comprobante (`fnImprimir`; dos copias, se conserva).
+
+**Alcance:** `SIGEFA.Administradores/VentaCierre/*` (archivos nuevos) y `SIGEFA.Formularios/frmVentaCierreProgreso.cs` (+ Designer). Sin tocar `frmVenta2019` ni `Facturacion.cs` (eso es T13b).
+- **Modelo (separado del enum transaccional):** `VentaCierrePostPaso` (crearDespacho, guardarCodigoBarras, generarComprobanteElectronico, imprimirComprobante) con estados Pendiente / En curso / Listo / **Advertencia** / Omitido.
+- **Errores por paso (uno o más):** clase `ErrorPaso` con paso, hora, tipo de excepción, mensaje, causa interna, `StackTrace` y contexto (factura id, serie-número, almacén, pedido, usuario). Cada paso acumula una lista (`List<ErrorPaso>`); un paso con 1+ errores queda en Advertencia, nunca aborta los siguientes ni anula la venta.
+- **Registro:** clase `VentaCierreRegistroErrores` que escribe en el mismo archivo `%LOCALAPPDATA%\SIGEFA\venta_cierre_errores.log`, mismo formato y enmascarado de credenciales que `VentaCierreService.registrarErrorLocal` (extraer la lógica; este es el único escritor del servicio en este momento). Sin abrir conexión a BD ni tabla nueva (tabla = cambio de esquema compartido, fuera de alcance).
+- **Diálogo:** segunda sección "Después de guardar" con las 4 filas y el estado Advertencia (color ámbar); la fila muestra el primer error resumido; "Copiar detalle" incluye **todos** los errores de **todos** los pasos. "Cerrar" se habilita solo al terminar todo. El diálogo recibe del formulario la lista de acciones (nombre + delegado asincrónico) y las ejecuta en el hilo UI, sin conocer `frmVenta2019`. `fueExitoso` no cambia por advertencias.
+- **Renombrados:** "Guardar cabecera" → "Guardar venta" (`VentaCierrePasoTexto`, `VentaCierrePaso.cs:51`) y el texto de progreso de `VentaCierreService.cs:211` → "Guardando la venta...".
+- [x] Implementada en `22bf183` (2026-10-05): `VentaCierrePostPaso` y `VentaCierreEstadoPaso` con estados Pendiente, En curso, Listo, Advertencia (en ámbar), Omitido; `ErrorPaso` con campos de excepción y contexto (factura id, serie-número, almacén, pedido, usuario); `VentaCierreRegistroErrores` para `%LOCALAPPDATA%\SIGEFA\venta_cierre_errores.log` con enmascarado de credenciales, extrayendo la lógica de `VentaCierreService.registrarErrorLocal`; diálogo `frmVentaCierreProgreso` con segunda sección "Después de guardar", ejecución de acciones asincrónicas en hilo UI sin conocer `frmVenta2019`, fila con primer error resumido, "Copiar detalle" con todos los errores de todos los pasos, "Cerrar" habilitado solo al terminar y advertencias sin abortar ni alterar `fueExitoso`; renombrado de "Guardar cabecera" a "Guardar venta" en `VentaCierrePasoTexto` y progreso "Guardando la venta...". Verificación: pendiente de compilación en VM (B2).
+
+### T13b — Conectar los pasos post-cierre y limpiar la vista al cerrar (antigravity, ~15 min, después de T13a)
+**Alcance:** `SIGEFA.Formularios/frmVenta2019.cs` (solo ramas con flag `nueva`, contado y crédito, que comparten el flujo posterior) y `SIGEFA.SunatFacElec/Facturacion.cs`.
+- Sacar de `guardaVenta()` (ruta nueva) las 4 acciones y pasarlas al diálogo como delegados en el orden de T13a. La ruta legacy queda **idéntica**.
+- **Capturar los errores hoy tragados:** `Facturacion.GeneraDocumento` muestra `MessageBox` y sigue; agregar un colector opcional (`Action<string, Exception>`) que, si está presente (solo ruta nueva), recibe cada error además de/en lugar del `MessageBox`; con `null` el comportamiento es el actual. Lo mismo para `fnImprimir` y `CreacionDespacho` (errores hoy en `MessageBox` o try propio).
+- `GuardaCodigoBarras` con try propio **por pedido** y su error como advertencia: en la ruta nueva **no se anula la venta** por este paso (el `catch` general sigue protegiendo fallos del servicio).
+- **Al pulsar "Cerrar"** (cuando el diálogo vuelve): llamar `limpiarVentana()` (`:2069`) y reiniciar `venta`, `lista_facturas`, `CodVenta` y `PedidosIngresados`, para que el formulario quede listo para "Iniciar OV". `limpiarVentana()` no los reinicia por sí sola. Consecuencia: el botón Imprimir deja de servir para reimprimir esa venta tras cerrar.
+- **Riesgo conocido:** `guardaVenta` es `async void` y se llama sin `await` (`:2989`, `:2999`); no cambiar su firma ni el flujo de quien la llama. Revisar en RV-C.
+- **Preparar T13c (obligatorio):** encapsular las 4 acciones post-cierre en un método auxiliar que recibe el bloque (venta, detalle1, cliente, pedidos) y devuelve los delegados, **sin depender del `foreach` de almacenes**. T13c reordenará el recorrido en tres fases y reutilizará ese método por documento; no deben quedar acciones post-cierre pegadas al cuerpo del `foreach`.
+- [ ] Implementar. Verificación: compilar en VM. Humo manual: (a) venta normal: las 4 filas pasan a Listo y el formulario queda limpio; (b) forzar fallas (certificado de FE inaccesible, impresora ausente, pedido sin requerimiento): la venta queda intacta, la fila va en ámbar y el error aparece en "Copiar detalle" y en el log.
+
+### T13c — Cierre multialmacén atómico: un bloque por almacén en una sola transacción (antigravity, ~20 min, después de T13b)
+**Problema observado por el usuario (2026-10-05, prueba en VM):** con productos de almacenes distintos (p.ej. D36 FR y D36 LM) `guardaVenta()` recorre `foreach (object e in alma)` (`frmVenta2019.cs:3548`) y por cada almacén arma la venta, abre el pago, guarda su transacción y factura **antes** de pasar al siguiente. FR queda guardada y facturada antes de pedir el pago de LM; si el cajero cancela en LM, el `catch` (`:3771`) no hace rollback sino que **anula por compensación** (documento anulado + numeración consumida). Comportamiento deseado: **un bloque por empresa, todos en una sola transacción**; si algo falla o se cancela, no se crea ninguno.
+
+**Alcance:** `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` (método nuevo), `SIGEFA.Formularios/frmVentaCierreProgreso.cs` (+ Designer, para N bloques) y `SIGEFA.Formularios/frmVenta2019.cs` (solo la rama `nueva`). Ruta legacy intacta (conserva el recorrido y la compensación actuales). No toca el repositorio salvo que sea imprescindible (reusar `bloquearSerie`, `bloquearStock`, `guardarFacturaVenta`, `guardarDetalle`, `guardarPago`).
+
+**Tres fases en `guardaVenta()` (ruta nueva):**
+1. **Preparar (sin escribir en la BD):** por cada almacén armar el bloque (`obtenerDatosVenta`, `ArmaCabecera`, serie, `RecorreDetalleVenta`). Verificar que ninguna de esas llamadas escriba en la BD; si alguna lo hace, reportarlo y detenerse.
+2. **Cobrar (solo contado):** abrir `frmCancelarPago` (modo captura) **uno tras otro** y acumular los `BorradorPago` de cada bloque en memoria. Cada comprobante conserva su monto y su serie. Si el cajero cancela en cualquiera, se aborta toda la venta con un mensaje claro y **no se guarda nada**. En crédito esta fase no existe.
+3. **Guardar:** una sola llamada atómica al servicio con todos los bloques y un único diálogo de progreso; después, por documento, los pasos post-cierre de T13a/T13b.
+
+**Servicio — `ejecutarOrdenAtomica(IList<VentaCierreDatosBloque>, IProgress<...>)`:**
+- Una conexión y una transacción (`RepeatableRead`, como hoy) para todos los bloques; un solo `Commit`.
+- Orden de bloqueo global y estable para evitar deadlocks entre ventas concurrentes: primero **todas** las series (distintas, ascendentes por `serieId`), luego **todo** el stock (ascendente por `almacenId` y `productoId`), y recién después, bloque por bloque: cabecera, detalle y pagos.
+- Si dos bloques usan la misma serie, la numeración debe avanzar correlativa dentro de la transacción: confirmar con `GuardaFacturaVenta` cómo asigna el número y probarlo.
+- Cualquier excepción: `Rollback` completo, entidades restauradas (ids asignados solo tras `Commit`, como hoy), error registrado con `VentaCierreRegistroErrores` indicando bloque y paso. Sin compensación en la ruta nueva.
+- Reportar el avance con bloque k/n (el DTO ya trae `bloqueActual` y `totalBloques`).
+
+**Diálogo para N bloques:** la lista de pasos transaccionales debe mostrarse sin confundir: series y stock una vez (globales) y luego guardar venta / detalle / pagos por bloque, con el almacén en el encabezado. La sección "Después de guardar" lista las acciones **por documento** (nombre con el almacén). Con un solo bloque se ve igual que hoy. Cuidado: `marcarPasosHasta` compara el valor numérico del enum; hay que adaptarlo a pasos repetidos por bloque.
+
+**Reemplaza** el límite aceptado en la revisión final ("el cierre no es atómico entre almacenes") **solo para la ruta nueva**.
+**Riesgos aceptados:** transacción más larga (las filas de serie y stock quedan bloqueadas más tiempo para otras cajas); si falla un bloque no se guarda ninguno y la venta completa se reintenta; los fallos post-cierre de un documento no afectan al otro.
+- [ ] Implementar. Verificación: compilar en VM. Humo manual con productos de dos almacenes: (a) caso feliz: dos pagos, un solo diálogo, dos comprobantes; (b) cancelar el pago del segundo almacén: **no queda ninguna fila** en `factura_venta`, sin anulaciones y sin numeración consumida; (c) fallo forzado en el segundo bloque (p.ej. stock insuficiente): el primero tampoco se guarda; (d) venta de un solo almacén: igual que antes.
+
+### T13d (ex T9) — Habilitar efectivo, depósito, tarjeta y transferencia en captura (opencode, ~5 min, en paralelo con T13a)
+- **Alcance:** solo `SIGEFA.Formularios/frmCancelarPago.cs`, bloque de `btnAceptar_Click` (~l.642-662).
+- `esMetodoSoportado` pasa a `5, 6, 8, 9`. El 7 (depósito por cheque), 10 y 12 siguen con el aviso y el flujo viejo (T10b/T11 habilitan 10 y 12).
+- Actualizar el comentario (ya no es cierto que `GuardaPagoPendiente` bloquee: es no-op en venta nueva; ver Evidencia). Mantener el bloqueo de mezcla de borradores con métodos no soportados.
+- No tocar servicio, repositorio ni `BorradorPago`. Confirmar que `Pag.codCtaCte`, `CtaCte`, `CodBanco`, `CodTarjeta`, `NOperacion` viajan al borrador (ya lo hace `desdePago`).
+- [ ] Implementar. Verificación: compilar en VM (B2). Humo manual: un depósito, una transferencia, una tarjeta y un pago mixto efectivo + transferencia; revisar `pago` y `ctactemovimientos` en la BD local.
+
+### T10a — Reserva y validación de nota de crédito en el servicio (antigravity, ~12 min)
+- **Alcance:** `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs`, su interfaz, `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` y `VentaCierrePaso.cs`. Sin UI.
+- Paso nuevo **antes de `guardarPago`** (orden estricto: serie → stock → cabecera → detalle → **notas de crédito** → pago → commit): por cada `notaCreditoId` distinto en los borradores, `SELECT pendiente FROM notacredito WHERE codNotaI=? FOR UPDATE` y validar que la suma de `montoCobrado` de los borradores que la usan sea `<=` pendiente. Ante falla: `VentaCierreException` con paso nombrado y rollback existente; registrar el nombre del paso en `obtenerNombreProcedimiento`.
+- Sin cambios si ningún borrador lleva NC (ruta de efectivo idéntica).
+- [ ] Implementar. Verificación: compilar en VM (B2).
+
+### T10b — Habilitar nota de crédito en captura (antigravity, ~8 min, después de T13d)
+- **Alcance:** `frmCancelarPago.cs` (y opcionalmente `frmListaNCreditosSinAplicar.cs`).
+- Incluir 10 en `esMetodoSoportado`.
+- **Resetear `Pag.NotaCredito` y `Pag.CodNotaCredito` a 0** al capturar cualquier método distinto de 10 (hoy `Pag` nunca se limpia).
+- Impedir elegir la misma NC dos veces en `borradoresPago` (o restar lo ya capturado del pendiente mostrado en la lista).
+- No replicar `ActualizaPendienteCredito`/`ActualizaNCreditoVentaSinAplicar` (código muerto, ver Evidencia).
+- [ ] Implementar. Verificación: compilar en VM; humo manual con una NC cuyo pendiente cubra y no cubra la venta; mixto NC + efectivo; comprobar `notacredito.pendiente/abonado/cancelado` y `factura_venta.codNotaCredito` en BD local.
+
+### T11 — Habilitar pendiente (12) en captura (opencode, ~5 min, después de T10b)
+- **Alcance:** `frmCancelarPago.cs`.
+- Incluir 12 en `esMetodoSoportado`. La confirmación "Esta seguro de cobrar con esta método de pago?" ya existe (l.663): conservarla.
+- Al elegir 12 exigir `txtMontoPago == txtMontoPendiente` (12 siempre último borrador, supuesto 1); si no, mensaje claro y no capturar.
+- Verificar que `frmVenta2019` no necesita cambios (el mapeo dice que no trata el 12 de forma especial) y que el cobro posterior desde `frmCobros` (`tipo=3`, `vieneDe="frmCobros"`) sigue funcionando con la venta creada por la ruta nueva.
+- [ ] Implementar. Verificación: compilar en VM; humo manual: venta a pendiente y luego cobro desde `frmCobros`; comprobar `pago` tipo 12, `cajamovimiento` tipo 12 y `caja.totalpendiente`.
+
+### RV-C — Revisión de T13d y T10a–T11 (codex, solo lectura, ~5 min)
+Revisar que la ruta vieja y el efectivo no cambian con flag ausente o `legacy`, que el 7 sigue en flujo viejo, que la NC no se consume dos veces y que el 12 solo puede ser el último borrador.
+
+### T12 — Build final, revisión e informe (claude, ~8 min)
+- [ ] Build en la VM (`Debug|x86`, directorio aparte `sigefa_build`) tras T13d (B2) y tras T11; registrar errores completos.
+- [ ] Informe: tabla método → ruta (nueva/vieja), qué se verificó, qué queda para humo manual, riesgos abiertos.
+
 ## Protocolo de traspaso entre agentes (obligatorio)
 
 Cada agente, al empezar: `mem_context` → `mem_search "venta-cierre-ruta-nueva"` → leer este archivo y `docs/venta-cierre/contrato-sp.md`. Trabaja **solo** en los archivos de su tarea. Al terminar: commit convencional, marcar la casilla con hash y evidencia, actualizar el espejo Engram (`mem_update` del tópico `odd/venta-cierre-ruta-nueva/tasks`) y **detenerse**. No toma tareas de otro agente. Si la tarea exige tocar un archivo fuera de su alcance, se detiene y lo reporta.
