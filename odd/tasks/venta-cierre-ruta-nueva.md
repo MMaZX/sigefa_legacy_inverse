@@ -106,6 +106,11 @@ Mecanismo (decidido por el usuario): **por SSH a la VM, sin subir nada a GitHub*
   - [x] Corregido en `0fc589c` (2026-10-05): CS0051 resuelto con constructor `internal`; Hallazgo 1 reporta bloques sin compensar en la excepción conservando causa original; Hallazgo 2 escribe en `%LOCALAPPDATA%\SIGEFA\venta_cierre_errores.log` sin abrir conexión extra; Hallazgo 3 revalida almacén/producto con `FOR UPDATE` en la misma lectura bloqueante; Hallazgo 5 asigna ids a entidades solo tras `Commit` y restaura al abortar; Hallazgo 6 preserva cadena vacía en `DocumentoReferencia` (solo `null` envía `DBNull.Value`).
   - [x] Microronda en `VentaCierreService` (`69d8786`, 2026-10-05): validación de colección Detalle (null o elemento null) dentro del flujo protegido reportando `VentaCierreException`; bloque confirmado sin venta o id registrado como no compensado con índice en excepción final; enmascaramiento de credenciales (`Pwd`/`Password`/`Uid`/`User Id`) en log local.
 
+#### Verificación tras la corrección (claude, 2026-10-05)
+- **B1b** sobre `9eb0553` y **B1c** sobre `409aafa` (incluye la microronda `69d8786`): MSBuild `Debug|x86` en la VM, `exit=0`, **0 errores**, 0 warnings en `VentaCierre`.
+- **RV-A2 (codex, sobre `0fc589c`):** resueltos CS0051, bloqueo de stock, asignación tras `Commit` y `DocumentoReferencia`; parciales compensación y log, más un caso de detalle nulo → corregidos en la microronda `69d8786` y revisados por diff por claude (sin segunda pasada de codex, por tratarse de un solo archivo). Riesgo abierto aceptado: la anulación vía `clsAdmFacturaVenta` puede mostrar `MessageBox` (revisar en T5).
+- Compilar no prueba funcionamiento: nada se ejecutó contra la base.
+
 ### T4 — Diálogo tasklist (opencode, ~10 min, en serie en esta rama)
 `SIGEFA.Formularios/frmVentaCierreProgreso.cs` (+ `.Designer.cs`):
 - Modal con `FormBorderStyle=FixedDialog`, `ControlBox=false`, `ShowInTaskbar=false`; sin `CancelButton`; `FormClosing` con `e.Cancel = true` mientras no haya terminado (cubre X, Alt+F4 y `Close()`).
