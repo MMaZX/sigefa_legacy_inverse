@@ -3660,6 +3660,7 @@ public class frmVenta2019 : Office2007Form
 							}
 							else
 							{
+								string ventaCierreRutaContado = ConfigurationManager.AppSettings["VentaCierreRuta"];
 								frmCancelarPago form = new frmCancelarPago();
 								form.VentComp = 1;
 								form.tipo = 3;
@@ -3676,19 +3677,60 @@ public class frmVenta2019 : Office2007Form
 									}
 									if (!form.ventaRecibida)
 									{
-										lista_facturas.Add(this.venta);
+										if (ventaCierreRutaContado != "nueva" || !form.modoCaptura)
+										{
+											lista_facturas.Add(this.venta);
+										}
 										throw new Exception("Ocurrió un problema al registrar la venta en el formulario de pagos.");
 									}
-									CodVenta = this.venta.CodFacturaVenta;
-									lista_facturas.Add(this.venta);
-									if (this.venta.FormaPago != 6)
+									if (ventaCierreRutaContado == "nueva" && form.modoCaptura)
 									{
-										toolStripImprimir.Visible = true;
+										// Nombre del almacén para el encabezado del diálogo de progreso.
+										string nombreAlmacenCierre = string.Empty;
+										foreach (DataRow filaAlmacen in aux.Rows)
+										{
+											if (filaAlmacen.ItemArray[0].ToString() == e.ToString())
+											{
+												nombreAlmacenCierre = filaAlmacen.ItemArray[1].ToString();
+												break;
+											}
+										}
+										// El bloque agrupa la venta y los pagos capturados en memoria para persistirlos en una sola transacción.
+										VentaCierreService servicioCierre = new VentaCierreService();
+										VentaCierreDatosBloque bloqueCierre = new VentaCierreDatosBloque(this.venta, nombreAlmacenCierre, form.borradoresPago);
+										List<VentaCierreDatosBloque> bloquesCierre = new List<VentaCierreDatosBloque>();
+										bloquesCierre.Add(bloqueCierre);
+										frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre);
+										dialogoCierre.ShowDialog(this);
+										if (!dialogoCierre.fueExitoso)
+										{
+											throw new Exception("VENTA AL CONTADO INCOMPLETA\nOcurrio un error al guardar la venta y los pagos al contado en la ruta nueva. El detalle exacto de MySQL se mostro en el dialogo de progreso.");
+										}
+										CodVenta = this.venta.CodFacturaVenta;
+										lista_facturas.Add(this.venta);
+										if (this.venta.FormaPago != 6)
+										{
+											toolStripImprimir.Visible = true;
+										}
+										if (!chkTicket.Checked)
+										{
+											await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
+											this.venta.Qr = facturacion.LogoEmp;
+										}
 									}
-									if (!chkTicket.Checked)
+									else
 									{
-										await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
-										this.venta.Qr = facturacion.LogoEmp;
+										CodVenta = this.venta.CodFacturaVenta;
+										lista_facturas.Add(this.venta);
+										if (this.venta.FormaPago != 6)
+										{
+											toolStripImprimir.Visible = true;
+										}
+										if (!chkTicket.Checked)
+										{
+											await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
+											this.venta.Qr = facturacion.LogoEmp;
+										}
 									}
 								}
 							}

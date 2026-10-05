@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Configuration;
 using System.Drawing;
 using System.Linq;
 using System.Net;
@@ -11,6 +12,7 @@ using CrystalDecisions.CrystalReports.Engine;
 using DevComponents.DotNetBar;
 using DevComponents.DotNetBar.Validator;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.VentaCierre;
 using SIGEFA.Entidades;
 using SIGEFA.Reportes;
 using SIGEFA.Reportes.clsReportes;
@@ -273,6 +275,12 @@ public class frmCancelarPago : Office2007Form
 
 	public bool caja_aperturada { get; set; }
 
+	// Modo captura de contado para la ruta nueva (transacción única de venta + pagos).
+	public bool modoCaptura { get; private set; }
+
+	// Lista en memoria de borradores de pagos capturados.
+	public List<BorradorPago> borradoresPago { get; } = new List<BorradorPago>();
+
 	public frmCancelarPago()
 	{
 		InitializeComponent();
@@ -358,6 +366,15 @@ public class frmCancelarPago : Office2007Form
 		ventana_cobro = true;
 		ventaRecibida = false;
 		caja_aperturada = true;
+		string flagRuta = ConfigurationManager.AppSettings["VentaCierreRuta"];
+		if (flagRuta == "nueva" && VentComp == 1 && tipo == 3 && venta != null && venta.CodFacturaVenta == null)
+		{
+			modoCaptura = true;
+		}
+		else
+		{
+			modoCaptura = false;
+		}
 		cargaMoneda();
 		CargarBancos();
 		CargarTarjetas();
@@ -366,6 +383,10 @@ public class frmCancelarPago : Office2007Form
 		txtMora.Text = "0.00";
 		if (tipo == 100)
 		{
+			if (flagRuta == "nueva")
+			{
+				MessageBox.Show("El pago con letras no está soportado en la ruta nueva de cierre de venta. Se utilizará el flujo tradicional para esta operación.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			}
 			CargaNotaCredito();
 			Text = "DEVOLVER PAGO";
 		}
@@ -616,6 +637,27 @@ public class frmCancelarPago : Office2007Form
 		{
 			return;
 		}
+		if (modoCaptura)
+		{
+			int metodoSeleccionado = Convert.ToInt32(cmbMetodoPago.SelectedValue);
+			// Métodos soportados en modo captura: 5 (Efectivo), 6 (Banco), 7 (Cheque), 8 (Tarjeta), 9 (Banco/CtaCte)
+			bool esMetodoSoportado = metodoSeleccionado == 5 || metodoSeleccionado == 6 ||
+			                         metodoSeleccionado == 7 || metodoSeleccionado == 8 ||
+			                         metodoSeleccionado == 9;
+			if (!esMetodoSoportado)
+			{
+				if (borradoresPago.Count > 0)
+				{
+					MessageBox.Show("No se pueden combinar pagos en borrador con métodos de persistencia directa (nota de crédito o pendiente). Complete el pago con los métodos permitidos o cancele la operación.", "Operación no permitida", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+					return;
+				}
+				else
+				{
+					MessageBox.Show("El método de pago seleccionado no está soportado en la ruta nueva de cierre de venta. Se utilizará el flujo tradicional para esta venta.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					modoCaptura = false;
+				}
+			}
+		}
 		if (Convert.ToInt32(cmbMetodoPago.SelectedValue) == 12)
 		{
 			DialogResult validaPago = MessageBox.Show("Esta seguro de cobrar con esta método de pago?", "Pago", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -625,7 +667,7 @@ public class frmCancelarPago : Office2007Form
 				return;
 			}
 		}
-		if (VentComp != 2 && tipo != 1)
+		if (!modoCaptura && VentComp != 2 && tipo != 1)
 		{
 			if (venta.CodFacturaVenta == null)
 			{
@@ -944,7 +986,7 @@ public class frmCancelarPago : Office2007Form
 							return;
 						}
 						montoPag = 1;
-						Pag.CodNota = venta.CodFacturaVenta.ToString();
+						Pag.CodNota = (!modoCaptura && venta.CodFacturaVenta != null) ? venta.CodFacturaVenta.ToString() : "";
 						Pag.CodLetra = letra.CodLetra;
 						Pag.CodTipoPago = Convert.ToInt32(cmbMetodoPago.SelectedValue);
 						Pag.CodMoneda = Convert.ToInt32(cmbMoneda.SelectedValue);
@@ -1063,7 +1105,7 @@ public class frmCancelarPago : Office2007Form
 						}
 						return;
 					}
-					Pag.CodNota = venta.CodFacturaVenta.ToString();
+					Pag.CodNota = (!modoCaptura && venta.CodFacturaVenta != null) ? venta.CodFacturaVenta.ToString() : "";
 					Pag.CodLetra = letra.CodLetra;
 					Pag.CodTipoPago = Convert.ToInt32(cmbMetodoPago.SelectedValue);
 					Pag.CodMoneda = Convert.ToInt32(cmbMoneda.SelectedValue);
@@ -1125,7 +1167,7 @@ public class frmCancelarPago : Office2007Form
 						}
 						Pagar();
 						btnImprimir.Visible = false;
-						if (Pag.CodTipoPago != 12)
+						if (!modoCaptura && Pag.CodTipoPago != 12)
 						{
 							Admpag.insertPagoPendiente(Pag);
 						}
@@ -1138,7 +1180,7 @@ public class frmCancelarPago : Office2007Form
 							return;
 						}
 						Pagar();
-						if (Pag.CodTipoPago != 12)
+						if (!modoCaptura && Pag.CodTipoPago != 12)
 						{
 							Admpag.insertPagoPendiente(Pag);
 						}
@@ -1152,7 +1194,7 @@ public class frmCancelarPago : Office2007Form
 						}
 						Pagar();
 						btnImprimir.Visible = false;
-						if (Pag.CodTipoPago != 12)
+						if (!modoCaptura && Pag.CodTipoPago != 12)
 						{
 							Admpag.insertPagoPendiente(Pag);
 						}
@@ -1188,7 +1230,7 @@ public class frmCancelarPago : Office2007Form
 					else
 					{
 						Pagar();
-						if (Pag.CodTipoPago != 12 && pagoventa == 0)
+						if (!modoCaptura && Pag.CodTipoPago != 12 && pagoventa == 0)
 						{
 							Admpag.insertPagoPendiente(Pag);
 						}
@@ -1255,13 +1297,21 @@ public class frmCancelarPago : Office2007Form
 			{
 				Pag.Aprobado = 1;
 			}
-			if (Admpag.insert(Pag))
+			if (modoCaptura)
 			{
+				borradoresPago.Add(BorradorPago.desdePago(Pag));
 				MessageBox.Show("Pago Realizado Correctamente", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-				if (tip == 3)
+			}
+			else
+			{
+				if (Admpag.insert(Pag))
 				{
+					MessageBox.Show("Pago Realizado Correctamente", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+					if (tip == 3)
+					{
+					}
+					cargaPago(Pag);
 				}
-				cargaPago(Pag);
 			}
 			txtMontoPendiente.Text = Convert.ToString(Convert.ToDecimal(txtMontoPendiente.Text) - Convert.ToDecimal(txtMontoPago.Text));
 			if (Convert.ToDouble(txtMontoPendiente.Text) != 0.0)
@@ -2125,6 +2175,11 @@ public class frmCancelarPago : Office2007Form
 				}
 				else
 				{
+					if (modoCaptura && Pag.CodPago <= 0)
+					{
+						MessageBox.Show("El comprobante de pago aún no ha sido confirmado en la base de datos.", "Impresión de Pago", MessageBoxButtons.OK, MessageBoxIcon.Information);
+						return;
+					}
 					CRImpresionPago rpt = new CRImpresionPago();
 					frmRptImpresionPago frm = new frmRptImpresionPago();
 					PrintOptions rptoption = rpt.PrintOptions;
@@ -2135,6 +2190,11 @@ public class frmCancelarPago : Office2007Form
 			}
 			else if (tip == 0)
 			{
+				if (modoCaptura && Pag.CodPago <= 0)
+				{
+					MessageBox.Show("El comprobante de cobro aún no ha sido confirmado en la base de datos.", "Impresión de Cobro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+					return;
+				}
 				CRImpresionCobro rpt2 = new CRImpresionCobro();
 				frmRptImpresionPago frm2 = new frmRptImpresionPago();
 				rpt2.SetDataSource(ds.ReporteImpresionCobro(Pag.CodPago, frmLogin.iCodAlmacen));
