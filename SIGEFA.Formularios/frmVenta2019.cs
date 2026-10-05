@@ -3498,6 +3498,9 @@ public class frmVenta2019 : Office2007Form
 		bool bandTerminoGuardadoVenta = false;
 		// Alcance de metodo: se escribe dentro del try (ruta nueva) y se lee despues del finally.
 		bool postCierreEnDialogo = false;
+		// Un solo bloque con metodo no soportado (7, 10, 12): se sigue por flujo viejo
+		// completo y se omite la fase 3 (sin servicio ni dialogo).
+		bool flujoViejoPorMetodoNoSoportado = false;
 		try
 		{
 			anulados = 0;
@@ -3634,6 +3637,8 @@ public class frmVenta2019 : Office2007Form
 								form.venta = bloque.venta;
 								form.opcionSuma = 1;
 								form.pagoventa = 1;
+								// Con varios almacenes no se sale a flujo viejo (romperia la atomicidad).
+								form.permitirFlujoViejo = (bloquesCierre.Count == 1);
 								form.ShowDialog();
 
 								if (!form.caja_aperturada)
@@ -3644,9 +3649,46 @@ public class frmVenta2019 : Office2007Form
 								{
 									throw new Exception("Se canceló el registro del pago en el formulario de cobro. No se guardó ningún comprobante.");
 								}
-								if (!form.ventaRecibida || !form.modoCaptura)
+								if (!form.ventaRecibida)
 								{
+									// Comportamiento viejo: si salio a flujo viejo (!modoCaptura) algo pudo
+									// guardarse: se agrega para compensar y se lanza. En captura
+									// (modoCaptura) nada se guardo: no hay nada que compensar.
+									if (!form.modoCaptura)
+									{
+										lista_facturas.Add(bloque.venta);
+										throw new Exception("Ocurrió un problema al registrar la venta en el formulario de pagos.");
+									}
 									throw new Exception("Ocurrió un problema al capturar el pago de la venta. No se guardó ningún comprobante.");
+								}
+								if (!form.modoCaptura)
+								{
+									// Un solo bloque con metodo no soportado (7, 10, 12): el flujo viejo
+									// ya guardo comprobante y pago; se sigue con sus pasos posteriores,
+									// sin servicio ni dialogo. Con varios bloques este caso no ocurre
+									// (el formulario no deja salir de captura).
+									if (bloquesCierre.Count != 1)
+									{
+										throw new Exception("El método de pago elegido no está disponible cuando la venta tiene productos de varios almacenes.");
+									}
+									CodVenta = bloque.venta.CodFacturaVenta;
+									lista_facturas.Add(bloque.venta);
+									if (bloque.venta.FormaPago != 6)
+									{
+										toolStripImprimir.Visible = true;
+									}
+									if (!chkTicket.Checked)
+									{
+										await facturacion.GeneraDocumento(cli, bloque.venta, detallesPorBloque[b], 0);
+										bloque.venta.Qr = facturacion.LogoEmp;
+									}
+									foreach (clsPedido ped2 in PedidosIngresados)
+									{
+										AdmPedido.GuardaCodigoBarras(ped2);
+									}
+									PedidosIngresados = new List<clsPedido>();
+									flujoViejoPorMetodoNoSoportado = true;
+									break;
 								}
 
 								if (form.borradoresPago != null)
@@ -3662,6 +3704,9 @@ public class frmVenta2019 : Office2007Form
 						// =========================================================================
 						// T13c - FASE 3: Guardar atómicamente y ejecutar post-cierre por documento
 						// =========================================================================
+						// Con flujo viejo por metodo no soportado se omite la fase 3 (ya se hizo todo en Cobrar).
+						if (!flujoViejoPorMetodoNoSoportado)
+						{
 						List<VentaCierrePostAccion> todasAccionesPostCierre = new List<VentaCierrePostAccion>();
 						bool incluirAlmacenEnNombre = bloquesCierre.Count > 1;
 						for (int b = 0; b < bloquesCierre.Count; b++)
@@ -3711,6 +3756,7 @@ public class frmVenta2019 : Office2007Form
 							men.ShowDialog();
 						}
 						PedidosIngresados = new List<clsPedido>();
+						}
 					}
 					else
 					{

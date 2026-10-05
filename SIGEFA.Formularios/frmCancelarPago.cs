@@ -278,6 +278,10 @@ public class frmCancelarPago : Office2007Form
 	// Modo captura de contado para la ruta nueva (transacción única de venta + pagos).
 	public bool modoCaptura { get; private set; }
 
+	// Con varios almacenes no se puede salir a flujo viejo (rompería la atomicidad):
+	// en ese caso el método no soportado se bloquea y se queda en captura.
+	public bool permitirFlujoViejo { get; set; } = true;
+
 	// Lista en memoria de borradores de pagos capturados.
 	public List<BorradorPago> borradoresPago { get; } = new List<BorradorPago>();
 
@@ -661,6 +665,13 @@ public class frmCancelarPago : Office2007Form
 				}
 				else
 				{
+					// Con varios almacenes no se sale a flujo viejo: se avisa y se queda
+					// en captura (modoCaptura sigue true, no se guarda nada).
+					if (!permitirFlujoViejo)
+					{
+						MessageBox.Show("Este método de pago no está disponible cuando la venta tiene productos de varios almacenes. Use efectivo, depósito, tarjeta o transferencia.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+						return;
+					}
 					MessageBox.Show("El método de pago seleccionado no está soportado en el modo captura de la ruta nueva. Se utilizará el flujo tradicional para esta venta.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
 					modoCaptura = false;
 				}
