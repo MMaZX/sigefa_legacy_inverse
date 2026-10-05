@@ -423,6 +423,327 @@ namespace SIGEFA.Administradores.VentaCierre
             return ejecutarOrden(new List<VentaCierreDatosBloque> { bloque }, progreso);
         }
 
+        // T13c: Cierre multialmacén atómico en una sola transacción explícita (RepeatableRead).
+        // Bloquea todas las series distintas en orden ascendente de serieId, luego todo el stock
+        // en orden ascendente de (almacenId, productoId), y luego procesa bloque por bloque (cabecera,
+        // detalle y pagos). Si dos bloques comparten serie, la numeración avanza correlativa dentro de
+        // la misma transacción. Un solo Commit al final. Ante cualquier fallo ejecuta Rollback completo
+        // y restaura las entidades sin compensación posterior.
+        public IList<VentaCierreResultado> ejecutarOrdenAtomica(
+            IList<VentaCierreDatosBloque> bloques,
+            IProgress<VentaCierreProgreso> progreso = null)
+        {
+            if (bloques == null || bloques.Count == 0)
+            {
+                throw new ArgumentException("La orden debe contener al menos un bloque de venta.", nameof(bloques));
+            }
+
+            int totalBloques = bloques.Count;
+
+            // Validación previa de todos los bloques
+            for (int k = 0; k < totalBloques; k++)
+            {
+                VentaCierreDatosBloque b = bloques[k];
+                if (b == null || b.venta == null)
+                {
+                    throw new ArgumentException("El bloque en la posición " + (k + 1) + " no contiene una entidad de venta válida.", nameof(bloques));
+                }
+
+                if (b.venta.Detalle == null || b.venta.Detalle.Count == 0)
+                {
+                    throw new VentaCierreException(
+                        VentaCierrePaso.abrirTransaccion,
+                        "ValidarDetalle",
+                        0,
+                        string.Empty,
+                        "La colección Detalle del bloque " + (k + 1) + " es nula o no contiene elementos.",
+                        null,
+                        null,
+                        null,
+                        "bloque=" + (k + 1) + ";codAlmacen=" + b.venta.CodAlmacen);
+                }
+
+                for (int i = 0; i < b.venta.Detalle.Count; i++)
+                {
+                    if (b.venta.Detalle[i] == null)
+                    {
+                        throw new VentaCierreException(
+                            VentaCierrePaso.guardarDetalle,
+                            "ValidarDetalle",
+                            0,
+                            string.Empty,
+                            "El elemento en la posición " + (i + 1) + " de la colección Detalle del bloque " + (k + 1) + " es nulo.",
+                            null,
+                            i + 1,
+                            null,
+                            "bloque=" + (k + 1) + ";item=" + (i + 1));
+                    }
+                }
+            }
+
+            // Respaldar estado previo de todas las entidades para restauración ante rollback
+            List<EstadoOriginalBloque> estadosOriginales = new List<EstadoOriginalBloque>();
+            foreach (VentaCierreDatosBloque b in bloques)
+            {
+                EstadoOriginalBloque est = new EstadoOriginalBloque
+                {
+                    venta = b.venta,
+                    codFacturaVenta = b.venta.CodFacturaVenta,
+                    numDoc = b.venta.NumDoc,
+                    codDetalles = b.venta.Detalle.Select(d => d.CodDetalleVenta).ToList()
+                };
+                estadosOriginales.Add(est);
+            }
+
+            VentaCierrePaso pasoActual = VentaCierrePaso.abrirTransaccion;
+            int? itemActual = null;
+            int? productoActual = null;
+            string parametrosActuales = string.Empty;
+            int bloqueActualError = 1;
+
+            MySqlConnection conexion = null;
+            MySqlTransaction transaccion = null;
+
+            List<BloqueEjecutadoInfo> bloquesEjecutados = new List<BloqueEjecutadoInfo>();
+
+            try
+            {
+                conexion = new MySqlConnection(_cadenaConexion);
+                conexion.Open();
+                transaccion = conexion.BeginTransaction(IsolationLevel.RepeatableRead);
+
+                reportarProgreso(progreso, VentaCierrePaso.abrirTransaccion, 0, 0, 1, totalBloques, "Global", "Abriendo transacción atómica RepeatableRead...");
+
+                // 1. Bloqueo global de series distintas en orden determinístico ascendente
+                pasoActual = VentaCierrePaso.bloquearSerie;
+                List<int> seriesDistintas = bloques
+                    .Where(b => b.venta != null && b.venta.CodSerie > 0)
+                    .Select(b => b.venta.CodSerie)
+                    .Distinct()
+                    .OrderBy(id => id)
+                    .ToList();
+
+                reportarProgreso(progreso, VentaCierrePaso.bloquearSerie, 0, 0, 1, totalBloques, "Global", "Bloqueando series en orden ascendente...");
+                foreach (int serieId in seriesDistintas)
+                {
+                    parametrosActuales = "codSerie=" + serieId;
+                    _repositorio.bloquearSerie(conexion, transaccion, serieId);
+                }
+
+                // 2. Bloqueo global de stock en orden ascendente de (almacenId, productoId)
+                pasoActual = VentaCierrePaso.bloquearStock;
+                List<int> almacenesDistintos = bloques
+                    .Where(b => b.venta != null && b.venta.CodAlmacen > 0)
+                    .Select(b => b.venta.CodAlmacen)
+                    .Distinct()
+                    .OrderBy(a => a)
+                    .ToList();
+
+                reportarProgreso(progreso, VentaCierrePaso.bloquearStock, 0, 0, 1, totalBloques, "Global", "Bloqueando stock en orden estable de almacén y producto...");
+                foreach (int almId in almacenesDistintos)
+                {
+                    List<int> productosDelAlmacen = bloques
+                        .Where(b => b.venta != null && b.venta.CodAlmacen == almId && b.venta.Detalle != null)
+                        .SelectMany(b => b.venta.Detalle)
+                        .Where(d => d != null)
+                        .Select(d => d.CodProducto)
+                        .Distinct()
+                        .OrderBy(p => p)
+                        .ToList();
+
+                    if (productosDelAlmacen.Count > 0)
+                    {
+                        parametrosActuales = "codAlmacen=" + almId + ";productos=" + string.Join(",", productosDelAlmacen);
+                        _repositorio.bloquearStock(conexion, transaccion, almId, productosDelAlmacen);
+                    }
+                }
+
+                // 3. Procesamiento bloque por bloque
+                for (int k = 0; k < totalBloques; k++)
+                {
+                    VentaCierreDatosBloque datos = bloques[k];
+                    int bloqueActual = k + 1;
+                    bloqueActualError = bloqueActual;
+                    int totalItems = datos.venta.Detalle.Count;
+
+                    BloqueEjecutadoInfo info = new BloqueEjecutadoInfo(datos);
+
+                    // Guardar cabecera
+                    pasoActual = VentaCierrePaso.guardarCabecera;
+                    itemActual = null;
+                    productoActual = null;
+                    parametrosActuales = "bloque=" + bloqueActual + ";codAlmacen=" + datos.venta.CodAlmacen + ";codSerie=" + datos.venta.CodSerie;
+                    reportarProgreso(progreso, VentaCierrePaso.guardarCabecera, 0, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Guardando la venta...");
+
+                    string numDocGen;
+                    int factId = _repositorio.guardarFacturaVenta(conexion, transaccion, datos.venta, out numDocGen);
+                    info.facturaVentaId = factId;
+                    info.numeroDocumentoGenerado = numDocGen;
+
+                    // Guardar detalle
+                    pasoActual = VentaCierrePaso.guardarDetalle;
+                    for (int i = 0; i < datos.venta.Detalle.Count; i++)
+                    {
+                        clsDetalleFacturaVenta det = datos.venta.Detalle[i];
+                        itemActual = i + 1;
+                        productoActual = det.CodProducto;
+                        parametrosActuales = "bloque=" + bloqueActual + ";codventa=" + factId + ";codpro=" + det.CodProducto + ";cantidad=" + det.Cantidad;
+
+                        reportarProgreso(progreso, VentaCierrePaso.guardarDetalle, itemActual.Value, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Guardando ítem " + itemActual.Value + " de " + totalItems + "...");
+                        int detId = _repositorio.guardarDetalle(conexion, transaccion, det, factId, itemActual.Value);
+                        info.detalleIds.Add(detId);
+                    }
+                    itemActual = null;
+                    productoActual = null;
+
+                    // Guardar pagos
+                    pasoActual = VentaCierrePaso.guardarPago;
+                    if (datos.pagos != null && datos.pagos.Count > 0)
+                    {
+                        int totalPagos = datos.pagos.Count;
+                        for (int p = 0; p < totalPagos; p++)
+                        {
+                            BorradorPago pago = datos.pagos[p];
+                            itemActual = p + 1;
+                            parametrosActuales = "bloque=" + bloqueActual + ";codnot=" + factId + ";codtipopago=" + pago.tipoPagoId + ";monto=" + pago.montoPagado;
+
+                            reportarProgreso(progreso, VentaCierrePaso.guardarPago, itemActual.Value, totalPagos, bloqueActual, totalBloques, datos.almacenNombre, "Guardando pago " + itemActual.Value + " de " + totalPagos + "...");
+                            int pId = _repositorio.guardarPago(conexion, transaccion, pago, factId);
+                            info.pagoIds.Add(pId);
+                        }
+                    }
+                    itemActual = null;
+
+                    bloquesEjecutados.Add(info);
+                }
+
+                // 4. Confirmar transacción única
+                pasoActual = VentaCierrePaso.confirmar;
+                itemActual = null;
+                productoActual = null;
+                parametrosActuales = "totalBloques=" + totalBloques;
+                reportarProgreso(progreso, VentaCierrePaso.confirmar, 0, 0, totalBloques, totalBloques, "Global", "Confirmando la venta...");
+
+                transaccion.Commit();
+
+                // 5. Asignar identificadores generados a las entidades solo tras Commit
+                List<VentaCierreResultado> resultados = new List<VentaCierreResultado>();
+                foreach (BloqueEjecutadoInfo be in bloquesEjecutados)
+                {
+                    be.datos.venta.CodFacturaVenta = be.facturaVentaId.ToString();
+                    be.datos.venta.NumDoc = be.numeroDocumentoGenerado;
+                    for (int i = 0; i < be.datos.venta.Detalle.Count && i < be.detalleIds.Count; i++)
+                    {
+                        be.datos.venta.Detalle[i].CodDetalleVenta = be.detalleIds[i];
+                    }
+
+                    resultados.Add(new VentaCierreResultado(
+                        be.facturaVentaId,
+                        be.numeroDocumentoGenerado,
+                        be.pagoIds,
+                        new Dictionary<VentaCierrePaso, long>()));
+                }
+
+                return resultados;
+            }
+            catch (Exception ex)
+            {
+                if (transaccion != null)
+                {
+                    try
+                    {
+                        transaccion.Rollback();
+                    }
+                    catch
+                    {
+                        // El fallo en rollback no debe ocultar la causa original
+                    }
+                }
+
+                // Restaurar entidades
+                foreach (EstadoOriginalBloque est in estadosOriginales)
+                {
+                    if (est.venta != null)
+                    {
+                        est.venta.CodFacturaVenta = est.codFacturaVenta;
+                        est.venta.NumDoc = est.numDoc;
+                        if (est.venta.Detalle != null)
+                        {
+                            for (int i = 0; i < est.venta.Detalle.Count && i < est.codDetalles.Count; i++)
+                            {
+                                if (est.venta.Detalle[i] != null)
+                                {
+                                    est.venta.Detalle[i].CodDetalleVenta = est.codDetalles[i];
+                                }
+                            }
+                        }
+                    }
+                }
+
+                registrarErrorLocal(ex, pasoActual, obtenerNombreProcedimiento(pasoActual), itemActual, productoActual, parametrosActuales + ";bloque=" + bloqueActualError);
+
+                if (ex is VentaCierreException)
+                {
+                    throw;
+                }
+
+                int mysqlNumero = 0;
+                string sqlState = string.Empty;
+                if (ex is MySqlException mysqlEx)
+                {
+                    mysqlNumero = mysqlEx.Number;
+                    sqlState = mysqlEx.SqlState;
+                }
+
+                throw new VentaCierreException(
+                    pasoActual,
+                    obtenerNombreProcedimiento(pasoActual),
+                    mysqlNumero,
+                    sqlState,
+                    "Error al ejecutar orden atómica en bloque " + bloqueActualError + " (" + pasoActual + "): " + ex.Message,
+                    ex,
+                    itemActual,
+                    productoActual,
+                    parametrosActuales + ";bloque=" + bloqueActualError);
+            }
+            finally
+            {
+                if (transaccion != null)
+                {
+                    transaccion.Dispose();
+                    transaccion = null;
+                }
+                if (conexion != null)
+                {
+                    conexion.Close();
+                    conexion.Dispose();
+                    conexion = null;
+                }
+            }
+        }
+
+        private class EstadoOriginalBloque
+        {
+            public clsFacturaVenta venta;
+            public string codFacturaVenta;
+            public string numDoc;
+            public List<int> codDetalles = new List<int>();
+        }
+
+        private class BloqueEjecutadoInfo
+        {
+            public VentaCierreDatosBloque datos;
+            public int facturaVentaId;
+            public string numeroDocumentoGenerado;
+            public List<int> detalleIds = new List<int>();
+            public List<int> pagoIds = new List<int>();
+
+            public BloqueEjecutadoInfo(VentaCierreDatosBloque datos)
+            {
+                this.datos = datos;
+            }
+        }
+
         // Hallazgo 1: Compensa los comprobantes confirmados en bloques anteriores llamando
         // a la anulación existente, registrando el resultado de cada anulación. Si alguna falla
         // (false, excepción o datos incompletos), lanza una excepción que detalla explícitamente qué bloques

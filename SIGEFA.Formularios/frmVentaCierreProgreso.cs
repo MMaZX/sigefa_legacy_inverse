@@ -10,7 +10,7 @@ using SIGEFA.Entidades;
 // Diálogo modal tipo lista de tareas para el cierre de una venta en la ruta nueva.
 // Ejecuta la orden transaccional en segundo plano y luego las acciones posteriores
 // en el hilo de interfaz de usuario.
-// No se puede cerrar hasta que todos los procesos hayan finalizado.
+// Soporta 1 o N bloques en una sola transacción atómica sin bloquear el diálogo.
 namespace SIGEFA.Formularios;
 
 public partial class frmVentaCierreProgreso : Form
@@ -27,7 +27,7 @@ public partial class frmVentaCierreProgreso : Form
     // Pasos transaccionales en orden de ejecución.
     private readonly VentaCierrePaso[] pasosOrdenados;
 
-    // Pasos posteriores al guardado en orden de ejecución.
+    // Pasos posteriores al guardado en orden de ejecución por defecto.
     private readonly VentaCierrePostPaso[] postPasosOrdenados;
 
     // Acumulador de todos los errores ocurridos en las etapas posteriores.
@@ -39,7 +39,7 @@ public partial class frmVentaCierreProgreso : Form
     // Indica si todos los procesos terminaron (éxito, advertencia o error).
     private bool terminado;
 
-    // Último bloque reportado, para reiniciar la lista transaccional al cambiar de almacén.
+    // Último bloque reportado, para control de avance.
     private int ultimoBloqueVisto;
 
     // Detalle completo del error o advertencias para mostrar y copiar al portapapeles.
@@ -131,14 +131,14 @@ public partial class frmVentaCierreProgreso : Form
         }
     }
 
-    // Inicia la ejecución al mostrar el diálogo. La etapa transaccional corre en segundo plano;
+    // Inicia la ejecución al mostrar el diálogo. La etapa transaccional atómica corre en segundo plano;
     // luego, las acciones posteriores se ejecutan en el hilo de UI.
     private async void alMostrar(object sender, EventArgs e)
     {
         Progress<VentaCierreProgreso> progreso = new Progress<VentaCierreProgreso>(alRecibirProgreso);
         try
         {
-            IList<VentaCierreResultado> salida = await Task.Run(() => servicio.ejecutarOrden(bloques, progreso));
+            IList<VentaCierreResultado> salida = await Task.Run(() => servicio.ejecutarOrdenAtomica(bloques, progreso));
             resultadosObtenidos = salida;
             fueExitoso = true;
             marcarPasosTransaccionales("Listo");
@@ -171,13 +171,21 @@ public partial class frmVentaCierreProgreso : Form
         if (avance.bloqueActual != ultimoBloqueVisto)
         {
             ultimoBloqueVisto = avance.bloqueActual;
-            marcarPasosTransaccionales("Pendiente");
         }
 
-        lblEncabezado.Text = "Bloque " + avance.bloqueActual + "/" + avance.totalBloques
-            + " (" + avance.almacenNombre + ")";
+        if (avance.totalBloques > 1)
+        {
+            lblEncabezado.Text = "Bloque " + avance.bloqueActual + "/" + avance.totalBloques
+                + (!string.IsNullOrEmpty(avance.almacenNombre) ? " (" + avance.almacenNombre + ")" : string.Empty);
+        }
+        else
+        {
+            lblEncabezado.Text = "Cerrando venta"
+                + (!string.IsNullOrEmpty(avance.almacenNombre) ? " (" + avance.almacenNombre + ")" : "...");
+        }
+
         lblAvance.Text = avance.mensaje;
-        marcarPasosHasta(avance.paso);
+        marcarPasosHasta(avance.paso, avance.bloqueActual);
 
         if (avance.totalItems > 0)
         {
@@ -193,19 +201,71 @@ public partial class frmVentaCierreProgreso : Form
         }
     }
 
-    // Ejecuta las 4 acciones posteriores en el hilo de UI de forma secuencial.
+    // Devuelve la cantidad total de filas dedicadas a la etapa transaccional.
+    private int obtenerTotalFilasTransaccionales()
+    {
+        if (bloques.Count <= 1)
+        {
+            return 7;
+        }
+
+        // 3 globales (abrir, serie, stock) + 3 por cada bloque (cabecera, detalle, pago) + 1 confirmar
+        return 3 + bloques.Count * 3 + 1;
+    }
+
+    // Calcula el índice exacto en el ListView para un paso y bloque dado.
+    private int obtenerIndiceFilaTransaccional(VentaCierrePaso paso, int bloqueActual)
+    {
+        if (bloques.Count <= 1)
+        {
+            return (int)paso;
+        }
+
+        switch (paso)
+        {
+            case VentaCierrePaso.abrirTransaccion:
+                return 0;
+            case VentaCierrePaso.bloquearSerie:
+                return 1;
+            case VentaCierrePaso.bloquearStock:
+                return 2;
+            case VentaCierrePaso.guardarCabecera:
+                return 3 + Math.Max(0, bloqueActual - 1) * 3;
+            case VentaCierrePaso.guardarDetalle:
+                return 3 + Math.Max(0, bloqueActual - 1) * 3 + 1;
+            case VentaCierrePaso.guardarPago:
+                return 3 + Math.Max(0, bloqueActual - 1) * 3 + 2;
+            case VentaCierrePaso.confirmar:
+                return 3 + bloques.Count * 3;
+            default:
+                return 0;
+        }
+    }
+
+    // Ejecuta las acciones posteriores en el hilo de UI de forma secuencial.
     // Un paso con incidencias queda en Advertencia y NUNCA interrumpe los pasos siguientes ni anula la venta.
     private async Task ejecutarAccionesPostCierre()
     {
         lblEncabezado.Text = "Procesando tareas posteriores al guardado...";
+        int offsetPost = obtenerTotalFilasTransaccionales();
 
-        for (int i = 0; i < postPasosOrdenados.Length; i++)
+        int totalAcciones = accionesPostCierre != null && accionesPostCierre.Count > 0
+            ? accionesPostCierre.Count
+            : postPasosOrdenados.Length;
+
+        for (int i = 0; i < totalAcciones; i++)
         {
-            VentaCierrePostPaso paso = postPasosOrdenados[i];
-            int filaIndice = pasosOrdenados.Length + i;
-            ListViewItem fila = lvwPasos.Items[filaIndice];
+            int filaIndice = offsetPost + i;
+            if (filaIndice >= lvwPasos.Items.Count)
+            {
+                break;
+            }
 
-            VentaCierrePostAccion accion = buscarAccionParaPaso(paso, i);
+            ListViewItem fila = lvwPasos.Items[filaIndice];
+            VentaCierrePostAccion accion = (accionesPostCierre != null && i < accionesPostCierre.Count)
+                ? accionesPostCierre[i]
+                : null;
+
             if (accion == null || accion.ejecutar == null)
             {
                 actualizarFilaPost(fila, "Omitido", null, Color.Gray);
@@ -215,8 +275,8 @@ public partial class frmVentaCierreProgreso : Form
             actualizarFilaPost(fila, "En curso", null, Color.Blue);
             lblAvance.Text = accion.nombre + "...";
 
-            VentaCierrePostEjecucion ejecucion = new VentaCierrePostEjecucion(paso);
-            inyectarContextoNegocio(ejecucion);
+            VentaCierrePostEjecucion ejecucion = new VentaCierrePostEjecucion(accion.paso);
+            inyectarContextoNegocio(ejecucion, accion);
 
             try
             {
@@ -250,32 +310,8 @@ public partial class frmVentaCierreProgreso : Form
         }
     }
 
-    // Busca la acción asociada al paso posterior por enum o por índice.
-    private VentaCierrePostAccion buscarAccionParaPaso(VentaCierrePostPaso paso, int indice)
-    {
-        if (accionesPostCierre == null || accionesPostCierre.Count == 0)
-        {
-            return null;
-        }
-
-        foreach (VentaCierrePostAccion accion in accionesPostCierre)
-        {
-            if (accion != null && accion.paso == paso)
-            {
-                return accion;
-            }
-        }
-
-        if (indice < accionesPostCierre.Count && accionesPostCierre[indice] != null)
-        {
-            return accionesPostCierre[indice];
-        }
-
-        return null;
-    }
-
     // Asocia datos de negocio conocidos al contexto del paso posterior.
-    private void inyectarContextoNegocio(VentaCierrePostEjecucion ejecucion)
+    private void inyectarContextoNegocio(VentaCierrePostEjecucion ejecucion, VentaCierrePostAccion accion)
     {
         if (resultadosObtenidos != null && resultadosObtenidos.Count > 0)
         {
@@ -343,18 +379,22 @@ public partial class frmVentaCierreProgreso : Form
     }
 
     // Marca como listos los pasos anteriores al actual y el actual como en curso.
-    private void marcarPasosHasta(VentaCierrePaso pasoActual)
+    // Adaptado para manejar pasos repetidos por bloque cuando totalBloques > 1.
+    private void marcarPasosHasta(VentaCierrePaso pasoActual, int bloqueActual)
     {
-        for (int i = 0; i < pasosOrdenados.Length; i++)
+        int filaIndiceActual = obtenerIndiceFilaTransaccional(pasoActual, bloqueActual);
+        int totalFilasTrans = obtenerTotalFilasTransaccionales();
+
+        for (int i = 0; i < totalFilasTrans; i++)
         {
             string estado;
             Color color;
-            if ((int)pasosOrdenados[i] < (int)pasoActual)
+            if (i < filaIndiceActual)
             {
                 estado = "Listo";
                 color = Color.DarkGreen;
             }
-            else if (pasosOrdenados[i] == pasoActual)
+            else if (i == filaIndiceActual)
             {
                 estado = "En curso";
                 color = Color.Blue;
@@ -375,7 +415,8 @@ public partial class frmVentaCierreProgreso : Form
     private void marcarPasosTransaccionales(string estado)
     {
         Color color = estado == "Listo" ? Color.DarkGreen : SystemColors.WindowText;
-        for (int i = 0; i < pasosOrdenados.Length; i++)
+        int totalFilasTrans = obtenerTotalFilasTransaccionales();
+        for (int i = 0; i < totalFilasTrans; i++)
         {
             lvwPasos.Items[i].UseItemStyleForSubItems = false;
             lvwPasos.Items[i].SubItems[1].Text = estado;
@@ -384,6 +425,7 @@ public partial class frmVentaCierreProgreso : Form
     }
 
     // Configura la lista dividida en dos secciones: Guardar en base de datos y Después de guardar.
+    // Con 1 bloque se muestra idéntico al diálogo original; con N bloques desglosa por almacén.
     private void inicializarListaPasos()
     {
         lvwPasos.Items.Clear();
@@ -394,22 +436,92 @@ public partial class frmVentaCierreProgreso : Form
         lvwPasos.Groups.Add(grpTransaccional);
         lvwPasos.Groups.Add(grpPostCierre);
 
-        foreach (VentaCierrePaso paso in pasosOrdenados)
+        if (bloques.Count <= 1)
         {
-            ListViewItem fila = new ListViewItem(VentaCierrePasoTexto.obtenerNombre(paso));
-            fila.Group = grpTransaccional;
-            fila.SubItems.Add("Pendiente");
-            fila.SubItems.Add(string.Empty);
-            lvwPasos.Items.Add(fila);
+            foreach (VentaCierrePaso paso in pasosOrdenados)
+            {
+                ListViewItem fila = new ListViewItem(VentaCierrePasoTexto.obtenerNombre(paso));
+                fila.Group = grpTransaccional;
+                fila.SubItems.Add("Pendiente");
+                fila.SubItems.Add(string.Empty);
+                lvwPasos.Items.Add(fila);
+            }
+        }
+        else
+        {
+            // Pasos globales previos
+            ListViewItem fAbrir = new ListViewItem("Abrir transacción");
+            fAbrir.Group = grpTransaccional;
+            fAbrir.SubItems.Add("Pendiente");
+            fAbrir.SubItems.Add(string.Empty);
+            lvwPasos.Items.Add(fAbrir);
+
+            ListViewItem fSerie = new ListViewItem("Bloquear series");
+            fSerie.Group = grpTransaccional;
+            fSerie.SubItems.Add("Pendiente");
+            fSerie.SubItems.Add(string.Empty);
+            lvwPasos.Items.Add(fSerie);
+
+            ListViewItem fStock = new ListViewItem("Bloquear stock");
+            fStock.Group = grpTransaccional;
+            fStock.SubItems.Add("Pendiente");
+            fStock.SubItems.Add(string.Empty);
+            lvwPasos.Items.Add(fStock);
+
+            // Pasos específicos de cada bloque
+            for (int k = 0; k < bloques.Count; k++)
+            {
+                string alm = !string.IsNullOrEmpty(bloques[k].almacenNombre) ? bloques[k].almacenNombre : "Almacén " + (k + 1);
+
+                ListViewItem fVenta = new ListViewItem("Guardar venta (" + alm + ")");
+                fVenta.Group = grpTransaccional;
+                fVenta.SubItems.Add("Pendiente");
+                fVenta.SubItems.Add(string.Empty);
+                lvwPasos.Items.Add(fVenta);
+
+                ListViewItem fDetalle = new ListViewItem("Guardar detalle (" + alm + ")");
+                fDetalle.Group = grpTransaccional;
+                fDetalle.SubItems.Add("Pendiente");
+                fDetalle.SubItems.Add(string.Empty);
+                lvwPasos.Items.Add(fDetalle);
+
+                ListViewItem fPago = new ListViewItem("Guardar pago (" + alm + ")");
+                fPago.Group = grpTransaccional;
+                fPago.SubItems.Add("Pendiente");
+                fPago.SubItems.Add(string.Empty);
+                lvwPasos.Items.Add(fPago);
+            }
+
+            // Confirmación única
+            ListViewItem fCommit = new ListViewItem("Confirmar");
+            fCommit.Group = grpTransaccional;
+            fCommit.SubItems.Add("Pendiente");
+            fCommit.SubItems.Add(string.Empty);
+            lvwPasos.Items.Add(fCommit);
         }
 
-        foreach (VentaCierrePostPaso paso in postPasosOrdenados)
+        // Sección Después de guardar (por documento/acción)
+        if (accionesPostCierre != null && accionesPostCierre.Count > 0)
         {
-            ListViewItem fila = new ListViewItem(VentaCierrePostPasoTexto.obtenerNombre(paso));
-            fila.Group = grpPostCierre;
-            fila.SubItems.Add("Pendiente");
-            fila.SubItems.Add(string.Empty);
-            lvwPasos.Items.Add(fila);
+            foreach (VentaCierrePostAccion acc in accionesPostCierre)
+            {
+                ListViewItem fila = new ListViewItem(acc.nombre);
+                fila.Group = grpPostCierre;
+                fila.SubItems.Add("Pendiente");
+                fila.SubItems.Add(string.Empty);
+                lvwPasos.Items.Add(fila);
+            }
+        }
+        else
+        {
+            foreach (VentaCierrePostPaso paso in postPasosOrdenados)
+            {
+                ListViewItem fila = new ListViewItem(VentaCierrePostPasoTexto.obtenerNombre(paso));
+                fila.Group = grpPostCierre;
+                fila.SubItems.Add("Pendiente");
+                fila.SubItems.Add(string.Empty);
+                lvwPasos.Items.Add(fila);
+            }
         }
     }
 
@@ -459,16 +571,16 @@ public partial class frmVentaCierreProgreso : Form
         fueExitoso = false;
         terminado = true;
 
-        for (int i = 0; i < postPasosOrdenados.Length; i++)
+        int offsetPost = obtenerTotalFilasTransaccionales();
+        for (int i = offsetPost; i < lvwPasos.Items.Count; i++)
         {
-            int filaIndice = pasosOrdenados.Length + i;
-            actualizarFilaPost(lvwPasos.Items[filaIndice], "Omitido", "Cancelado por error previo", Color.Gray);
+            actualizarFilaPost(lvwPasos.Items[i], "Omitido", "Cancelado por error previo", Color.Gray);
         }
 
         VentaCierreException errorCierre = ex as VentaCierreException;
         if (errorCierre != null)
         {
-            marcarPasoTransaccionalConError(errorCierre.paso);
+            marcarPasoTransaccionalConError(errorCierre.paso, ultimoBloqueVisto > 0 ? ultimoBloqueVisto : 1);
             detalleError = "Paso: " + VentaCierrePasoTexto.obtenerNombre(errorCierre.paso) + "\r\n"
                 + "Procedimiento: " + errorCierre.procedimiento + "\r\n"
                 + "Ítem: " + (errorCierre.itemIndice.HasValue ? errorCierre.itemIndice.Value.ToString() : "-") + "\r\n"
@@ -495,17 +607,14 @@ public partial class frmVentaCierreProgreso : Form
     }
 
     // Marca como fallido el paso transaccional correspondiente.
-    private void marcarPasoTransaccionalConError(VentaCierrePaso paso)
+    private void marcarPasoTransaccionalConError(VentaCierrePaso paso, int bloqueActual)
     {
-        for (int i = 0; i < pasosOrdenados.Length; i++)
+        int filaIndice = obtenerIndiceFilaTransaccional(paso, bloqueActual);
+        if (filaIndice >= 0 && filaIndice < lvwPasos.Items.Count)
         {
-            if (pasosOrdenados[i] == paso)
-            {
-                lvwPasos.Items[i].UseItemStyleForSubItems = false;
-                lvwPasos.Items[i].SubItems[1].Text = "Error";
-                lvwPasos.Items[i].SubItems[1].ForeColor = Color.Red;
-                break;
-            }
+            lvwPasos.Items[filaIndice].UseItemStyleForSubItems = false;
+            lvwPasos.Items[filaIndice].SubItems[1].Text = "Error";
+            lvwPasos.Items[filaIndice].SubItems[1].ForeColor = Color.Red;
         }
     }
 

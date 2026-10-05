@@ -3546,103 +3546,221 @@ public class frmVenta2019 : Office2007Form
 							return;
 						}
 					}
-					// T13b: en la ruta nueva los 4 pasos post-cierre los ejecuta el dialogo;
+					// T13b / T13c: en la ruta nueva los 4 pasos post-cierre los ejecuta el dialogo;
 					// al volver solo se limpia la vista. Con legacy o sin flag queda en false.
 					bool postCierreEnDialogo = false;
-					foreach (object e in alma)
+					string ventaCierreRutaGlobal = ConfigurationManager.AppSettings["VentaCierreRuta"];
+
+					if (ventaCierreRutaGlobal == "nueva")
 					{
-						admsucu.sucursalxalmacen(Convert.ToInt32(e));
-						int codemp = admEmpresa.empresaxalmacen(Convert.ToInt32(e));
-						this.venta = new clsFacturaVenta();
-						this.venta = obtenerDatosVenta(Convert.ToInt32(e));
-						foreach (clsPedido ped in PedidosIngresados)
+						// =========================================================================
+						// T13c - FASE 1: Preparar (en memoria, sin escribir en BD)
+						// =========================================================================
+						List<VentaCierreDatosBloque> bloquesCierre = new List<VentaCierreDatosBloque>();
+						List<List<clsDetalleFacturaVenta>> detallesPorBloque = new List<List<clsDetalleFacturaVenta>>();
+						List<List<clsPedido>> pedidosPorBloque = new List<List<clsPedido>>();
+
+						foreach (object e in alma)
 						{
-							ped.CodigoBarras = this.venta.CodigoBarras;
-							ped.CodigoBarrasCifrado = this.venta.CodigoBarrasCifrado;
-						}
-						if (txtCodCliente.Text.ToString() == "00000000")
-						{
+							admsucu.sucursalxalmacen(Convert.ToInt32(e));
+							int codemp = admEmpresa.empresaxalmacen(Convert.ToInt32(e));
+							this.venta = new clsFacturaVenta();
+							this.venta = obtenerDatosVenta(Convert.ToInt32(e));
+							foreach (clsPedido ped in PedidosIngresados)
+							{
+								ped.CodigoBarras = this.venta.CodigoBarras;
+								ped.CodigoBarrasCifrado = this.venta.CodigoBarrasCifrado;
+							}
 							this.venta.Nombre = txtNombreCliente.Text;
-						}
-						else
-						{
-							this.venta.Nombre = txtNombreCliente.Text;
-						}
-						ArmaCabecera(Convert.ToInt32(e));
-						ser = AdmSerie.CargaSerieEmpresa(Convert.ToInt32(e), doc.CodTipoDocumento);
-						if (ser == null)
-						{
-							throw new Exception("\tError Serie de Venta\nNo se encontro una serie para registrar la venta.\nError: AdmSerie.CargaSerieEmpresa(" + Convert.ToInt32(e) + ", " + doc.CodTipoDocumento + ");");
-						}
-						this.venta.CodSerie = ser.CodSerie;
-						this.venta.Serie = ser.Serie;
-						this.venta.NumDoc = ser.Numeracion.ToString().PadLeft(8, '0');
-						new clsFacturaVenta();
-						clsFacturaVenta factura = AdmVenta.FechaCorrelativoAnterior(this.venta.CodSerie);
-						this.venta.CodEmpresa = codemp;
-						if (factura.FechaSalida.Date > this.venta.FechaSalida.Date)
-						{
-							throw new Exception("Error de Fecha de Venta\nError No se puede Registrar los Datos. Verifique Fecha");
-						}
-						RecorreDetalleVenta(Convert.ToInt32(e));
-						this.venta.Detalle = detalle1;
-						if (detalle1.Count > 0)
-						{
+							ArmaCabecera(Convert.ToInt32(e));
+							ser = AdmSerie.CargaSerieEmpresa(Convert.ToInt32(e), doc.CodTipoDocumento);
+							if (ser == null)
+							{
+								throw new Exception("\tError Serie de Venta\nNo se encontro una serie para registrar la venta.\nError: AdmSerie.CargaSerieEmpresa(" + Convert.ToInt32(e) + ", " + doc.CodTipoDocumento + ");");
+							}
+							this.venta.CodSerie = ser.CodSerie;
+							this.venta.Serie = ser.Serie;
+							this.venta.NumDoc = ser.Numeracion.ToString().PadLeft(8, '0');
+							clsFacturaVenta factura = AdmVenta.FechaCorrelativoAnterior(this.venta.CodSerie);
+							this.venta.CodEmpresa = codemp;
+							if (factura.FechaSalida.Date > this.venta.FechaSalida.Date)
+							{
+								throw new Exception("Error de Fecha de Venta\nError No se puede Registrar los Datos. Verifique Fecha");
+							}
+							RecorreDetalleVenta(Convert.ToInt32(e));
+							List<clsDetalleFacturaVenta> copiaDetalle = new List<clsDetalleFacturaVenta>(detalle1);
+							this.venta.Detalle = copiaDetalle;
+
+							if (copiaDetalle.Count <= 0)
+							{
+								MessageBox.Show("No hay items en el comprobante.", "Registro de Venta", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+								return;
+							}
+
 							this.venta.Pendiente = Convert.ToDecimal(this.venta.Total);
 							fpago = AdmPago.CargaFormaPago(Convert.ToInt32(cmbFormaPago.SelectedValue));
 							dtpFechaPago.Value = dtpFecha.Value.AddDays(fpago.Dias);
-							if (fpago.Dias > 0 && this.venta.CodTipoTransaccion == 7)
+
+							string nombreAlmacenCierre = string.Empty;
+							foreach (DataRow filaAlmacen in aux.Rows)
 							{
-								// La ruta nueva cierra la venta con transacción explícita y muestra
-								// los errores exactos de MySQL. Con "legacy" o sin el flag se usa
-								// la ruta vieja sin ningún cambio.
-								string ventaCierreRuta = ConfigurationManager.AppSettings["VentaCierreRuta"];
-								if (ventaCierreRuta == "nueva")
+								if (filaAlmacen.ItemArray[0].ToString() == e.ToString())
 								{
-									// Nombre del almacén para el encabezado del diálogo; si no se
-									// encuentra se deja vacío (el diálogo igual funciona).
-									string nombreAlmacenCierre = string.Empty;
-									foreach (DataRow filaAlmacen in aux.Rows)
-									{
-										if (filaAlmacen.ItemArray[0].ToString() == e.ToString())
-										{
-											nombreAlmacenCierre = filaAlmacen.ItemArray[1].ToString();
-											break;
-										}
-									}
-									// El bloque lleva la venta del almacén actual sin pagos (al
-									// crédito no hay cobro). El servicio asigna CodFacturaVenta y
-									// NumDoc a esta misma instancia tras el Commit.
-									VentaCierreService servicioCierre = new VentaCierreService();
-									VentaCierreDatosBloque bloqueCierre = new VentaCierreDatosBloque(this.venta, nombreAlmacenCierre);
-									List<VentaCierreDatosBloque> bloquesCierre = new List<VentaCierreDatosBloque>();
-									bloquesCierre.Add(bloqueCierre);
-									// El diálogo ejecuta la orden en un hilo de fondo y ya mostró el
-									// error exacto de MySQL con botón para copiarlo; si falló se
-									// relanza un error legible para que lo capture el catch actual
-									// y compense con lista_facturas los bloques ya confirmados.
-									// T13b: las 4 acciones post-cierre van al dialogo como delegados (despacho,
-									// codigo de barras, comprobante electronico e impresion, en ese orden).
-									IList<VentaCierrePostAccion> accionesPostCierre = construirAccionesPostCierre(bloqueCierre, detalle1, cli, new List<clsPedido>(PedidosIngresados));
-									frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre, accionesPostCierre);
-									dialogoCierre.ShowDialog(this);
-									if (!dialogoCierre.fueExitoso)
-									{
-										throw new Exception("VENTA AL CREDITO INCOMPLETA\nOcurrio un error al guardar la venta al credito en la ruta nueva. El detalle exacto de MySQL se mostro en el dialogo de progreso.");
-									}
-									CodVenta = this.venta.CodFacturaVenta;
-									lista_facturas.Add(this.venta);
-									if (this.venta.FormaPago != 6)
-									{
-										toolStripImprimir.Visible = true;
-									}
-									// T13b: despacho, codigo de barras, comprobante e impresion ya los ejecuto
-									// el dialogo; al volver solo se marca para limpiar la vista al cerrar.
-									postCierreEnDialogo = true;
-									frmMensajeCredito men = new frmMensajeCredito();
-									men.ShowDialog();
+									nombreAlmacenCierre = filaAlmacen.ItemArray[1].ToString();
+									break;
 								}
-								else
+							}
+
+							VentaCierreDatosBloque bloque = new VentaCierreDatosBloque(this.venta, nombreAlmacenCierre);
+							bloquesCierre.Add(bloque);
+							detallesPorBloque.Add(copiaDetalle);
+							pedidosPorBloque.Add(new List<clsPedido>(PedidosIngresados));
+						}
+
+						// =========================================================================
+						// T13c - FASE 2: Cobrar (solo ventas al contado)
+						// =========================================================================
+						fpago = AdmPago.CargaFormaPago(Convert.ToInt32(cmbFormaPago.SelectedValue));
+						bool esVentaCredito = (fpago.Dias > 0 && bloquesCierre[0].venta.CodTipoTransaccion == 7);
+
+						if (!esVentaCredito)
+						{
+							for (int b = 0; b < bloquesCierre.Count; b++)
+							{
+								VentaCierreDatosBloque bloque = bloquesCierre[b];
+								frmCancelarPago form = new frmCancelarPago();
+								form.VentComp = 1;
+								form.tipo = 3;
+								form.CodCliente = cli.CodCliente;
+								form.venta = bloque.venta;
+								form.opcionSuma = 1;
+								form.pagoventa = 1;
+								form.ShowDialog();
+
+								if (!form.caja_aperturada)
+								{
+									throw new Exception("La caja no se encuentra aperturada para registrar el cobro.");
+								}
+								if (!form.ventana_cobro)
+								{
+									throw new Exception("Se canceló el registro del pago en el formulario de cobro. No se guardó ningún comprobante.");
+								}
+								if (!form.ventaRecibida || !form.modoCaptura)
+								{
+									throw new Exception("Ocurrió un problema al capturar el pago de la venta. No se guardó ningún comprobante.");
+								}
+
+								if (form.borradoresPago != null)
+								{
+									foreach (BorradorPago bp in form.borradoresPago)
+									{
+										bloque.pagos.Add(bp);
+									}
+								}
+							}
+						}
+
+						// =========================================================================
+						// T13c - FASE 3: Guardar atómicamente y ejecutar post-cierre por documento
+						// =========================================================================
+						List<VentaCierrePostAccion> todasAccionesPostCierre = new List<VentaCierrePostAccion>();
+						bool incluirAlmacenEnNombre = bloquesCierre.Count > 1;
+						for (int b = 0; b < bloquesCierre.Count; b++)
+						{
+							IList<VentaCierrePostAccion> accionesBloque = construirAccionesPostCierre(
+								bloquesCierre[b],
+								detallesPorBloque[b],
+								cli,
+								pedidosPorBloque[b],
+								incluirAlmacenEnNombre);
+
+							foreach (VentaCierrePostAccion acc in accionesBloque)
+							{
+								todasAccionesPostCierre.Add(acc);
+							}
+						}
+
+						VentaCierreService servicioCierre = new VentaCierreService();
+						frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre, todasAccionesPostCierre);
+						dialogoCierre.ShowDialog(this);
+
+						if (!dialogoCierre.fueExitoso)
+						{
+							string tipoVentaMensaje = esVentaCredito ? "VENTA AL CREDITO INCOMPLETA" : "VENTA AL CONTADO INCOMPLETA";
+							throw new Exception(tipoVentaMensaje + "\nOcurrió un error al guardar la venta en la ruta nueva. El detalle exacto de MySQL se mostró en el diálogo de progreso.");
+						}
+
+						foreach (VentaCierreDatosBloque bloque in bloquesCierre)
+						{
+							CodVenta = bloque.venta.CodFacturaVenta;
+							lista_facturas.Add(bloque.venta);
+							if (bloque.venta.FormaPago != 6)
+							{
+								toolStripImprimir.Visible = true;
+							}
+						}
+
+						if (bloquesCierre.Count > 0)
+						{
+							this.venta = bloquesCierre[bloquesCierre.Count - 1].venta;
+						}
+
+						postCierreEnDialogo = true;
+						if (esVentaCredito)
+						{
+							frmMensajeCredito men = new frmMensajeCredito();
+							men.ShowDialog();
+						}
+						PedidosIngresados = new List<clsPedido>();
+					}
+					else
+					{
+						// =========================================================================
+						// RUTA LEGACY INTACTA
+						// =========================================================================
+						foreach (object e in alma)
+						{
+							admsucu.sucursalxalmacen(Convert.ToInt32(e));
+							int codemp = admEmpresa.empresaxalmacen(Convert.ToInt32(e));
+							this.venta = new clsFacturaVenta();
+							this.venta = obtenerDatosVenta(Convert.ToInt32(e));
+							foreach (clsPedido ped in PedidosIngresados)
+							{
+								ped.CodigoBarras = this.venta.CodigoBarras;
+								ped.CodigoBarrasCifrado = this.venta.CodigoBarrasCifrado;
+							}
+							if (txtCodCliente.Text.ToString() == "00000000")
+							{
+								this.venta.Nombre = txtNombreCliente.Text;
+							}
+							else
+							{
+								this.venta.Nombre = txtNombreCliente.Text;
+							}
+							ArmaCabecera(Convert.ToInt32(e));
+							ser = AdmSerie.CargaSerieEmpresa(Convert.ToInt32(e), doc.CodTipoDocumento);
+							if (ser == null)
+							{
+								throw new Exception("\tError Serie de Venta\nNo se encontro una serie para registrar la venta.\nError: AdmSerie.CargaSerieEmpresa(" + Convert.ToInt32(e) + ", " + doc.CodTipoDocumento + ");");
+							}
+							this.venta.CodSerie = ser.CodSerie;
+							this.venta.Serie = ser.Serie;
+							this.venta.NumDoc = ser.Numeracion.ToString().PadLeft(8, '0');
+							new clsFacturaVenta();
+							clsFacturaVenta factura = AdmVenta.FechaCorrelativoAnterior(this.venta.CodSerie);
+							this.venta.CodEmpresa = codemp;
+							if (factura.FechaSalida.Date > this.venta.FechaSalida.Date)
+							{
+								throw new Exception("Error de Fecha de Venta\nError No se puede Registrar los Datos. Verifique Fecha");
+							}
+							RecorreDetalleVenta(Convert.ToInt32(e));
+							this.venta.Detalle = detalle1;
+							if (detalle1.Count > 0)
+							{
+								this.venta.Pendiente = Convert.ToDecimal(this.venta.Total);
+								fpago = AdmPago.CargaFormaPago(Convert.ToInt32(cmbFormaPago.SelectedValue));
+								dtpFechaPago.Value = dtpFecha.Value.AddDays(fpago.Dias);
+								if (fpago.Dias > 0 && this.venta.CodTipoTransaccion == 7)
 								{
 									if (!AdmVenta.insertComprobante(this.venta))
 									{
@@ -3662,70 +3780,27 @@ public class frmVenta2019 : Office2007Form
 									frmMensajeCredito men = new frmMensajeCredito();
 									men.ShowDialog();
 								}
-							}
-							else
-							{
-								string ventaCierreRutaContado = ConfigurationManager.AppSettings["VentaCierreRuta"];
-								frmCancelarPago form = new frmCancelarPago();
-								form.VentComp = 1;
-								form.tipo = 3;
-								form.CodCliente = cli.CodCliente;
-								form.venta = this.venta;
-								form.opcionSuma = 1;
-								form.pagoventa = 1;
-								form.ShowDialog();
-								if (form.caja_aperturada)
+								else
 								{
-									if (!form.ventana_cobro)
+									frmCancelarPago form = new frmCancelarPago();
+									form.VentComp = 1;
+									form.tipo = 3;
+									form.CodCliente = cli.CodCliente;
+									form.venta = this.venta;
+									form.opcionSuma = 1;
+									form.pagoventa = 1;
+									form.ShowDialog();
+									if (form.caja_aperturada)
 									{
-										throw new Exception("Se cancelo el registro del pago para la venta en el formulario de pagos.");
-									}
-									if (!form.ventaRecibida)
-									{
-										if (ventaCierreRutaContado != "nueva" || !form.modoCaptura)
+										if (!form.ventana_cobro)
+										{
+											throw new Exception("Se cancelo el registro del pago para la venta en el formulario de pagos.");
+										}
+										if (!form.ventaRecibida)
 										{
 											lista_facturas.Add(this.venta);
+											throw new Exception("Ocurrió un problema al registrar la venta en el formulario de pagos.");
 										}
-										throw new Exception("Ocurrió un problema al registrar la venta en el formulario de pagos.");
-									}
-									if (ventaCierreRutaContado == "nueva" && form.modoCaptura)
-									{
-										// Nombre del almacén para el encabezado del diálogo de progreso.
-										string nombreAlmacenCierre = string.Empty;
-										foreach (DataRow filaAlmacen in aux.Rows)
-										{
-											if (filaAlmacen.ItemArray[0].ToString() == e.ToString())
-											{
-												nombreAlmacenCierre = filaAlmacen.ItemArray[1].ToString();
-												break;
-											}
-										}
-										// El bloque agrupa la venta y los pagos capturados en memoria para persistirlos en una sola transacción.
-										VentaCierreService servicioCierre = new VentaCierreService();
-										VentaCierreDatosBloque bloqueCierre = new VentaCierreDatosBloque(this.venta, nombreAlmacenCierre, form.borradoresPago);
-										List<VentaCierreDatosBloque> bloquesCierre = new List<VentaCierreDatosBloque>();
-										bloquesCierre.Add(bloqueCierre);
-										// T13b: las 4 acciones post-cierre van al dialogo como delegados (despacho,
-										// codigo de barras, comprobante electronico e impresion, en ese orden).
-										IList<VentaCierrePostAccion> accionesPostCierreContado = construirAccionesPostCierre(bloqueCierre, detalle1, cli, new List<clsPedido>(PedidosIngresados));
-										frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre, accionesPostCierreContado);
-										dialogoCierre.ShowDialog(this);
-										if (!dialogoCierre.fueExitoso)
-										{
-											throw new Exception("VENTA AL CONTADO INCOMPLETA\nOcurrio un error al guardar la venta y los pagos al contado en la ruta nueva. El detalle exacto de MySQL se mostro en el dialogo de progreso.");
-										}
-										CodVenta = this.venta.CodFacturaVenta;
-										lista_facturas.Add(this.venta);
-										if (this.venta.FormaPago != 6)
-										{
-											toolStripImprimir.Visible = true;
-										}
-										// T13b: despacho, codigo de barras, comprobante e impresion ya los ejecuto
-										// el dialogo; al volver solo se marca para limpiar la vista al cerrar.
-										postCierreEnDialogo = true;
-									}
-									else
-									{
 										CodVenta = this.venta.CodFacturaVenta;
 										lista_facturas.Add(this.venta);
 										if (this.venta.FormaPago != 6)
@@ -3740,23 +3815,18 @@ public class frmVenta2019 : Office2007Form
 									}
 								}
 							}
-						}
-						else
-						{
-							MessageBox.Show("No hay items en el comprobante.", "Registro de Venta", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-							this.venta = new clsFacturaVenta();
-							new clsFacturaVenta();
-						}
-						// T13b: en la ruta nueva el codigo de barras lo ejecuta el dialogo por pedido
-						// (advertencia sin anular); aqui solo se conserva para la ruta legacy.
-						if (!postCierreEnDialogo)
-						{
+							else
+							{
+								MessageBox.Show("No hay items en el comprobante.", "Registro de Venta", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+								this.venta = new clsFacturaVenta();
+								new clsFacturaVenta();
+							}
 							foreach (clsPedido ped2 in PedidosIngresados)
 							{
 								AdmPedido.GuardaCodigoBarras(ped2);
 							}
+							PedidosIngresados = new List<clsPedido>();
 						}
-						PedidosIngresados = new List<clsPedido>();
 					}
 					// T13b: en la ruta nueva la impresion la ejecuta el dialogo (despues de la
 					// facturacion electronica); aqui solo se conserva para la ruta legacy.
@@ -4136,14 +4206,18 @@ public class frmVenta2019 : Office2007Form
 		VentaCierreDatosBloque bloqueCierre,
 		List<clsDetalleFacturaVenta> detalleDoc,
 		clsCliente clienteDoc,
-		List<clsPedido> pedidosDoc)
+		List<clsPedido> pedidosDoc,
+		bool incluirAlmacenEnNombre = false)
 	{
 		clsFacturaVenta ventaDoc = bloqueCierre.venta;
 		List<clsPedido> pedidosPaso = new List<clsPedido>(pedidosDoc ?? new List<clsPedido>());
 		List<VentaCierrePostAccion> acciones = new List<VentaCierrePostAccion>();
+		string sufijo = (incluirAlmacenEnNombre && !string.IsNullOrEmpty(bloqueCierre.almacenNombre))
+			? " (" + bloqueCierre.almacenNombre + ")"
+			: string.Empty;
 
 		// 1. Crear despacho (se conserva creacion e impresion; sin requerimiento queda Omitido).
-		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.crearDespacho, ctx =>
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.crearDespacho, "Crear despacho" + sufijo, ctx =>
 		{
 			try
 			{
@@ -4165,7 +4239,7 @@ public class frmVenta2019 : Office2007Form
 		}));
 
 		// 2. Guardar codigo de barras del pedido (solo etiqueta; en la ruta nueva no anula la venta).
-		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.guardarCodigoBarras, ctx =>
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.guardarCodigoBarras, "Guardar código de barras" + sufijo, ctx =>
 		{
 			if (pedidosPaso.Count == 0)
 			{
@@ -4190,7 +4264,7 @@ public class frmVenta2019 : Office2007Form
 		}));
 
 		// 3. Generar y firmar comprobante electronico (el QR impreso sale de venta.Qr).
-		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.generarComprobanteElectronico, async ctx =>
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.generarComprobanteElectronico, "Generar comprobante electrónico" + sufijo, async ctx =>
 		{
 			if (chkTicket.Checked)
 			{
@@ -4202,7 +4276,7 @@ public class frmVenta2019 : Office2007Form
 		}));
 
 		// 4. Imprimir comprobante (doble copia y visor de transferencia, como hoy).
-		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.imprimirComprobante, ctx =>
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.imprimirComprobante, "Imprimir comprobante" + sufijo, ctx =>
 		{
 			try
 			{
