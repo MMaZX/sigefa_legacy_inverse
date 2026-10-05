@@ -48,7 +48,7 @@ public static class VentaCierrePasoTexto
             case VentaCierrePaso.bloquearStock:
                 return "Bloquear stock";
             case VentaCierrePaso.guardarCabecera:
-                return "Guardar cabecera";
+                return "Guardar venta";
             case VentaCierrePaso.guardarDetalle:
                 return "Guardar detalle";
             case VentaCierrePaso.guardarPago:

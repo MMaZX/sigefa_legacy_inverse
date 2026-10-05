@@ -208,7 +208,7 @@ namespace SIGEFA.Administradores.VentaCierre
                 pasoActual = VentaCierrePaso.guardarCabecera;
                 cronometroPaso.Restart();
                 parametrosActuales = "codAlmacen=" + datos.venta.CodAlmacen + ";codSerie=" + datos.venta.CodSerie;
-                reportarProgreso(progreso, VentaCierrePaso.guardarCabecera, 0, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Guardando cabecera de la venta...");
+                reportarProgreso(progreso, VentaCierrePaso.guardarCabecera, 0, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Guardando la venta...");
 
                 facturaVentaId = _repositorio.guardarFacturaVenta(conexion, transaccion, datos.venta, out numeroDocumentoGenerado);
 
@@ -541,18 +541,11 @@ namespace SIGEFA.Administradores.VentaCierre
         // Enmascara patrones comunes de credenciales como Pwd=..., Password=..., Uid=..., User Id=...
         private static string enmascararCredenciales(string texto)
         {
-            if (string.IsNullOrEmpty(texto))
-            {
-                return string.Empty;
-            }
-
-            string patron = @"(?i)\b(pwd|password|uid|user\s*id)\s*=\s*[^;,\s]+";
-            return Regex.Replace(texto, patron, "$1=***");
+            return VentaCierreRegistroErrores.enmascararCredenciales(texto);
         }
 
-        // Hallazgo 2: Registra el error en un archivo local %LOCALAPPDATA%\SIGEFA\venta_cierre_errores.log
-        // Escribe una sola línea por error con fecha, paso, procedimiento, ítem, producto, número
-        // y mensaje de MySQL con credenciales reemplazadas por ***. No abre conexión extra ni altera el esquema.
+        // Registra el error en un archivo local %LOCALAPPDATA%\SIGEFA\venta_cierre_errores.log
+        // a través de VentaCierreRegistroErrores.
         // Si la escritura en el archivo falla, no debe ocultar la excepción original.
         private void registrarErrorLocal(Exception ex, VentaCierrePaso paso, string procedimiento, int? itemIndice, int? productoId, string parametros)
         {
@@ -564,63 +557,7 @@ namespace SIGEFA.Administradores.VentaCierre
                     return;
                 }
 
-                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                if (string.IsNullOrEmpty(localAppData))
-                {
-                    return;
-                }
-
-                string directorioSigefa = Path.Combine(localAppData, "SIGEFA");
-                if (!Directory.Exists(directorioSigefa))
-                {
-                    Directory.CreateDirectory(directorioSigefa);
-                }
-
-                string rutaLog = Path.Combine(directorioSigefa, "venta_cierre_errores.log");
-
-                int mysqlNumero = 0;
-                string sqlState = string.Empty;
-                string mysqlMensaje = ex != null ? ex.Message : string.Empty;
-
-                if (ex is VentaCierreException vcEx)
-                {
-                    mysqlNumero = vcEx.mysqlNumero;
-                    sqlState = vcEx.sqlState;
-                    mysqlMensaje = vcEx.mysqlMensaje;
-                    if (!string.IsNullOrEmpty(vcEx.procedimiento))
-                    {
-                        procedimiento = vcEx.procedimiento;
-                    }
-                    if (vcEx.itemIndice.HasValue)
-                    {
-                        itemIndice = vcEx.itemIndice;
-                    }
-                    if (vcEx.productoId.HasValue)
-                    {
-                        productoId = vcEx.productoId;
-                    }
-                }
-                else if (ex is MySqlException myEx)
-                {
-                    mysqlNumero = myEx.Number;
-                    sqlState = myEx.SqlState;
-                    mysqlMensaje = myEx.Message;
-                }
-
-                // Filtrar credenciales y garantizar una única línea
-                string mensajeLimpio = enmascararCredenciales((mysqlMensaje ?? string.Empty).Replace("\r", " ").Replace("\n", " ").Trim());
-                string linea = string.Format(
-                    "{0:yyyy-MM-dd HH:mm:ss} | Paso: {1} | Procedimiento: {2} | Item: {3} | Producto: {4} | ErrorMySQL: {5} [{6}] | Mensaje: {7}",
-                    DateTime.Now,
-                    paso,
-                    procedimiento ?? string.Empty,
-                    itemIndice.HasValue ? itemIndice.Value.ToString() : "N/A",
-                    productoId.HasValue ? productoId.Value.ToString() : "N/A",
-                    mysqlNumero,
-                    sqlState ?? string.Empty,
-                    mensajeLimpio);
-
-                File.AppendAllText(rutaLog, linea + Environment.NewLine, Encoding.UTF8);
+                VentaCierreRegistroErrores.registrarErrorTransaccional(ex, paso, procedimiento, itemIndice, productoId, parametros);
             }
             catch
             {
