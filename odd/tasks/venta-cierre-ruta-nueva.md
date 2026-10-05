@@ -99,6 +99,11 @@ Mecanismo (decidido por el usuario): **por SSH a la VM, sin subir nada a GitHub*
 - [ ] Errores de T1–T3 vuelven a antigravity en una sola ronda. Los errores preexistentes del repo base (≈200 warnings, 0 errores según `build_warnings.md`) no son de esta rama.
 - Los datos de acceso a la VM viven en `try-print-go/usqay-print-client/windows-test.yaml` (ignorado por git); nunca se imprimen, ni se escriben en commits o informes.
 
+#### Resultado de B1 y RV-A (2026-10-05, sobre `4b00f12`)
+- **B1 (build en la VM, 16 s):** 1 error único `CS0051` en `VentaCierreService.cs:63`: el constructor `public` recibe `clsAdmFacturaVenta`, que es `internal` (`clsAdmFacturaVenta.cs:11`). Los errores de accesibilidad se reportan en una fase temprana: **tras corregirlo puede haber más**; hay que recompilar.
+- **RV-A (codex, solo lectura):** parámetros 55/32/39 correctos, sin duplicados ni `entregado_ex`; orden serie→stock correcto; sin `TransactionScope`, `throw ex;` ni UI directa. Hallazgos: (1) alta: la compensación de `ejecutarOrden` ignora el resultado/excepción de cada anulación (`VentaCierreService.cs:349-367`); (2) alta: el registro de error por defecto abre una conexión aparte pero no escribe nada (`:373-388`); (3) alta: `bloquearStock` lee la PK sin bloqueo y luego bloquea por PK sin revalidar almacén/producto (`VentaCierreRepositorio.cs:110-160`); (4) media: la anulación vía `clsAdmFacturaVenta` puede mostrar `MessageBox` (`:351-361`) — **aceptado como riesgo conocido**, se revisa en T5; (5) media: ids y número de documento se asignan a las entidades antes del `Commit` (`VentaCierreRepositorio.cs:320-322,452`); (6) baja: `DocumentoReferencia == ""` se envía como NULL (`:244`), el contrato dice solo si es null.
+- **Ronda de corrección (antigravity, una sola):** CS0051, hallazgos 1, 2, 3, 5 y 6. Decisión para el hallazgo 2: registrar en un **archivo local** (`%LOCALAPPDATA%\SIGEFA\venta_cierre_errores.log`), sin tocar el esquema de la base. Después, claude recompila (B1b).
+
 ### T4 — Diálogo tasklist (opencode, ~10 min, en serie en esta rama)
 `SIGEFA.Formularios/frmVentaCierreProgreso.cs` (+ `.Designer.cs`):
 - Modal con `FormBorderStyle=FixedDialog`, `ControlBox=false`, `ShowInTaskbar=false`; sin `CancelButton`; `FormClosing` con `e.Cancel = true` mientras no haya terminado (cubre X, Alt+F4 y `Close()`).
