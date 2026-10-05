@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using MySql.Data.MySqlClient;
 using SIGEFA.Conexion;
 using SIGEFA.Entidades;
@@ -108,9 +109,17 @@ namespace SIGEFA.Administradores.VentaCierre
             // solo reciban ids tras Commit o se restauren intactas ante aborto.
             string codFacturaVentaOriginal = datos.venta.CodFacturaVenta;
             string numDocOriginal = datos.venta.NumDoc;
-            List<int> codDetallesOriginales = datos.venta.Detalle != null
-                ? datos.venta.Detalle.Select(d => d.CodDetalleVenta).ToList()
-                : new List<int>();
+            List<int> codDetallesOriginales = new List<int>();
+            if (datos.venta.Detalle != null)
+            {
+                foreach (clsDetalleFacturaVenta d in datos.venta.Detalle)
+                {
+                    if (d != null)
+                    {
+                        codDetallesOriginales.Add(d.CodDetalleVenta);
+                    }
+                }
+            }
 
             MySqlConnection conexion = null;
             MySqlTransaction transaccion = null;
@@ -122,6 +131,39 @@ namespace SIGEFA.Administradores.VentaCierre
 
             try
             {
+                // Validación de la colección Detalle dentro del flujo protegido para que cualquier error
+                // se capture y reporte exactamente como VentaCierreException
+                if (datos.venta.Detalle == null || datos.venta.Detalle.Count == 0)
+                {
+                    throw new VentaCierreException(
+                        VentaCierrePaso.abrirTransaccion,
+                        "ValidarDetalle",
+                        0,
+                        string.Empty,
+                        "La colección Detalle de la venta es nula o no contiene elementos.",
+                        null,
+                        null,
+                        null,
+                        "codAlmacen=" + datos.venta.CodAlmacen);
+                }
+
+                for (int i = 0; i < datos.venta.Detalle.Count; i++)
+                {
+                    if (datos.venta.Detalle[i] == null)
+                    {
+                        throw new VentaCierreException(
+                            VentaCierrePaso.guardarDetalle,
+                            "ValidarDetalle",
+                            0,
+                            string.Empty,
+                            "El elemento en la posición " + (i + 1) + " de la colección Detalle es nulo.",
+                            null,
+                            i + 1,
+                            null,
+                            "codAlmacen=" + datos.venta.CodAlmacen + ";itemIndice=" + (i + 1));
+                    }
+                }
+
                 // Paso 1: abrirTransaccion
                 pasoActual = VentaCierrePaso.abrirTransaccion;
                 cronometroPaso.Restart();
@@ -151,9 +193,11 @@ namespace SIGEFA.Administradores.VentaCierre
                 parametrosActuales = "almacenId=" + datos.venta.CodAlmacen;
                 reportarProgreso(progreso, VentaCierrePaso.bloquearStock, 0, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Bloqueando stock en orden estable de producto...");
 
-                List<int> productoIds = datos.venta.Detalle != null
-                    ? datos.venta.Detalle.Select(d => d.CodProducto).Distinct().ToList()
-                    : new List<int>();
+                List<int> productoIds = datos.venta.Detalle
+                    .Where(d => d != null)
+                    .Select(d => d.CodProducto)
+                    .Distinct()
+                    .ToList();
 
                 _repositorio.bloquearStock(conexion, transaccion, datos.venta.CodAlmacen, productoIds);
 
@@ -175,20 +219,17 @@ namespace SIGEFA.Administradores.VentaCierre
                 pasoActual = VentaCierrePaso.guardarDetalle;
                 cronometroPaso.Restart();
 
-                if (datos.venta.Detalle != null && datos.venta.Detalle.Count > 0)
+                for (int i = 0; i < datos.venta.Detalle.Count; i++)
                 {
-                    for (int i = 0; i < datos.venta.Detalle.Count; i++)
-                    {
-                        clsDetalleFacturaVenta det = datos.venta.Detalle[i];
-                        itemActual = i + 1;
-                        productoActual = det.CodProducto;
-                        parametrosActuales = "codventa=" + facturaVentaId + ";codpro=" + det.CodProducto + ";cantidad=" + det.Cantidad;
+                    clsDetalleFacturaVenta det = datos.venta.Detalle[i];
+                    itemActual = i + 1;
+                    productoActual = det.CodProducto;
+                    parametrosActuales = "codventa=" + facturaVentaId + ";codpro=" + det.CodProducto + ";cantidad=" + det.Cantidad;
 
-                        reportarProgreso(progreso, VentaCierrePaso.guardarDetalle, itemActual.Value, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Guardando ítem " + itemActual.Value + " de " + totalItems + "...");
+                    reportarProgreso(progreso, VentaCierrePaso.guardarDetalle, itemActual.Value, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Guardando ítem " + itemActual.Value + " de " + totalItems + "...");
 
-                        int detId = _repositorio.guardarDetalle(conexion, transaccion, det, facturaVentaId, itemActual.Value);
-                        detalleIds.Add(detId);
-                    }
+                    int detId = _repositorio.guardarDetalle(conexion, transaccion, det, facturaVentaId, itemActual.Value);
+                    detalleIds.Add(detId);
                 }
 
                 cronometroPaso.Stop();
@@ -233,12 +274,9 @@ namespace SIGEFA.Administradores.VentaCierre
                 datos.venta.CodFacturaVenta = facturaVentaId.ToString();
                 datos.venta.NumDoc = numeroDocumentoGenerado;
 
-                if (datos.venta.Detalle != null)
+                for (int i = 0; i < datos.venta.Detalle.Count && i < detalleIds.Count; i++)
                 {
-                    for (int i = 0; i < datos.venta.Detalle.Count && i < detalleIds.Count; i++)
-                    {
-                        datos.venta.Detalle[i].CodDetalleVenta = detalleIds[i];
-                    }
+                    datos.venta.Detalle[i].CodDetalleVenta = detalleIds[i];
                 }
 
                 return new VentaCierreResultado(facturaVentaId, numeroDocumentoGenerado, pagoIds, duraciones);
@@ -274,7 +312,10 @@ namespace SIGEFA.Administradores.VentaCierre
                     {
                         for (int i = 0; i < datos.venta.Detalle.Count && i < codDetallesOriginales.Count; i++)
                         {
-                            datos.venta.Detalle[i].CodDetalleVenta = codDetallesOriginales[i];
+                            if (datos.venta.Detalle[i] != null)
+                            {
+                                datos.venta.Detalle[i].CodDetalleVenta = codDetallesOriginales[i];
+                            }
                         }
                     }
                 }
@@ -384,8 +425,8 @@ namespace SIGEFA.Administradores.VentaCierre
 
         // Hallazgo 1: Compensa los comprobantes confirmados en bloques anteriores llamando
         // a la anulación existente, registrando el resultado de cada anulación. Si alguna falla
-        // (false o excepción), lanza una excepción que detalla explícitamente qué bloques quedaron
-        // sin compensar, conservando la causa original como InnerException.
+        // (false, excepción o datos incompletos), lanza una excepción que detalla explícitamente qué bloques
+        // quedaron sin compensar, conservando la causa original como InnerException.
         private void compensarBloquesConfirmados(IList<VentaCierreDatosBloque> bloquesConfirmados, Exception causaOriginal)
         {
             if (bloquesConfirmados == null || bloquesConfirmados.Count == 0)
@@ -400,8 +441,19 @@ namespace SIGEFA.Administradores.VentaCierre
                 VentaCierreDatosBloque bloque = bloquesConfirmados[i];
                 clsFacturaVenta venta = bloque != null ? bloque.venta : null;
 
+                // Si un bloque confirmado no tiene venta o id, se registra como no compensado
+                // e incluye su índice en la excepción final.
                 if (venta == null || string.IsNullOrEmpty(venta.CodFacturaVenta))
                 {
+                    string nombreAlm = (bloque != null && !string.IsNullOrEmpty(bloque.almacenNombre))
+                        ? bloque.almacenNombre
+                        : (venta != null ? venta.CodAlmacen.ToString() : "desconocido");
+
+                    fallosCompensacion.Add(string.Format(
+                        "Bloque {0} (Almacén: '{1}', FacturaVentaId: {2}): bloque confirmado sin entidad de venta o identificador de factura para anular",
+                        i + 1,
+                        nombreAlm,
+                        venta != null ? (venta.CodFacturaVenta ?? "null") : "null"));
                     continue;
                 }
 
@@ -486,9 +538,21 @@ namespace SIGEFA.Administradores.VentaCierre
             }
         }
 
+        // Enmascara patrones comunes de credenciales como Pwd=..., Password=..., Uid=..., User Id=...
+        private static string enmascararCredenciales(string texto)
+        {
+            if (string.IsNullOrEmpty(texto))
+            {
+                return string.Empty;
+            }
+
+            string patron = @"(?i)\b(pwd|password|uid|user\s*id)\s*=\s*[^;,\s]+";
+            return Regex.Replace(texto, patron, "$1=***");
+        }
+
         // Hallazgo 2: Registra el error en un archivo local %LOCALAPPDATA%\SIGEFA\venta_cierre_errores.log
         // Escribe una sola línea por error con fecha, paso, procedimiento, ítem, producto, número
-        // y mensaje de MySQL, sin credenciales. No abre conexión extra ni altera el esquema.
+        // y mensaje de MySQL con credenciales reemplazadas por ***. No abre conexión extra ni altera el esquema.
         // Si la escritura en el archivo falla, no debe ocultar la excepción original.
         private void registrarErrorLocal(Exception ex, VentaCierrePaso paso, string procedimiento, int? itemIndice, int? productoId, string parametros)
         {
@@ -543,8 +607,8 @@ namespace SIGEFA.Administradores.VentaCierre
                     mysqlMensaje = myEx.Message;
                 }
 
-                // Garantizar una única línea sin saltos de línea ni credenciales
-                string mensajeLimpio = (mysqlMensaje ?? string.Empty).Replace("\r", " ").Replace("\n", " ").Trim();
+                // Filtrar credenciales y garantizar una única línea
+                string mensajeLimpio = enmascararCredenciales((mysqlMensaje ?? string.Empty).Replace("\r", " ").Replace("\n", " ").Trim());
                 string linea = string.Format(
                     "{0:yyyy-MM-dd HH:mm:ss} | Paso: {1} | Procedimiento: {2} | Item: {3} | Producto: {4} | ErrorMySQL: {5} [{6}] | Mensaje: {7}",
                     DateTime.Now,
