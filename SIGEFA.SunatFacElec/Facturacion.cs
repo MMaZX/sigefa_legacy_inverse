@@ -178,7 +178,7 @@ public class Facturacion
 		return result;
 	}
 
-	public async Task GeneraDocumento(clsCliente cliente, clsFacturaVenta venta, List<clsDetalleFacturaVenta> detalleventa, int isVenta)
+	public async Task GeneraDocumento(clsCliente cliente, clsFacturaVenta venta, List<clsDetalleFacturaVenta> detalleventa, int isVenta, Action<string, Exception> colectorErrores = null)
 	{
 		try
 		{
@@ -212,7 +212,15 @@ public class Facturacion
 			VerificaContribuyente = DatosComtribuyente(venta.CodEmpresa);
 			if (VerificaContribuyente == 2)
 			{
-				MessageBox.Show("No se puede generar documento\n Falta cargar datos de la empresa");
+				// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+				if (colectorErrores != null)
+				{
+					colectorErrores("No se puede generar el comprobante electronico: falta cargar datos de la empresa.", null);
+				}
+				else
+				{
+					MessageBox.Show("No se puede generar documento\n Falta cargar datos de la empresa");
+				}
 				return;
 			}
 			switch (_documento.TipoDocumento)
@@ -232,7 +240,15 @@ public class Facturacion
 			DocumentoResponse response = await new GenerarFactura(serializador).Post(_documento);
 			if (!response.Exito)
 			{
-				MessageBox.Show(response.MensajeError);
+				// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+				if (colectorErrores != null)
+				{
+					colectorErrores("No se pudo generar el comprobante electronico: " + response.MensajeError, null);
+				}
+				else
+				{
+					MessageBox.Show(response.MensajeError);
+				}
 			}
 			RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
 			File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
@@ -292,7 +308,15 @@ public class Facturacion
 				new EscribirLog("Guardando documento en Repositorio ", mostrarConsola: true);
 				if (!admRepositorio.registra_repositorio(repositorio))
 				{
-					MessageBox.Show("Documento no se pudo enviar al repositorio");
+					// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+					if (colectorErrores != null)
+					{
+						colectorErrores("No se pudo enviar el comprobante electronico al repositorio.", null);
+					}
+					else
+					{
+						MessageBox.Show("Documento no se pudo enviar al repositorio");
+					}
 					new EscribirLog("Error al guardar repositorio", mostrarConsola: true);
 				}
 			}
@@ -300,7 +324,15 @@ public class Facturacion
 		catch (Exception ex)
 		{
 			Exception a = ex;
-			MessageBox.Show(a.Message);
+			// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+			if (colectorErrores != null)
+			{
+				colectorErrores("No se pudo generar el comprobante electronico: " + a.Message, a);
+			}
+			else
+			{
+				MessageBox.Show(a.Message);
+			}
 		}
 		finally
 		{

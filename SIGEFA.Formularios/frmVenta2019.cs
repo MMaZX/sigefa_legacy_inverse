@@ -8,6 +8,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Transactions;
 using System.Windows.Forms;
 using AForge;
@@ -3545,6 +3546,9 @@ public class frmVenta2019 : Office2007Form
 							return;
 						}
 					}
+					// T13b: en la ruta nueva los 4 pasos post-cierre los ejecuta el dialogo;
+					// al volver solo se limpia la vista. Con legacy o sin flag queda en false.
+					bool postCierreEnDialogo = false;
 					foreach (object e in alma)
 					{
 						admsucu.sucursalxalmacen(Convert.ToInt32(e));
@@ -3617,7 +3621,10 @@ public class frmVenta2019 : Office2007Form
 									// error exacto de MySQL con botón para copiarlo; si falló se
 									// relanza un error legible para que lo capture el catch actual
 									// y compense con lista_facturas los bloques ya confirmados.
-									frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre);
+									// T13b: las 4 acciones post-cierre van al dialogo como delegados (despacho,
+									// codigo de barras, comprobante electronico e impresion, en ese orden).
+									IList<VentaCierrePostAccion> accionesPostCierre = construirAccionesPostCierre(bloqueCierre, detalle1, cli, new List<clsPedido>(PedidosIngresados));
+									frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre, accionesPostCierre);
 									dialogoCierre.ShowDialog(this);
 									if (!dialogoCierre.fueExitoso)
 									{
@@ -3629,11 +3636,9 @@ public class frmVenta2019 : Office2007Form
 									{
 										toolStripImprimir.Visible = true;
 									}
-									if (!chkTicket.Checked)
-									{
-										await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
-										this.venta.Qr = facturacion.LogoEmp;
-									}
+									// T13b: despacho, codigo de barras, comprobante e impresion ya los ejecuto
+									// el dialogo; al volver solo se marca para limpiar la vista al cerrar.
+									postCierreEnDialogo = true;
 									frmMensajeCredito men = new frmMensajeCredito();
 									men.ShowDialog();
 								}
@@ -3700,7 +3705,10 @@ public class frmVenta2019 : Office2007Form
 										VentaCierreDatosBloque bloqueCierre = new VentaCierreDatosBloque(this.venta, nombreAlmacenCierre, form.borradoresPago);
 										List<VentaCierreDatosBloque> bloquesCierre = new List<VentaCierreDatosBloque>();
 										bloquesCierre.Add(bloqueCierre);
-										frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre);
+										// T13b: las 4 acciones post-cierre van al dialogo como delegados (despacho,
+										// codigo de barras, comprobante electronico e impresion, en ese orden).
+										IList<VentaCierrePostAccion> accionesPostCierreContado = construirAccionesPostCierre(bloqueCierre, detalle1, cli, new List<clsPedido>(PedidosIngresados));
+										frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre, accionesPostCierreContado);
 										dialogoCierre.ShowDialog(this);
 										if (!dialogoCierre.fueExitoso)
 										{
@@ -3712,11 +3720,9 @@ public class frmVenta2019 : Office2007Form
 										{
 											toolStripImprimir.Visible = true;
 										}
-										if (!chkTicket.Checked)
-										{
-											await facturacion.GeneraDocumento(cli, this.venta, detalle1, 0);
-											this.venta.Qr = facturacion.LogoEmp;
-										}
+										// T13b: despacho, codigo de barras, comprobante e impresion ya los ejecuto
+										// el dialogo; al volver solo se marca para limpiar la vista al cerrar.
+										postCierreEnDialogo = true;
 									}
 									else
 									{
@@ -3741,17 +3747,27 @@ public class frmVenta2019 : Office2007Form
 							this.venta = new clsFacturaVenta();
 							new clsFacturaVenta();
 						}
-						foreach (clsPedido ped2 in PedidosIngresados)
+						// T13b: en la ruta nueva el codigo de barras lo ejecuta el dialogo por pedido
+						// (advertencia sin anular); aqui solo se conserva para la ruta legacy.
+						if (!postCierreEnDialogo)
 						{
-							AdmPedido.GuardaCodigoBarras(ped2);
+							foreach (clsPedido ped2 in PedidosIngresados)
+							{
+								AdmPedido.GuardaCodigoBarras(ped2);
+							}
 						}
 						PedidosIngresados = new List<clsPedido>();
 					}
-					foreach (clsFacturaVenta fv in lista_facturas)
+					// T13b: en la ruta nueva la impresion la ejecuta el dialogo (despues de la
+					// facturacion electronica); aqui solo se conserva para la ruta legacy.
+					if (!postCierreEnDialogo)
 					{
-						if (fv.CodFacturaVenta != null)
+						foreach (clsFacturaVenta fv in lista_facturas)
 						{
-							fnImprimir(fv);
+							if (fv.CodFacturaVenta != null)
+							{
+								fnImprimir(fv);
+							}
 						}
 					}
 					if (anulados == 0)
@@ -3793,7 +3809,20 @@ public class frmVenta2019 : Office2007Form
 		}
 		if (bandTerminoGuardadoVenta)
 		{
-			CreacionDespacho(lista_facturas);
+			if (postCierreEnDialogo)
+			{
+				// T13b: el dialogo ya ejecuto despacho, codigo de barras, comprobante e
+				// impresion; se limpia la vista y se reinicia el estado para "Iniciar OV".
+				limpiarVentana();
+				this.venta = new clsFacturaVenta();
+				lista_facturas = new List<clsFacturaVenta>();
+				CodVenta = null;
+				PedidosIngresados = new List<clsPedido>();
+			}
+			else
+			{
+				CreacionDespacho(lista_facturas);
+			}
 		}
 	}
 
@@ -3995,7 +4024,7 @@ public class frmVenta2019 : Office2007Form
 		return venta;
 	}
 
-	private void CreacionDespacho(List<clsFacturaVenta> lista_facturas)
+	private void CreacionDespacho(List<clsFacturaVenta> lista_facturas, Action<string, Exception> colectorErrores = null)
 	{
 		try
 		{
@@ -4083,15 +4112,113 @@ public class frmVenta2019 : Office2007Form
 			if (contador == lista_facturas.Count)
 			{
 			}
-			imprimirDespachos(lista_despacho);
+			imprimirDespachos(lista_despacho, colectorErrores);
 		}
 		catch (Exception ex3)
 		{
-			MessageBox.Show("Error: " + ex3.Message.ToString(), "Error Respecto a Despacho", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+			// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+			if (colectorErrores != null)
+			{
+				colectorErrores("No se pudo crear el despacho: " + ex3.Message, ex3);
+			}
+			else
+			{
+				MessageBox.Show("Error: " + ex3.Message.ToString(), "Error Respecto a Despacho", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+			}
 		}
 	}
 
-	private void imprimirDespachos(List<clsDespacho> lista_despacho)
+	// T13b: arma las 4 acciones post-cierre de la ruta nueva en el orden de T13a.
+	// Recibe el bloque ya confirmado (venta, detalle, cliente y pedidos) y devuelve
+	// los delegados para el dialogo, sin depender del recorrido de almacenes.
+	// Cada error va a la lista del paso (Advertencia, nunca anula la venta) y al registro local.
+	private IList<VentaCierrePostAccion> construirAccionesPostCierre(
+		VentaCierreDatosBloque bloqueCierre,
+		List<clsDetalleFacturaVenta> detalleDoc,
+		clsCliente clienteDoc,
+		List<clsPedido> pedidosDoc)
+	{
+		clsFacturaVenta ventaDoc = bloqueCierre.venta;
+		List<clsPedido> pedidosPaso = new List<clsPedido>(pedidosDoc ?? new List<clsPedido>());
+		List<VentaCierrePostAccion> acciones = new List<VentaCierrePostAccion>();
+
+		// 1. Crear despacho (se conserva creacion e impresion; sin requerimiento queda Omitido).
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.crearDespacho, ctx =>
+		{
+			try
+			{
+				int codAlmacenDoc = Convert.ToInt32(ventaDoc.CodAlmacen);
+				int codPedidoDoc = Convert.ToInt32(pedido.CodPedido);
+				clsRequerimientoAlmacen req = admreqalm.CargaRequerimientosSegun(codPedidoDoc, codAlmacenDoc, 13);
+				if (req == null)
+				{
+					ctx.marcarOmitido("Omitido: sin requerimiento");
+					return Task.CompletedTask;
+				}
+				CreacionDespacho(new List<clsFacturaVenta> { ventaDoc }, (mensaje, ex) => ctx.agregarError(mensaje, ex));
+			}
+			catch (Exception ex)
+			{
+				ctx.agregarError("No se pudo crear el despacho de la venta " + ventaDoc.CodFacturaVenta + ".", ex);
+			}
+			return Task.CompletedTask;
+		}));
+
+		// 2. Guardar codigo de barras del pedido (solo etiqueta; en la ruta nueva no anula la venta).
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.guardarCodigoBarras, ctx =>
+		{
+			if (pedidosPaso.Count == 0)
+			{
+				ctx.marcarOmitido("Omitido: sin pedidos");
+				return Task.CompletedTask;
+			}
+			foreach (clsPedido ped in pedidosPaso)
+			{
+				try
+				{
+					if (!AdmPedido.GuardaCodigoBarras(ped))
+					{
+						ctx.agregarError("No se pudo guardar el codigo de barras del pedido " + ped.CodPedido + ".", null);
+					}
+				}
+				catch (Exception ex)
+				{
+					ctx.agregarError("No se pudo guardar el codigo de barras del pedido " + ped.CodPedido + ".", ex);
+				}
+			}
+			return Task.CompletedTask;
+		}));
+
+		// 3. Generar y firmar comprobante electronico (el QR impreso sale de venta.Qr).
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.generarComprobanteElectronico, async ctx =>
+		{
+			if (chkTicket.Checked)
+			{
+				ctx.marcarOmitido("Omitido: ticket sin comprobante electronico");
+				return;
+			}
+			await facturacion.GeneraDocumento(clienteDoc, ventaDoc, detalleDoc, 0, (mensaje, ex) => ctx.agregarError(mensaje, ex));
+			ventaDoc.Qr = facturacion.LogoEmp;
+		}));
+
+		// 4. Imprimir comprobante (doble copia y visor de transferencia, como hoy).
+		acciones.Add(new VentaCierrePostAccion(VentaCierrePostPaso.imprimirComprobante, ctx =>
+		{
+			try
+			{
+				fnImprimir(ventaDoc, (mensaje, ex) => ctx.agregarError(mensaje, ex));
+			}
+			catch (Exception ex)
+			{
+				ctx.agregarError("No se pudo imprimir el comprobante " + ventaDoc.Serie + "-" + ventaDoc.NumDoc + ".", ex);
+			}
+			return Task.CompletedTask;
+		}));
+
+		return acciones;
+	}
+
+	private void imprimirDespachos(List<clsDespacho> lista_despacho, Action<string, Exception> colectorErrores = null)
 	{
 		try
 		{
@@ -4115,13 +4242,29 @@ public class frmVenta2019 : Office2007Form
 				}
 				catch (Exception ex)
 				{
-					MessageBox.Show("Se encontro el siguiente problema: " + ex.Message, "Despacho", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+					// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+					if (colectorErrores != null)
+					{
+						colectorErrores("No se pudo imprimir el despacho " + item.CodDespacho + ": " + ex.Message, ex);
+					}
+					else
+					{
+						MessageBox.Show("Se encontro el siguiente problema: " + ex.Message, "Despacho", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+					}
 				}
 			}
 		}
 		catch (Exception ex2)
 		{
-			MessageBox.Show("Se encontro el siguiente problema" + ex2.Message, "Venta", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+			if (colectorErrores != null)
+			{
+				colectorErrores("No se pudo imprimir un despacho: " + ex2.Message, ex2);
+			}
+			else
+			{
+				MessageBox.Show("Se encontro el siguiente problema" + ex2.Message, "Venta", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			}
 		}
 	}
 
@@ -4180,7 +4323,7 @@ public class frmVenta2019 : Office2007Form
 		return detalle;
 	}
 
-	public void fnImprimir(clsFacturaVenta fv)
+	public void fnImprimir(clsFacturaVenta fv, Action<string, Exception> colectorErrores = null)
 	{
 		try
 		{
@@ -4189,22 +4332,30 @@ public class frmVenta2019 : Office2007Form
 			admTransa.TransFactura(venta.CodPedido);
 			if (impresion == 0)
 			{
-				PrintaDocumento(fv);
+				PrintaDocumento(fv, colectorErrores);
 				transfer = admTransa.CargaTransferenciaCodPedido(Convert.ToInt32(pedido.CodPedido));
 				if (transfer != null)
 				{
 					transfer = null;
-					PrintaDocumentoTrnas(fv);
+					PrintaDocumentoTrnas(fv, colectorErrores);
 				}
 			}
 		}
 		catch (Exception ex)
 		{
-			MessageBox.Show("Se encontro el siguiente problema" + ex.Message, "Venta", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+			if (colectorErrores != null)
+			{
+				colectorErrores("No se pudo imprimir el comprobante " + fv.Serie + "-" + fv.NumDoc + ": " + ex.Message, ex);
+			}
+			else
+			{
+				MessageBox.Show("Se encontro el siguiente problema" + ex.Message, "Venta", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			}
 		}
 	}
 
-	private void PrintaDocumentoTrnas(clsFacturaVenta fv)
+	private void PrintaDocumentoTrnas(clsFacturaVenta fv, Action<string, Exception> colectorErrores = null)
 	{
 		try
 		{
@@ -4247,11 +4398,19 @@ public class frmVenta2019 : Office2007Form
 		}
 		catch (Exception ex)
 		{
-			MessageBox.Show("Se encontro el siguiente problema" + ex.Message, "Transferencia", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+			if (colectorErrores != null)
+			{
+				colectorErrores("No se pudo imprimir la transferencia del comprobante " + fv.Serie + "-" + fv.NumDoc + ": " + ex.Message, ex);
+			}
+			else
+			{
+				MessageBox.Show("Se encontro el siguiente problema" + ex.Message, "Transferencia", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			}
 		}
 	}
 
-	private void PrintaDocumento(clsFacturaVenta fv)
+	private void PrintaDocumento(clsFacturaVenta fv, Action<string, Exception> colectorErrores = null)
 	{
 		new EscribirLog("Imprimiento TICKET ", mostrarConsola: true);
 		int VFormapago = venta.FormaPago;
@@ -4333,7 +4492,15 @@ public class frmVenta2019 : Office2007Form
 		}
 		catch (Exception ex)
 		{
-			MessageBox.Show("Se encontro el siguiente problema" + ex.Message, "Venta", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
+			if (colectorErrores != null)
+			{
+				colectorErrores("No se pudo imprimir el comprobante " + fv.Serie + "-" + fv.NumDoc + ": " + ex.Message, ex);
+			}
+			else
+			{
+				MessageBox.Show("Se encontro el siguiente problema" + ex.Message, "Venta", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			}
 		}
 	}
 
