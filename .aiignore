@@ -1,0 +1,43 @@
+# .aiignore — qué NO debe leer ninguna IA en este repo.
+# Sintaxis tipo .gitignore (una regla por línea, * = wildcard).
+# OJO: no todos los asistentes leen este archivo automáticamente.
+# La mayoría (Cursor, Gemini, Cody, Copilot) sí respeta .gitignore al indexar,
+# así que lo sensible también va ahí. Este archivo es la capa extra explícita:
+# si trabajás con IA en este repo, empezá acá.
+
+# --- Secretos y credenciales (si alguna vez existen en disco) ---
+*.env
+*.env.*
+*.pfx
+*.p12
+*.pem
+*.key
+secrets/
+credentials/
+
+# --- Datos reales de clientes ---
+# documentos/ lo crea el sistema al arrancar (CDR, Boletas, Facturas, NC, ND,
+# RESUMEN, GUIAS de SUNAT). Son comprobantes de clientes de verdad: no leer,
+# no resumir, no pegar su contenido en respuestas.
+documentos/
+
+# --- Binarios y dependencias precompiladas (ilegibles, solo ruido) ---
+Debug_gr/
+*.dll
+*.exe
+*.rpt
+
+# --- Recursos de diseñador WinForms (*.resx, algunos de hasta 12 MB) ---
+# Son XML generados por Visual Studio; el código que importa está en los .cs.
+*.resx
+
+# --- Caches de herramientas (índices locales, se regeneran solos) ---
+.atl/
+.codegraph/
+graphify-out/
+.opencode/node_modules/
+.agents/
+
+# --- Archivos locales de Visual Studio ---
+.vs/
+*.user

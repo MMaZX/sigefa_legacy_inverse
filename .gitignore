@@ -26,5 +26,11 @@ packages/
 
 ## Agent Skills and Graphify cache
 .agents/
+.opencode/node_modules/
 graphify-out/cache/
+.atl/
+.codegraph/
+
+## Runtime-generated SUNAT documents (facturas, CDR, guías, etc.)
+documentos/
 
