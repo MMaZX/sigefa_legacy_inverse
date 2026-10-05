@@ -642,10 +642,12 @@ public class frmCancelarPago : Office2007Form
 		if (modoCaptura)
 		{
 			int metodoSeleccionado = Convert.ToInt32(cmbMetodoPago.SelectedValue);
-			// En modo captura solo se soporta efectivo (método 5). Depósito (6), cheque (7),
-			// tarjeta (8) y transferencia (9) usan el flujo viejo con el aviso existente, porque
-			// la ruta vieja crea además GuardaPagoPendiente (insertPagoPendiente) y la ruta nueva no lo replica.
-			bool esMetodoSoportado = metodoSeleccionado == 5;
+			// En modo captura se soportan efectivo (5), depósito (6), tarjeta (8) y
+			// transferencia (9): GuardaPago ya inserta ctactemovimientos para esos
+			// métodos y GuardaPagoPendiente es no-op en venta nueva (solo descuenta
+			// de un pago tipo 12 ya existente para esa factura). Cheque (7), nota de
+			// crédito (10) y pendiente (12) usan el flujo viejo con el aviso existente.
+			bool esMetodoSoportado = metodoSeleccionado == 5 || metodoSeleccionado == 6 || metodoSeleccionado == 8 || metodoSeleccionado == 9;
 			if (!esMetodoSoportado)
 			{
 				if (borradoresPago.Count > 0)
