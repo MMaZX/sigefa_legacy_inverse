@@ -59,7 +59,8 @@ public static class ReqVentaConsultas
     }
 
     // Lee las transferencias originales del requerimiento (excluye extornos).
-    // tiene_extorno indica si la original ya tiene extorno (LEFT JOIN por codDocExtornacion).
+    // tiene_extorno indica si la original ya tiene extorno (EXISTS por codDocExtornacion; un JOIN
+    // duplicaría la original cuando tiene varios extornos, como el req 10785 con 3).
     // El orden por codTransDir es estable; con bloqueo termina en FOR UPDATE.
     public static List<Dictionary<string, object>> ObtenerTransferencias(IConsultor consultor, int codReq, bool bloquear)
     {
@@ -70,8 +71,8 @@ public static class ReqVentaConsultas
 
         string sql = "SELECT o." + Columnas.CodTransDir + ", o." + Columnas.AlmacenOrigen + ", o." + Columnas.AlmacenDestino + ", o." + Columnas.Total + ", "
             + "o." + Columnas.Estado + "+0 AS " + Columnas.Estado + ", o." + Columnas.Pendiente + "+0 AS " + Columnas.Pendiente + ", "
-            + "(e." + Columnas.CodTransDir + " IS NOT NULL) AS " + Columnas.TieneExtorno + " "
-            + "FROM transferencia o LEFT JOIN transferencia e ON e." + Columnas.CodDocExtornacion + " = o." + Columnas.CodTransDir + " "
+            + "EXISTS (SELECT 1 FROM transferencia e WHERE e." + Columnas.CodDocExtornacion + " = o." + Columnas.CodTransDir + ") AS " + Columnas.TieneExtorno + " "
+            + "FROM transferencia o "
             + "WHERE o." + Columnas.IdReq + " = @id AND o." + Columnas.CodDocExtornacion + " IS NULL "
             + "ORDER BY o." + Columnas.CodTransDir;
         if (bloquear)
