@@ -25,11 +25,14 @@ public enum VentaCierrePaso
     // Guarda cada ítem con GuardaDetalleFacturaVenta (informa itemActual).
     guardarDetalle = 4,
 
+    // Bloquea y valida las notas de crédito con SELECT pendiente FROM notacredito FOR UPDATE.
+    reservarNotaCredito = 5,
+
     // Guarda cada pago capturado con GuardaPago (solo si hay borradores).
-    guardarPago = 5,
+    guardarPago = 6,
 
     // Confirma la transacción con Commit (ya fuera del try de escritura).
-    confirmar = 6
+    confirmar = 7
 }
 
 // Texto legible en español para mostrar cada paso en el diálogo de progreso.
@@ -51,6 +54,8 @@ public static class VentaCierrePasoTexto
                 return "Guardar venta";
             case VentaCierrePaso.guardarDetalle:
                 return "Guardar detalle";
+            case VentaCierrePaso.reservarNotaCredito:
+                return "Reservar nota de crédito";
             case VentaCierrePaso.guardarPago:
                 return "Guardar pago";
             case VentaCierrePaso.confirmar:

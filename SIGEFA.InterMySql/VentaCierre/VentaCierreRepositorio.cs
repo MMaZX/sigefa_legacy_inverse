@@ -33,6 +33,11 @@ namespace SIGEFA.InterMySql.VentaCierre
 
         // Inserta un pago capturado mediante GuardaPago y devuelve el id generado.
         int guardarPago(MySqlConnection conexion, MySqlTransaction transaccion, BorradorPago pago, int facturaVentaId);
+
+        // Bloquea la fila de la nota de crédito mediante SELECT pendiente FROM notacredito WHERE codNotaI = @notaCreditoId FOR UPDATE.
+        // Espera: notaCreditoId existente en la tabla notacredito.
+        // Devuelve: el saldo pendiente actual registrado en la nota de crédito.
+        decimal bloquearNotaCredito(MySqlConnection conexion, MySqlTransaction transaccion, int notaCreditoId);
     }
 
     // Implementación MySQL del repositorio transaccional de cierre de venta.
@@ -593,6 +598,54 @@ namespace SIGEFA.InterMySql.VentaCierre
                 throw new VentaCierreException(
                     VentaCierrePaso.guardarPago,
                     "GuardaPago",
+                    ex.Number,
+                    ex.SqlState,
+                    ex.Message,
+                    ex,
+                    null,
+                    null,
+                    parametrosInfo);
+            }
+        }
+
+        // Bloquea la fila de la nota de crédito mediante SELECT pendiente FROM notacredito WHERE codNotaI = @notaCreditoId FOR UPDATE.
+        // Espera: notaCreditoId existente en la tabla notacredito.
+        // Devuelve: el saldo pendiente actual registrado en la nota de crédito.
+        public decimal bloquearNotaCredito(MySqlConnection conexion, MySqlTransaction transaccion, int notaCreditoId)
+        {
+            const string sql = "SELECT pendiente FROM notacredito WHERE codNotaI = @notaCreditoId FOR UPDATE;";
+            string parametrosInfo = "notaCreditoId=" + notaCreditoId;
+
+            try
+            {
+                using (MySqlCommand cmd = new MySqlCommand(sql, conexion, transaccion))
+                {
+                    cmd.CommandType = CommandType.Text;
+                    cmd.Parameters.AddWithValue("@notaCreditoId", notaCreditoId);
+
+                    object valor = cmd.ExecuteScalar();
+                    if (valor == null || valor == DBNull.Value)
+                    {
+                        throw new VentaCierreException(
+                            VentaCierrePaso.reservarNotaCredito,
+                            "bloquearNotaCredito",
+                            0,
+                            string.Empty,
+                            "No se encontró la nota de crédito con ID " + notaCreditoId,
+                            null,
+                            null,
+                            null,
+                            parametrosInfo);
+                    }
+
+                    return Convert.ToDecimal(valor);
+                }
+            }
+            catch (MySqlException ex)
+            {
+                throw new VentaCierreException(
+                    VentaCierrePaso.reservarNotaCredito,
+                    "bloquearNotaCredito",
                     ex.Number,
                     ex.SqlState,
                     ex.Message,

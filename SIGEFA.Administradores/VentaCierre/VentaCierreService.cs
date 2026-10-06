@@ -237,7 +237,50 @@ namespace SIGEFA.Administradores.VentaCierre
                 itemActual = null;
                 productoActual = null;
 
-                // Paso 6: guardarPago (solo si hay borradores; en venta a crédito no hay pagos)
+                // Paso 6: reservarNotaCredito (solo si hay borradores con notaCreditoId > 0)
+                pasoActual = VentaCierrePaso.reservarNotaCredito;
+                cronometroPaso.Restart();
+
+                if (datos.pagos != null && datos.pagos.Count > 0)
+                {
+                    List<int> ncsDistintas = datos.pagos
+                        .Where(p => p != null && p.notaCreditoId > 0)
+                        .Select(p => p.notaCreditoId)
+                        .Distinct()
+                        .OrderBy(id => id)
+                        .ToList();
+
+                    for (int n = 0; n < ncsDistintas.Count; n++)
+                    {
+                        int ncId = ncsDistintas[n];
+                        decimal sumaCobradoNC = datos.pagos
+                            .Where(p => p != null && p.notaCreditoId == ncId)
+                            .Sum(p => p.montoCobrado);
+
+                        parametrosActuales = "notaCreditoId=" + ncId + ";sumaCobrado=" + sumaCobradoNC;
+                        reportarProgreso(progreso, VentaCierrePaso.reservarNotaCredito, n + 1, ncsDistintas.Count, bloqueActual, totalBloques, datos.almacenNombre, "Validando nota de crédito " + (n + 1) + " de " + ncsDistintas.Count + "...");
+
+                        decimal pendienteActual = _repositorio.bloquearNotaCredito(conexion, transaccion, ncId);
+                        if (sumaCobradoNC > pendienteActual)
+                        {
+                            throw new VentaCierreException(
+                                VentaCierrePaso.reservarNotaCredito,
+                                "bloquearNotaCredito",
+                                0,
+                                string.Empty,
+                                "Saldo insuficiente en nota de crédito ID " + ncId + ": monto a aplicar (" + sumaCobradoNC + ") supera el saldo pendiente (" + pendienteActual + ").",
+                                null,
+                                null,
+                                null,
+                                parametrosActuales + ";pendiente=" + pendienteActual);
+                        }
+                    }
+                }
+
+                cronometroPaso.Stop();
+                duraciones[VentaCierrePaso.reservarNotaCredito] = cronometroPaso.ElapsedMilliseconds;
+
+                // Paso 7: guardarPago (solo si hay borradores; en venta a crédito no hay pagos)
                 pasoActual = VentaCierrePaso.guardarPago;
                 cronometroPaso.Restart();
 
@@ -259,7 +302,7 @@ namespace SIGEFA.Administradores.VentaCierre
                 cronometroPaso.Stop();
                 duraciones[VentaCierrePaso.guardarPago] = cronometroPaso.ElapsedMilliseconds;
 
-                // Paso 7: confirmar
+                // Paso 8: confirmar
                 pasoActual = VentaCierrePaso.confirmar;
                 cronometroPaso.Restart();
                 reportarProgreso(progreso, VentaCierrePaso.confirmar, totalItems, totalItems, bloqueActual, totalBloques, datos.almacenNombre, "Confirmando transacción...");
@@ -596,6 +639,46 @@ namespace SIGEFA.Administradores.VentaCierre
                     itemActual = null;
                     productoActual = null;
 
+                    // Validar y reservar notas de crédito del bloque
+                    pasoActual = VentaCierrePaso.reservarNotaCredito;
+                    if (datos.pagos != null && datos.pagos.Count > 0)
+                    {
+                        List<int> ncsDistintasBloque = datos.pagos
+                            .Where(p => p != null && p.notaCreditoId > 0)
+                            .Select(p => p.notaCreditoId)
+                            .Distinct()
+                            .OrderBy(id => id)
+                            .ToList();
+
+                        for (int n = 0; n < ncsDistintasBloque.Count; n++)
+                        {
+                            int ncId = ncsDistintasBloque[n];
+                            decimal sumaCobradoNC = datos.pagos
+                                .Where(p => p != null && p.notaCreditoId == ncId)
+                                .Sum(p => p.montoCobrado);
+
+                            itemActual = n + 1;
+                            parametrosActuales = "bloque=" + bloqueActual + ";notaCreditoId=" + ncId + ";sumaCobrado=" + sumaCobradoNC;
+                            reportarProgreso(progreso, VentaCierrePaso.reservarNotaCredito, itemActual.Value, ncsDistintasBloque.Count, bloqueActual, totalBloques, datos.almacenNombre, "Validando nota de crédito " + itemActual.Value + " de " + ncsDistintasBloque.Count + "...");
+
+                            decimal pendienteActual = _repositorio.bloquearNotaCredito(conexion, transaccion, ncId);
+                            if (sumaCobradoNC > pendienteActual)
+                            {
+                                throw new VentaCierreException(
+                                    VentaCierrePaso.reservarNotaCredito,
+                                    "bloquearNotaCredito",
+                                    0,
+                                    string.Empty,
+                                    "Saldo insuficiente en nota de crédito ID " + ncId + " (bloque " + bloqueActual + "): monto a aplicar (" + sumaCobradoNC + ") supera el saldo pendiente (" + pendienteActual + ").",
+                                    null,
+                                    null,
+                                    null,
+                                    parametrosActuales + ";pendiente=" + pendienteActual);
+                            }
+                        }
+                    }
+                    itemActual = null;
+
                     // Guardar pagos
                     pasoActual = VentaCierrePaso.guardarPago;
                     if (datos.pagos != null && datos.pagos.Count > 0)
@@ -901,6 +984,8 @@ namespace SIGEFA.Administradores.VentaCierre
                     return "GuardaFacturaVenta";
                 case VentaCierrePaso.guardarDetalle:
                     return "GuardaDetalleFacturaVenta";
+                case VentaCierrePaso.reservarNotaCredito:
+                    return "bloquearNotaCredito (SELECT pendiente FROM notacredito FOR UPDATE)";
                 case VentaCierrePaso.guardarPago:
                     return "GuardaPago";
                 case VentaCierrePaso.confirmar:
