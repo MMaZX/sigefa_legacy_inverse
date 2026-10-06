@@ -1627,29 +1627,29 @@ public class frmCancelarPago : Office2007Form
 	{
 		try
 		{
-			buscaAprobacion(Convert.ToInt32(cmbMetodoPago.SelectedValue));
 			int metodoId = Convert.ToInt32(cmbMetodoPago.SelectedValue);
+			buscaAprobacion(metodoId);
 			helperCamposPago.aplicarMetodo(metodoId);
-			if (metodoId == 6 || metodoId == 9)
+			switch (metodoId)
 			{
-				// CargarBancos reenlaza y deja sin selección; va después del helper
-				// para que el banco no quede con valor residual.
-				CargarBancos();
-				if (tipo != 1 || metodoId != 6)
-				{
+				case 6:
+				case 9:
+					// CargarBancos reenlaza y deja sin selección; va después del helper
+					// para que el banco no quede con valor residual.
+					CargarBancos();
+					if (tipo != 1 || metodoId != 6)
+					{
+						cboBanco.Focus();
+					}
+					break;
+				case 7:
 					cboBanco.Focus();
-				}
-			}
-			else if (metodoId == 7)
-			{
-				cboBanco.Focus();
-			}
-			else if (metodoId == 8)
-			{
-				cboTarjeta.Focus();
-			}
-			else if (metodoId == 10)
-			{
+					break;
+				case 8:
+					cboTarjeta.Focus();
+					break;
+				case 10:
+				{
 				if (Application.OpenForms["frmListaNCreditosSinAplicar"] != null)
 				{
 					Application.OpenForms["frmListaNCreditosSinAplicar"].Activate();
@@ -1683,6 +1683,8 @@ public class frmCancelarPago : Office2007Form
 					txtNc.Text = notaS.Docref;
 					txtMontoPago.Text = notaS.Total.ToString();
 				}
+				}
+					break;
 			}
 		}
 		catch (Exception ex)
