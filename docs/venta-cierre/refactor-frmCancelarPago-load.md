@@ -43,16 +43,28 @@ CargaLetra();
 Riesgo: nulo (el bloque no hace nada). Skill `refactor` §9 (código muerto): si hace falta, el historial de git lo conserva.
 Verificación: `git diff -w` muestra solo líneas eliminadas; humo con `tipo == 4`.
 
-### Paso 2 — Extraer la decisión del modo captura
+### Paso 2 — Estabilizar los flags en camelCase y extraer la decisión del modo captura
+
+Los tres flags que `Load` inicializa mezclan estilos (`ventana_cobro`, `caja_aperturada` con snake_case; `ventaRecibida` en camelCase) y no dicen con su nombre que son estado booleano. Se renombran con prefijo `es` (los tres son `bool`):
+
+| Antes (público) | Después (público) |
+|---|---|
+| `ventana_cobro` | `esVentanaCobro` |
+| `caja_aperturada` | `esCajaAperturada` |
+| `ventaRecibida` | `esVentaRecibida` |
+
+Alcance medido del renombre (únicos lectores externos): `frmVenta2019.cs:3644, 3648, 3652` (ruta contado) y `:3838, 3840, 3844` (ruta crédito). Usos internos en `frmCancelarPago.cs:367, 378-380, 705, 741, 1399, 1494, 2126`. **No tocar** `caja_aperturada` de `frmCancelarPagoMultiple.cs:123` ni de `frmCancelarCobroMultiple.cs:268`: son miembros de otras clases, fuera de alcance.
+
+El renombre va en el mismo commit que la extracción (si quedara a medias, no compila: el compilador hace de red de seguridad) y se verifica con el build en VM.
 
 Cuerpo actual (`:378-391`): las tres banderas, la lectura del flag y el `if/else` que fija `modoCaptura` y limpia `borradoresPago`.
 
-Cuerpo propuesto en `Load`:
+Cuerpo propuesto en `Load` (ya con los nombres nuevos):
 
 ```csharp
-ventana_cobro = true;
-ventaRecibida = false;
-caja_aperturada = true;
+esVentanaCobro = true;
+esVentaRecibida = false;
+esCajaAperturada = true;
 determinarModoCaptura();
 ```
 
@@ -122,7 +134,7 @@ Verificación por `tipo`: 10 (sin `Mon`, solo TC venta), 1/2/5 (TC venta + moned
 
 Regla de oro: **el refactor no cambia lo que el código hace, solo cómo está escrito**. En esta pasada, además:
 
-- No cambian firmas públicas ni campos públicos (`tipo`, `tip`, `VentComp`, `venta`, `mon`, `Mon`, `vieneDe`, `montoPag`, `borradoresPago`, etc.).
+- No cambian firmas públicas ni campos públicos (`tipo`, `tip`, `VentComp`, `venta`, `mon`, `Mon`, `vieneDe`, `montoPag`, `borradoresPago`, etc.), **con una sola excepción**: el renombre de los tres flags del paso 2 (`ventana_cobro`, `caja_aperturada`, `ventaRecibida` → prefijo `es`), que actualiza todos sus lectores en el mismo commit y se verifica con el build en VM.
 - No cambia el orden de inicialización (O7).
 - No hay cambios de arquitectura (sin DI, sin clases nuevas, sin tocar DAL ni servicio).
 - Proceso por paso (adaptado de la skill: no hay tests, el "test" es el humo): un paso → `git diff -w` → humo del `tipo` afectado → commit. Un commit por extracción. Si un humo falla, se revierte solo ese paso.
