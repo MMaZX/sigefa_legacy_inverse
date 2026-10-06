@@ -388,15 +388,7 @@ public class frmCancelarPago : Office2007Form
 		if (tipo == 10)
 		{
 			tc = mdi_Menu.clstc;
-			if (tc != null)
-			{
-				txtTipoCambio.Text = tc.Venta.ToString();
-			}
-			else
-			{
-				txtTipoCambio.Text = "";
-				txtTipoCambio.ReadOnly = false;
-			}
+			cargarTipoCambio(usaCompra: false);
 		}
 		cargarDocumentoPorTipo();
 		CargaMetodosPagos();
@@ -408,15 +400,7 @@ public class frmCancelarPago : Office2007Form
 			{
 				txtMoneda.Text = Mon.SDescripcion;
 				tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
-				if (tc != null)
-				{
-					txtTipoCambio.Text = tc.Venta.ToString();
-				}
-				else
-				{
-					txtTipoCambio.Text = "";
-					txtTipoCambio.ReadOnly = false;
-				}
+				cargarTipoCambio(usaCompra: false);
 				cmbMoneda.SelectedValue = Mon.IcodMoneda;
 			}
 		}
@@ -424,15 +408,10 @@ public class frmCancelarPago : Office2007Form
 		{
 			txtMoneda.Text = Mon.SDescripcion;
 			tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
+			cargarTipoCambio(usaCompra: true);
 			if (tc != null)
 			{
-				txtTipoCambio.Text = tc.Compra.ToString();
 				txtTipoCambio.ReadOnly = true;
-			}
-			else
-			{
-				txtTipoCambio.Text = "";
-				txtTipoCambio.ReadOnly = false;
 			}
 			cmbMoneda.SelectedValue = Mon.IcodMoneda;
 		}
@@ -513,6 +492,21 @@ public class frmCancelarPago : Office2007Form
 				break;
 			default:
 				break;
+		}
+	}
+
+	// Fija el texto del tipo de cambio desde el tc ya cargado (venta o compra).
+	// Sin tipo de cambio deja texto vacío y editable.
+	private void cargarTipoCambio(bool usaCompra)
+	{
+		if (tc != null)
+		{
+			txtTipoCambio.Text = usaCompra ? tc.Compra.ToString() : tc.Venta.ToString();
+		}
+		else
+		{
+			txtTipoCambio.Text = "";
+			txtTipoCambio.ReadOnly = false;
 		}
 	}
 
