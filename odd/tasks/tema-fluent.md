@@ -1,6 +1,6 @@
 # tema-fluent
 
-Estado: **PLAN PROPUESTO, PENDIENTE DE APROBACIÓN** (2026-10-06). Ninguna tarea iniciada.
+Estado: T1, T2 y T3 completas (2026-10-06); pendiente T4 (humo visual).
 Espejo Engram: tópico `odd/tema-fluent/tasks` (proyecto `sigefa_legacy_inverse`).
 
 ## Objetivo
@@ -53,7 +53,8 @@ Cada tarea cierra con un commit de unidad de trabajo (Conventional Commit) y reg
   - Mantener `StyleManager.Style = eStyle.Office2007Black` sin registrar tema Telerik.
 
 ### T3 — Build en VM de pruebas
-- [ ] Compilar en la VM Windows (`Debug|x86`) y comprobar ausencia de errores de enlace con las librerías de Telerik y DevComponents.
+- [x] Compilar en la VM Windows (`Debug|x86`) y comprobar ausencia de errores de enlace con las librerías de Telerik y DevComponents.
+  - **Resultado (2026-10-06, sobre `634b5ce`, incluye T1 y T2):** `git bundle` de `feat/tema-fluent` + `scp` al directorio aparte `sigefa_build` (checkout verificado en `634b5ce`); MSBuild 18 (`SIGEFA.csproj`, `Debug|x86`, sin `-m`): `exit=0`, **0 errores**, ~31 s. Sin errores de enlace con Telerik (incl. `Telerik.WinControls.Themes.Fluent`) ni DevComponents. Única advertencia en la pasada incremental: `System.Resources.Extensions 7.0.0` sin soporte net461 (preexistente, no relacionada). Compilar no prueba funcionamiento: la verificación visual queda para T4.
 
 ### T4 — Verificación de humo visual en pantallas críticas
 - [ ] Probar inicio de sesión en `frmLogin`.
