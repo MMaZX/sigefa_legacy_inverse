@@ -1,3 +1,5 @@
+using System;
+
 namespace SIGEFA.Administradores.ReqVenta;
 
 // Reglas puras de anulación de requerimientos de venta (T2a).
@@ -32,10 +34,19 @@ public static class ReqVentaReglas
             return Denegar("solo requerimientos de venta: tipo recibido " + tipoReq + ".");
         }
 
+        if (estado == Anulado)
+        {
+            return Denegar("el requerimiento ya está anulado (estado 12).");
+        }
+
+        // EstadosAnulables es la única fuente de verdad: lo que no esté ahí se deniega.
+        if (Array.IndexOf(EstadosAnulables, estado) < 0)
+        {
+            return Denegar("el estado " + estado + " (" + NombreEstado(estado) + ") no admite anulación.");
+        }
+
         switch (estado)
         {
-            case Anulado:
-                return Denegar("el requerimiento ya está anulado (estado 12).");
             case Pendiente:
                 return new DecisionAnulacion(
                     AccionAnulacion.AnularPendiente,
@@ -47,7 +58,8 @@ public static class ReqVentaReglas
                     true,
                     "aprobado y transferido: admite anulación con extorno (estado 13).");
             default:
-                return Denegar("el estado " + estado + " (" + NombreEstado(estado) + ") no admite anulación.");
+                // Un estado agregado a EstadosAnulables sin acción definida aquí no debe anular nada.
+                return Denegar("el estado " + estado + " (" + NombreEstado(estado) + ") no tiene una acción de anulación definida.");
         }
     }
 
