@@ -34,3 +34,6 @@ graphify-out/cache/
 ## Runtime-generated SUNAT documents (facturas, CDR, guías, etc.)
 documentos/
 
+
+## Datos locales de acceso a la VM de pruebas (nunca commitear)
+.local/
