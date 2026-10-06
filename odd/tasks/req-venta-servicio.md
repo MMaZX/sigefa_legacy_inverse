@@ -88,7 +88,13 @@ Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`)
 - Defecto 1 (T2b, nacido de la instrucción de claude): `tiene_extorno` con `LEFT JOIN` duplicaba la original con varios extornos (req 10785: 1 original y 3 extornos devolvía 3 filas; verificado en la BD dev). Corregido con `EXISTS` y prueba nueva (RED `bc231b6`, corrección en commit posterior).
 - Defecto 2 (T2a): `EstadosAnulables` existía pero `Evaluar` no la usaba (`switch` con 7 y 13 fijos); cambiarla no cambiaba el comportamiento. Ahora es la única fuente de verdad.
 - Verificado en la BD dev: columnas de `detalle_req_almacen` existen; el SQL corregido da el resultado esperado en los reqs 10785, 6318, 11713 y 1.
-- Pendiente: compilar y ejecutar en la VM (requiere autorización explícita del usuario).
+- **Verificado en la VM (2026-10-06, `sigefa_build`, `632336a`, autorización explícita del usuario):**
+  - RED sobre `bc231b6`: de 24 pruebas de integración falla 1, `ObtenerTransferencias_10785_UnaOriginalAunqueTengaTresExtornos` (`Assert.Single`: la colección tenía 3 elementos).
+  - Build principal `Debug|x86` (MSBuild, `/t:Rebuild`, sin `-m`): `exit=0`, 0 errores, 480 advertencias, 30 s. Los 4 archivos de `ReqVenta\` compilan dentro del ejecutable; `SIGEFA.Tests` queda fuera. No se confirmó el binario `SIGEFA.exe` en disco (ruta de salida no localizada).
+  - Sin `SIGEFA_TEST_CONN`: 77 pruebas, 53 correctas, 24 omitidas, 0 falladas.
+  - Con la BD dev del host (vía `192.168.122.1:3307`, nunca producción): **77 de 77 correctas**, incluida la del req 10785. Sin tablas `zz_test_db_*` residuales.
+  - El `HintPath` corregido en `f18a8a3` funciona sin copiar la DLL.
+  - Límite: no se probó el flujo de negocio ni la UI; los datos de las pruebas de integración son los de la BD dev y pueden cambiar.
 
 ### T2c — Anular pendiente (estado 7)
 - [ ] Rechazar pendientes, devolver stock y marcar anulado en una transacción. Pendiente de T2a/T2b.
