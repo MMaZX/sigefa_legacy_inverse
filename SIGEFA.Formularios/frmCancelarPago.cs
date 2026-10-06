@@ -289,9 +289,13 @@ public class frmCancelarPago : Office2007Form
 	// crédito (10) y pendiente (12) usan el flujo viejo (T10b/T11 habilitan 10 y 12).
 	private static readonly int[] metodosSoportadosEnCaptura = new int[] { 5, 6, 8, 9 };
 
+	// Helper de habilitado y limpieza de campos por método de pago (T14).
+	private PagoCamposHelper helperCamposPago;
+
 	public frmCancelarPago()
 	{
 		InitializeComponent();
+		helperCamposPago = new PagoCamposHelper(cmbMetodoPago, cboBanco, cboTarjeta, cboNumCta, txtOperacion, txtCheque, txtNc, txtMontoPago);
 	}
 
 	private void cargaMoneda()
@@ -1611,106 +1615,28 @@ public class frmCancelarPago : Office2007Form
 		try
 		{
 			buscaAprobacion(Convert.ToInt32(cmbMetodoPago.SelectedValue));
-			if (Convert.ToInt32(cmbMetodoPago.SelectedValue) == 5)
+			int metodoId = Convert.ToInt32(cmbMetodoPago.SelectedValue);
+			helperCamposPago.aplicarMetodo(metodoId);
+			if (metodoId == 6 || metodoId == 9)
 			{
-				cboTarjeta.Enabled = false;
-				cboBanco.Enabled = false;
-				cboBanco.SelectedIndex = -1;
-				cboTarjeta.SelectedIndex = -1;
-				txtCheque.Text = "";
-				txtNc.Text = "";
-				txtOperacion.Text = "";
-				txtOperacion.Enabled = false;
-				txtCheque.Enabled = false;
-				txtMontoPago.Enabled = true;
-				cboNumCta.Enabled = false;
-				cboNumCta.SelectedIndex = -1;
-			}
-			else if (Convert.ToInt32(cmbMetodoPago.SelectedValue) == 6 || Convert.ToInt32(cmbMetodoPago.SelectedValue) == 9)
-			{
-				if (tipo == 1 && Convert.ToInt32(cmbMetodoPago.SelectedValue) == 6)
+				// CargarBancos reenlaza y deja sin selección; va después del helper
+				// para que el banco no quede con valor residual.
+				CargarBancos();
+				if (tipo != 1 || metodoId != 6)
 				{
-					cboTarjeta.Enabled = false;
-					cboBanco.Enabled = true;
-					CargarBancos();
-					cboTarjeta.SelectedIndex = -1;
-					txtCheque.Text = "";
-					txtNc.Text = "";
-					txtOperacion.Text = "";
-					txtOperacion.Enabled = true;
-					txtCheque.Enabled = false;
-					txtMontoPago.Enabled = true;
-					cboNumCta.Enabled = false;
-					cboNumCta.SelectedIndex = -1;
-				}
-				else
-				{
-					cboTarjeta.Enabled = false;
-					cboBanco.Enabled = true;
-					CargarBancos();
-					cboTarjeta.SelectedIndex = -1;
 					cboBanco.Focus();
-					txtCheque.Text = "";
-					txtOperacion.Text = "";
-					txtNc.Text = "";
-					txtOperacion.Enabled = true;
-					txtCheque.Enabled = false;
-					txtMontoPago.Enabled = true;
-					cboNumCta.Enabled = false;
-					cboNumCta.SelectedIndex = -1;
 				}
 			}
-			else if (Convert.ToInt32(cmbMetodoPago.SelectedValue) == 7)
+			else if (metodoId == 7)
 			{
-				cboTarjeta.Enabled = false;
-				cboBanco.Enabled = true;
 				cboBanco.Focus();
-				cboBanco.SelectedIndex = -1;
-				cboTarjeta.SelectedIndex = -1;
-				txtOperacion.Text = "";
-				txtNc.Text = "";
-				txtCheque.Text = "";
-				txtOperacion.Enabled = true;
-				txtCheque.Enabled = true;
-				txtMontoPago.Enabled = true;
-				cboNumCta.Enabled = false;
-				cboNumCta.SelectedIndex = -1;
 			}
-			else if (Convert.ToInt32(cmbMetodoPago.SelectedValue) == 8)
+			else if (metodoId == 8)
 			{
-				cboTarjeta.Enabled = true;
-				cboBanco.Enabled = true;
 				cboTarjeta.Focus();
-				cboBanco.SelectedIndex = -1;
-				cboTarjeta.SelectedIndex = -1;
-				txtOperacion.Text = "";
-				txtNc.Text = "";
-				txtCheque.Text = "";
-				txtOperacion.Enabled = true;
-				txtCheque.Enabled = false;
-				txtMontoPago.Enabled = true;
-				cboNumCta.Enabled = true;
-				cboNumCta.SelectedIndex = -1;
 			}
-			else
+			else if (metodoId == 10)
 			{
-				if (Convert.ToInt32(cmbMetodoPago.SelectedValue) != 10)
-				{
-					return;
-				}
-				cboTarjeta.Enabled = false;
-				cboBanco.Enabled = false;
-				cboBanco.SelectedIndex = -1;
-				cboTarjeta.SelectedIndex = -1;
-				txtOperacion.Text = "";
-				txtCheque.Text = "";
-				txtNc.Text = "";
-				txtOperacion.Enabled = false;
-				txtCheque.Enabled = false;
-				txtNc.Enabled = false;
-				cboNumCta.Enabled = false;
-				txtMontoPago.Enabled = false;
-				cboNumCta.SelectedIndex = -1;
 				if (Application.OpenForms["frmListaNCreditosSinAplicar"] != null)
 				{
 					Application.OpenForms["frmListaNCreditosSinAplicar"].Activate();
