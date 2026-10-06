@@ -1,6 +1,6 @@
 # req-venta-servicio
 
-Estado: T1 verificada en la VM (2026-10-06); HintPath corregido pendiente de reverificar. T2a y T2b asignadas a opencode; T2c en adelante pendientes.
+Estado: T1 verificada en la VM (2026-10-06); HintPath corregido pendiente de reverificar. T2a y T2b escritas sin verificar en compilador (2026-10-06, commits cca2e76/da1cf8b y 6f7fa04/3f2f6cc); T2c en adelante pendientes.
 Espejo Engram: tópico `odd/req-venta-servicio/tasks` (proyecto `sigefa_legacy_inverse`).
 Rama: `feat/req-venta-servicio` (desde `main`).
 
@@ -74,6 +74,7 @@ Carpeta nueva `SIGEFA.Administradores/ReqVenta/`, namespace `SIGEFA.Administrado
 - [ ] Estados anulables en UNA constante fácil de cambiar: `{7, 13}` (**confirmado por el usuario, 2026-10-06**; el 8 casi no existe: 0 filas en dev, la aprobación de venta pasa a 13).
 - [ ] Reglas: `tipoReq != 2` -> rechazado ("solo requerimientos de venta"); estado 12 -> rechazado ("ya está anulado"); 7 -> `AnularPendiente`; 13 -> `AnularConExtorno`; cualquier otro (8, 9, 10, 11, 17, desconocido) -> rechazado con motivo que nombre el estado.
 - [ ] Pruebas unitarias sin BD (primero, RED).
+- [x] Escrito, no verificado en compilador (2026-10-06, opencode). Test RED `cca2e76`, feat `da1cf8b`. Archivos: `SIGEFA.Administradores/ReqVenta/ReqVentaReglas.cs`, `AccionAnulacion.cs`, `DecisionAnulacion.cs`; pruebas `SIGEFA.Tests/ReqVenta/ReqVentaReglasTests.cs`; enlace `Compile Include` en `SIGEFA.Tests.csproj`.
 
 ### T2b — Lecturas con nombre `ReqVentaConsultas` (opencode)
 Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`) para poder correr dentro de una transacción. SQL parametrizado; sin `MessageBox`.
@@ -81,6 +82,7 @@ Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`)
 - [ ] `List<Dictionary<string,object>> ObtenerTransferencias(IConsultor c, int codReq, bool bloquear)`: transferencias ORIGINALES del requerimiento (`id_req_almacen = @id AND codDocExtornacion IS NULL`) con columnas `codTransDir`, `codAlmacenOrigen`, `codAlmacenDestino`, `total`, `estado+0 AS estado`, `pendiente+0 AS pendiente` y `tiene_extorno` calculado con `LEFT JOIN transferencia e ON e.codDocExtornacion = o.codTransDir` (los extornos antiguos NO tienen `id_req_almacen`, por eso se busca por `codDocExtornacion`, no por requerimiento).
 - [ ] `List<Dictionary<string,object>> ObtenerDetalle(IConsultor c, int codReq)`: líneas de `detalle_req_almacen` del requerimiento (descubrir columnas con `DESCRIBE`; incluir las de producto, unidad, cantidad pendiente aprobada y el id de detalle que usa `RetornandoStockAlAnularReqAlmacen`).
 - [ ] Pruebas de integración de solo lectura contra la BD dev (`SIGEFA_TEST_CONN`; se omiten sin ella): id inexistente -> `null`; casos históricos estables (req 6318: anulado, original aprobada sin extorno; req 11713: dos originales rechazadas; un requerimiento con extorno: `tiene_extorno`). Sin escribir ni borrar nada.
+- [x] Escrito, no verificado en compilador (2026-10-06, opencode). Test RED `6f7fa04`, feat `3f2f6cc`. Archivos: `SIGEFA.Administradores/ReqVenta/ReqVentaConsultas.cs`; pruebas `SIGEFA.Tests/ReqVenta/ReqVentaConsultasTests.cs` (solo lectura: req -1 null/vacío, 6318 estado 12 tipo 2 + original 13791 sin extorno, 11713 dos originales, req 1 con extorno). `SIGEFA.Tests.csproj` ya enlazaba la carpeta (sin cambios).
 
 ### T2c — Anular pendiente (estado 7)
 - [ ] Rechazar pendientes, devolver stock y marcar anulado en una transacción. Pendiente de T2a/T2b.
