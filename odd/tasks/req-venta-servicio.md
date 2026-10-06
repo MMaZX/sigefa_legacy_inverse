@@ -34,7 +34,7 @@ Reemplazar la lógica dispersa de anulación de requerimientos de almacén de ve
 - Vacíos (decidido): `Get()` devuelve lista vacía, nunca `null`; `First()` devuelve `null`; NULL de BD -> `null` en el diccionario; clave inexistente lanza excepción clara; claves `OrdinalIgnoreCase`; método de extensión `Valor<T>(clave, defecto)`.
 - Confirmado (2026-10-06): estados que permiten anular = 7 y 13, solo `tipo_req=2`.
 - Confirmado (2026-10-06): si un extorno falla, la anulación NO se termina de hacer: rollback total, el requerimiento queda como estaba y el usuario ve el error.
-- Pendiente del usuario: estrategia de entrega en cadena cuando el total supere ~400 líneas (antes de T2c).
+- Confirmado (2026-10-06): entrega en PR encadenados con estrategia **stacked-to-main** (cada PR entra a `main` en orden; no se mezcla otra estrategia). Cortes en la sección "Evidencia y entrega".
 
 ## TDD
 
@@ -122,9 +122,26 @@ Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`)
 
 ## Evidencia y entrega
 
+### Cortes de entrega (stacked-to-main, decidido 2026-10-06)
+Líneas = adiciones sin contar el documento ODD; estimadas por archivo. Cada PR lleva sus pruebas. Los PR 1-6 no cambian el comportamiento de nadie; solo el PR 7 toca el botón, detrás del flag `VentaCierreRuta=nueva` (por defecto, legacy).
+
+| # | PR | Contenido | Líneas |
+|---|---|---|---|
+| 1 | Núcleo del helper | `IConsultor`, `Consulta`, `ResultadoEjecucion`, `ParametrosSql`, proyecto `SIGEFA.Tests`, exclusión en `SIGEFA.csproj` | ~366 |
+| 2 | Lectura tipada | `FilaExtensiones` (`Valor<T>`) + pruebas | ~239 |
+| 3 | Acceso a MySQL | `ConsultorMySql`, `Db`, pruebas de integración | ~496 (**recomendar `size:exception`**: separar las pruebas del código que verifican contradice la guía) |
+| 4 | Reglas | `ReqVentaReglas`, `DecisionAnulacion`, `AccionAnulacion` + pruebas | ~230 |
+| 5 | Lecturas | `ReqVentaConsultas` + pruebas de integración | ~240 |
+| 6 | Servicio de anulación | `Anular`, transacción única, extorno (T2c-T2e) | ~400 (estimado) |
+| 7 | Conectar el botón | `FrmTPenPedido` detrás del flag | ~100 (estimado) |
+
+- Cada PR: sección Chain Context, diagrama con `📍`, base = `main` tras integrarse el anterior (retarget/rebase para que el diff muestre solo su unidad).
+- Las ramas por PR se crean al momento de armar los PR (no antes) reordenando los commits ya agrupados por unidad de trabajo; no se abre ningún PR ni se hace push sin pedido explícito del usuario.
+- Plan de verificación por PR: build `Debug|x86` en la VM y pruebas del PR (con autorización explícita del usuario cada vez).
+
 - Pronóstico de líneas: T1 ~450-550 autoreadas (incluye pruebas), T2 ~400. Total sobre el umbral de ~400: aplicar la estrategia de entrega (`ask-on-risk`) antes del siguiente commit tras pactar la cadena con el usuario.
 - Diseño de referencia: ver informe de investigación (sesión 2026-10-06; Engram `odd/anular-req-venta/investigacion`).
 
 ## Siguiente paso
 
-opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Ids anulables 7 y 13 confirmados por el usuario. Pendiente del usuario: estrategia de cadena de PR (antes de T2c).
+opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Ids anulables 7 y 13 confirmados por el usuario. Estrategia de entrega confirmada: stacked-to-main.
