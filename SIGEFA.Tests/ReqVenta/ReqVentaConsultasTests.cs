@@ -91,6 +91,19 @@ public class ReqVentaConsultasTests
         Assert.Contains(filas, f => f.Valor<int>("codTransDir") == 19721);
     }
 
+    // El req 10785 tiene UNA original con 3 extornos: no debe duplicarse la fila por cada extorno.
+    [HechoConBd]
+    public void ObtenerTransferencias_10785_UnaOriginalAunqueTengaTresExtornos()
+    {
+        IConsultor consultor = NuevoConsultor();
+
+        List<Dictionary<string, object>> filas = ReqVentaConsultas.ObtenerTransferencias(consultor, 10785, false);
+
+        Assert.Single(filas);
+        Assert.Equal(18684, filas[0].Valor<int>("codTransDir"));
+        Assert.True(filas[0].Valor<bool>("tiene_extorno"));
+    }
+
     [HechoConBd]
     public void ObtenerTransferencias_Req1_AlMenosUnaConExtorno()
     {
