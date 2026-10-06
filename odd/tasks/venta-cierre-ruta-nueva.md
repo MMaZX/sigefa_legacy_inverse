@@ -346,7 +346,7 @@ Se ejecuta **cuando T13a, T13b, T13c y T13d estén commiteadas**, antes de empez
 - **Resetear `Pag.NotaCredito` y `Pag.CodNotaCredito` a 0** al capturar cualquier método distinto de 10 (hoy `Pag` nunca se limpia).
 - Impedir elegir la misma NC dos veces en `borradoresPago` (o restar lo ya capturado del pendiente mostrado en la lista).
 - No replicar `ActualizaPendienteCredito`/`ActualizaNCreditoVentaSinAplicar` (código muerto, ver Evidencia).
-- [ ] Implementar. Verificación: compilar en VM; humo manual con una NC cuyo pendiente cubra y no cubra la venta; mixto NC + efectivo; comprobar `notacredito.pendiente/abonado/cancelado` y `factura_venta.codNotaCredito` en BD local.
+- [x] Implementada en `07c0519` (2026-10-06): habilitado método 10 (nota de crédito) en `metodosSoportadosEnCaptura` y en comentarios de `frmCancelarPago.cs`; validación en `cmbMetodoPago_SelectionChangeCommitted` impidiendo re-seleccionar una NC ya existente en `borradoresPago`; reseteo explícito de `Pag.NotaCredito = 0` y `Pag.CodNotaCredito = 0` al ejecutar cualquier método != 10 tanto en tipo 5 como en tipo 3/4; protección de llamadas legacy (`ActualizaPendienteCredito`, `ActualizaNCreditoVentaSinAplicar`, `insertPagoPendiente`) bajo `!modoCaptura` preservando intacto el flujo viejo. Verificación: diff revisado, sin compilar en Linux; compilar en VM (B2) y humo manual pendientes.
 
 ### T11 — Habilitar pendiente (12) en captura (opencode, ~5 min, después de T10b)
 - **Alcance:** `frmCancelarPago.cs`.
