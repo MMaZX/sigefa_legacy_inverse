@@ -381,46 +381,48 @@ public class frmCancelarPago : Office2007Form
 		string flagRuta = ConfigurationManager.AppSettings["VentaCierreRuta"];
 		determinarModoCaptura(flagRuta);
 		cargarListasBase();
-		if (tipo == 100)
+		switch (tipo)
 		{
-			cargarDevolucionPorLetras(flagRuta);
-		}
-		if (tipo == 10)
-		{
-			tc = mdi_Menu.clstc;
-			cargarTipoCambio(usaCompra: false);
+			case 100:
+				cargarDevolucionPorLetras(flagRuta);
+				break;
+			case 10:
+				tc = mdi_Menu.clstc;
+				cargarTipoCambio(usaCompra: false);
+				break;
 		}
 		cargarDocumentoPorTipo();
 		CargaMetodosPagos();
 		cmbMetodoPago_SelectionChangeCommitted(cmbMetodoPago, null);
 		Mon = AdmMoned.CargaMoneda(mon);
-		// Sin moneda no hay nada que fijar: el formulario sigue sin moneda, como hoy.
-		if (Mon != null)
+		// Solo los tipos 1 al 5 usan la moneda; los demas (0, 10, 100) no dependen de ella.
+		bool usaMoneda = tipo >= 1 && tipo <= 5;
+		// Sin moneda el formulario no puede inicializarse correctamente.
+		if (usaMoneda && Mon == null)
 		{
-			switch (tipo)
-			{
-				case 1:
-				case 2:
-				case 5:
-					txtMoneda.Text = Mon.SDescripcion;
-					tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
-					cargarTipoCambio(usaCompra: false);
-					cmbMoneda.SelectedValue = Mon.IcodMoneda;
-					break;
-				case 3:
-				case 4:
-					txtMoneda.Text = Mon.SDescripcion;
-					tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
-					cargarTipoCambio(usaCompra: true);
-					if (tc != null)
-					{
-						txtTipoCambio.ReadOnly = true;
-					}
-					cmbMoneda.SelectedValue = Mon.IcodMoneda;
-					break;
-				default:
-					break;
-			}
+			throw new InvalidOperationException("No se pudo cargar la moneda (codigo " + mon + ") del formulario de cancelar pago.");
+		}
+		switch (tipo)
+		{
+			case 1:
+			case 2:
+			case 5:
+				txtMoneda.Text = Mon.SDescripcion;
+				tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
+				cargarTipoCambio(usaCompra: false);
+				cmbMoneda.SelectedValue = Mon.IcodMoneda;
+				break;
+			case 3:
+			case 4:
+				txtMoneda.Text = Mon.SDescripcion;
+				tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
+				cargarTipoCambio(usaCompra: true);
+				if (tc != null)
+				{
+					txtTipoCambio.ReadOnly = true;
+				}
+				cmbMoneda.SelectedValue = Mon.IcodMoneda;
+				break;
 		}
 		cmbMoneda.MouseWheel += cmbMoneda_MouseWheel;
 	}
