@@ -183,7 +183,7 @@ Revisar que la ruta vieja no cambió (diff solo agrega ramas detrás del flag), 
 1. T13a (agy: VentaCierre/* + diálogo) ─> T13b (agy: frmVenta2019 + Facturacion) ─> T13c (agy: cierre multialmacén atómico) ─> B1' (build VM + prueba del usuario)
 2. Recién entonces métodos de pago:
    agy:      T10a (VentaCierre/*) ─> T10b (frmCancelarPago)
-   opencode: T13d [ex T9] (hecha) ─> T14 (helper de campos de pago; frmCancelarPago; bug del usuario, va ANTES de T10b y T11) ─> T11 (frmCancelarPago)
+   opencode: T13d [ex T9] (hecha) ─> T14 (helper de campos de pago; frmCancelarPago; bug del usuario, va ANTES de T10b y T11) ─> T14a (etapa A: plan de `frmCancelarPago_Load`, solo escribe un documento, puede correr en paralelo con T14; etapa B: refactor tras la aprobación del usuario) ─> T11 (frmCancelarPago)
    B2 (build VM) ─> RV-C (codex) ─> T12 (claude, build final)
 ```
 T13a y T13b se serializan (comparten `VentaCierre/*` y el flujo de `guardaVenta`). T13d corre en paralelo con T13a (archivos disjuntos, `git add <rutas>` explícitas y commits secuenciales). Una vez cerrado T13, T10a (agy) puede correr en paralelo con lo que quede de opencode. T10b y T11 esperan a T13d y a T10a.
@@ -258,6 +258,8 @@ Se ejecuta **cuando T13a, T13b, T13c y T13d estén commiteadas**, antes de empez
 
 **Decisión del usuario:** reiniciar a efectivo tras un pago parcial y centralizar las reglas en un helper reutilizable, con un `switch` por método, en vez de repetir `Enabled`/`SelectedIndex` por todos lados.
 
+**Convención (AGENTS.md, sección "Code conventions"):** sin `if` anidados a más de dos niveles; usar `switch` con `case` agrupados, un método auxiliar (`fijar(...)` con parámetros nombrados) y leer `Convert.ToInt32(cmbMetodoPago.SelectedValue)` una sola vez en una variable local.
+
 **Alcance:** archivo nuevo `SIGEFA.Formularios/PagoCamposHelper.cs` (se incluye solo por globbing; namespace de archivo `SIGEFA.Formularios`, como `frmCancelarPago`) y `SIGEFA.Formularios/frmCancelarPago.cs`. Solo UI: sin tocar servicio, repositorio, `BorradorPago`, ni la lógica de datos de `btnAceptar_Click`/`Pagar()` fuera del punto del bug.
 
 **Helper `PagoCamposHelper` (clase interna, sin lógica de negocio ni acceso a datos):**
@@ -286,6 +288,33 @@ Se ejecuta **cuando T13a, T13b, T13c y T13d estén commiteadas**, antes de empez
 
 **Verificación:** compilar en VM. Humo manual: (a) pago parcial con efectivo → "Sí" al restante: banco, tarjeta, cuenta, operación y cheque quedan bloqueados y vacíos, método = Efectivo, monto = restante; (b) pago parcial con transferencia → mismo resultado; (c) elegir cada método a mano (5, 6, 7, 8, 9, 10) y comprobar la tabla; (d) nota de crédito seguida de efectivo: el segundo pago no sale marcado como NC; (e) venta con un solo pago total: sin cambios.
 - [x] Implementada en `20553c3` (feat) + `4271008` (fix) (2026-10-06): helper interno `PagoCamposHelper` (`switch` por método según la tabla; 12 y otros como efectivo; `reiniciarAEfectivo`); `SelectionChangeCommitted` reducido a `buscaAprobacion` + `aplicarMetodo` + efectos propios (`CargarBancos` tras el helper para no dejar banco residual, `Focus`, diálogo NC intacto); rama "Sí" de `Pagar()` reinicia a efectivo, rehabilita solo lo de un nuevo ingreso, monto = restante, limpia operación/cheque/NC y resetea `Pag.NotaCredito`/`CodNotaCredito`; `Deshabilita_botones(true)` sin llamadas, método conservado con comentario. Sin tocar servicio, repositorio, `BorradorPago` ni datos de `Pagar()`. Verificación: diff revisado, sin compilar en Linux; compilar en VM (B2) y humo manual (a)-(e) pendientes.
+
+### T14a — Plan y refactor de `frmCancelarPago_Load` con las skills `refactor` y `csharp-async` (opencode, agregada 2026-10-05 a pedido del usuario)
+**Objetivo:** reducir `frmCancelarPago_Load` (`SIGEFA.Formularios/frmCancelarPago.cs:376-496`, ~120 líneas) sin cambiar su comportamiento, aplicando las skills instaladas en `.agents/skills/refactor/SKILL.md` y `.agents/skills/csharp-async/SKILL.md` (ignoradas por git). **Primero un plan; el código solo después de que el usuario lo apruebe.**
+
+**Olores detectados (lectura de claude, a confirmar/ampliar en el plan):**
+1. Método largo con varias responsabilidades: bandera de ruta y modo captura, carga de listas (monedas, bancos, tarjetas, métodos de pago), carga del documento según `tipo` y cálculo de moneda/tipo de cambio.
+2. Cadena `if / else if` sobre `tipo` (1, 2, 3, 4, 5) más ramas sueltas para 10 y 100: números mágicos sin nombre. `tipo` es un campo público que fijan otros formularios: no cambiar su tipo ni su significado.
+3. Bloque de tipo de cambio duplicado 4 veces (`tc.Venta` o `tc.Compra`, texto vacío y `ReadOnly = false` si no hay tipo de cambio): candidato a un método `cargarTipoCambio(...)`.
+4. Código muerto: `if (letra == null) { }` vacío en la rama `tipo == 4` y otros `if` vacíos del archivo.
+5. La decisión del modo captura y el aviso de letras en la ruta nueva mezclados con la carga de la interfaz.
+6. Todas las consultas a la BD corren en el hilo de interfaz, antes de mostrar el formulario.
+7. Orden con dependencias que **no puede cambiar**: `CargaMetodosPagos()` antes de `cmbMetodoPago_SelectionChangeCommitted(cmbMetodoPago, null)` (y, tras T14, con el helper ya creado) y `Mon` antes del bloque de moneda.
+
+**Etapa A — plan (solo lectura del código, escribe únicamente un documento):**
+- Lee ambas `SKILL.md` y `AGENTS.md` ("Code conventions").
+- Entrega `docs/venta-cierre/refactor-frmCancelarPago-load.md` con: lista ordenada de pasos pequeños (un método extraído por paso), el cuerpo actual y el nuevo de cada uno, el riesgo de cambiar el comportamiento, y cómo se verifica (no hay tests: humo manual por `tipo`).
+- Aplicar la regla de oro de `refactor` (no cambiar comportamiento) y su proceso seguro. No proponer cambios de arquitectura ni de firmas públicas.
+- **Decisión de `csharp-async` a justificar por escrito:** ¿conviene volver `Load` asincrónico o mover las consultas a segundo plano? Postura de claude: **no** convertir `Load` en `async void` en esta pasada. Los llamadores (`frmVenta2019`, `frmCobros` y otros) abren el formulario con `ShowDialog()` y leen el resultado al volver; con `Load` asincrónico el formulario se mostraría antes de terminar de inicializarse y el usuario podría pulsar Aceptar con listas vacías. Si el plan propone async, que indique el orden exacto de inicialización, qué controles se bloquean mientras carga y cómo se manejan las excepciones.
+- Identificar qué otros llamadores abren `frmCancelarPago` (`rg "new frmCancelarPago"`) y con qué `tipo`, para definir el humo.
+- No escribir código ni tocar `.cs`.
+
+**Etapa B — implementación (solo tras la aprobación del usuario del documento de la etapa A):**
+- Un commit por extracción, `refactor(venta-cierre): ...`; sin cambiar firmas públicas, campos públicos ni el orden de inicialización.
+- Humo manual (VM) del plan: `tipo 3` ruta nueva y legacy, cobro desde `frmCobros`, `tipo 1` (cancelar pago), `tipo 5` y la rama `tipo 100`/10 si hay datos; comprobar tipo de cambio, moneda, título del formulario y modo captura iguales a antes.
+- Orden: después de T14 (mismo archivo y `Load` llama al método que T14 modifica); antes de T10b y T11.
+- [x] Etapa A: plan escrito en `docs/venta-cierre/refactor-frmCancelarPago-load.md`, pendiente aprobación del usuario.
+- [ ] Etapa B: implementar y compilar en VM.
 
 ### T10a — Reserva y validación de nota de crédito en el servicio (antigravity, ~12 min)
 - **Alcance:** `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs`, su interfaz, `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` y `VentaCierrePaso.cs`. Sin UI.
