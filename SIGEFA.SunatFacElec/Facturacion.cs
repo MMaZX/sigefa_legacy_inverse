@@ -240,20 +240,21 @@ public class Facturacion
 			DocumentoResponse response = await new GenerarFactura(serializador).Post(_documento);
 			if (!response.Exito)
 			{
-				// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
-				if (colectorErrores != null)
-				{
-					colectorErrores("No se pudo generar el comprobante electronico: " + response.MensajeError, null);
-				}
-				else
-				{
-					MessageBox.Show(response.MensajeError);
-				}
+				informarComprobante(colectorErrores, "el servicio no generó el XML: " + MensajeConDetalle(response.MensajeError), null);
+				return;
+			}
+			if (string.IsNullOrEmpty(response.TramaXmlSinFirma))
+			{
+				informarComprobante(colectorErrores, "el servicio no devolvió el XML sin firmar", null);
+				return;
 			}
 			RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
 			File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
 			new EscribirLog("Firmando XML ", mostrarConsola: true);
-			await Firmar();
+			if (!await Firmar(colectorErrores))
+			{
+				return;
+			}
 			new EscribirLog("XML Firmado ", mostrarConsola: true);
 			string codigoHash = "";
 			string rutadocumentosboletas = "C:\\DOCUMENTOS-" + empresa.Ruc + "\\DOCUMENTOS ENVIAR\\BOLETAS\\" + _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml";
@@ -324,15 +325,7 @@ public class Facturacion
 		catch (Exception ex)
 		{
 			Exception a = ex;
-			// T13b: en la ruta nueva el error va al colector (paso del dialogo) en vez del MessageBox.
-			if (colectorErrores != null)
-			{
-				colectorErrores("No se pudo generar el comprobante electronico: " + a.Message, a);
-			}
-			else
-			{
-				MessageBox.Show(a.Message);
-			}
+			informarComprobante(colectorErrores, mensajeSeguro("generación del comprobante", a), a);
 		}
 		finally
 		{
@@ -883,20 +876,45 @@ public class Facturacion
 		}
 	}
 
-	private async Task Firmar()
+	private async Task<bool> Firmar(Action<string, Exception> colectorErrores = null)
 	{
+		// Sin estado viejo: si esta instancia firma varios documentos y uno falla,
+		// no queda la trama firmada del documento anterior.
+		respuestaFirmado = new FirmadoResponse();
 		try
 		{
 			if (string.IsNullOrEmpty(_documento.IdDocumento))
 			{
-				MessageBox.Show("La Serie y el Correlativo no pueden estar vacíos");
-				return;
+				informarComprobante(colectorErrores, "La Serie y el Correlativo no pueden estar vacíos", null);
+				return false;
 			}
-			string tramaXmlSinFirma = Convert.ToBase64String(File.ReadAllBytes(Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml")));
+			if (string.IsNullOrEmpty(empresa.Certificado))
+			{
+				informarComprobante(colectorErrores, "la empresa no tiene configurado el certificado digital", null);
+				return false;
+			}
+			string rutaCertificado = "C:\\DOCUMENTOS-" + empresa.Ruc + "\\CERTIFIK\\" + empresa.Certificado;
+			if (!File.Exists(rutaCertificado))
+			{
+				informarComprobante(colectorErrores, "no se encontró el certificado digital en " + rutaCertificado, null);
+				return false;
+			}
+			if (string.IsNullOrEmpty(empresa.Contrasena))
+			{
+				informarComprobante(colectorErrores, "la empresa no tiene configurada la contraseña del certificado", null);
+				return false;
+			}
+			string rutaXmlSinFirma = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
+			if (!File.Exists(rutaXmlSinFirma))
+			{
+				informarComprobante(colectorErrores, "no se encontró el XML generado en " + rutaXmlSinFirma, null);
+				return false;
+			}
+			string tramaXmlSinFirma = Convert.ToBase64String(File.ReadAllBytes(rutaXmlSinFirma));
 			FirmadoRequest firmadoRequest = new FirmadoRequest
 			{
 				TramaXmlSinFirma = tramaXmlSinFirma,
-				CertificadoDigital = Convert.ToBase64String(File.ReadAllBytes("C:\\DOCUMENTOS-" + empresa.Ruc + "\\CERTIFIK\\" + empresa.Certificado)),
+				CertificadoDigital = Convert.ToBase64String(File.ReadAllBytes(rutaCertificado)),
 				PasswordCertificado = empresa.Contrasena,
 				UnSoloNodoExtension = false
 			};
@@ -904,18 +922,60 @@ public class Facturacion
 			respuestaFirmado = await new Firmar(certificador).Post(firmadoRequest);
 			if (!respuestaFirmado.Exito)
 			{
-				MessageBox.Show(respuestaFirmado.MensajeError);
+				informarComprobante(colectorErrores, "falló la firma digital: " + MensajeConDetalle(respuestaFirmado.MensajeError), null);
+				return false;
 			}
+			if (string.IsNullOrEmpty(respuestaFirmado.TramaXmlFirmado))
+			{
+				informarComprobante(colectorErrores, "la firma digital no devolvió el documento firmado", null);
+				return false;
+			}
+			return true;
 		}
 		catch (Exception ex)
 		{
-			Exception ex2 = ex;
-			MessageBox.Show(ex2.Message);
+			informarComprobante(colectorErrores, mensajeSeguro("firma digital", ex), ex);
+			return false;
 		}
 		finally
 		{
 			Cursor.Current = Cursors.Default;
 		}
+	}
+
+	// Reporta un error del comprobante electrónico: al colector si hay uno,
+	// o al MessageBox actual con el mismo texto. Nunca incluye la contraseña.
+	private void informarComprobante(Action<string, Exception> colectorErrores, string detalle, Exception causa)
+	{
+		string mensaje = "No se pudo generar el comprobante electrónico: " + detalle;
+		if (colectorErrores != null)
+		{
+			colectorErrores(mensaje, causa);
+		}
+		else
+		{
+			MessageBox.Show(mensaje);
+		}
+	}
+
+	// Texto seguro para causas desconocidas: los nulos no llegan al usuario.
+	private static string mensajeSeguro(string paso, Exception ex)
+	{
+		if (ex is ArgumentNullException || ex is NullReferenceException)
+		{
+			return "falta un dato obligatorio del comprobante (" + paso + ")";
+		}
+		return ex.Message;
+	}
+
+	// Detalle del servicio o texto fijo cuando viene vacío.
+	private static string MensajeConDetalle(string mensajeError)
+	{
+		if (string.IsNullOrEmpty(mensajeError))
+		{
+			return "sin detalle";
+		}
+		return mensajeError;
 	}
 
 	public async Task Enviar(clsEmpresa empresa, string IdDocumento, string TipoDocumento, string TramaXmlFirmado)
