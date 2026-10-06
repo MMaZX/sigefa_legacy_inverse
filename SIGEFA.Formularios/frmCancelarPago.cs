@@ -398,41 +398,7 @@ public class frmCancelarPago : Office2007Form
 				txtTipoCambio.ReadOnly = false;
 			}
 		}
-		if (tipo == 1)
-		{
-			CargaFactura();
-			txtTipoCambio.Enabled = true;
-			txtTipoCambio.ReadOnly = false;
-			Text = "CANCELAR PAGO";
-			muestra_botones(activo: true);
-			posiciona_textbox();
-		}
-		else if (tipo == 2)
-		{
-			CargaLetra();
-		}
-		else if (tipo == 3)
-		{
-			CargaNotaSalida();
-			sigl = "RC";
-			valida_serie(sigl);
-			muestra_botones(activo: true);
-			posiciona_textbox();
-			Text = "COBRANZA VENTAS";
-		}
-		else if (tipo == 4)
-		{
-			CargaLetra();
-		}
-		else if (tipo == 5)
-		{
-			CargaCuota();
-			txtTipoCambio.Enabled = true;
-			txtTipoCambio.ReadOnly = false;
-			Text = "CANCELAR PAGO";
-			muestra_botones(activo: true);
-			posiciona_textbox();
-		}
+		cargarDocumentoPorTipo();
 		CargaMetodosPagos();
 		cmbMetodoPago_SelectionChangeCommitted(cmbMetodoPago, null);
 		Mon = AdmMoned.CargaMoneda(mon);
@@ -508,6 +474,46 @@ public class frmCancelarPago : Office2007Form
 		}
 		CargaNotaCredito();
 		Text = "DEVOLVER PAGO";
+	}
+
+	// Carga el documento según el tipo de cobro o pago.
+	private void cargarDocumentoPorTipo()
+	{
+		switch (tipo)
+		{
+			case 1:
+				CargaFactura();
+				txtTipoCambio.Enabled = true;
+				txtTipoCambio.ReadOnly = false;
+				Text = "CANCELAR PAGO";
+				muestra_botones(activo: true);
+				posiciona_textbox();
+				break;
+			case 2:
+				CargaLetra();
+				break;
+			case 3:
+				CargaNotaSalida();
+				sigl = "RC";
+				valida_serie(sigl);
+				muestra_botones(activo: true);
+				posiciona_textbox();
+				Text = "COBRANZA VENTAS";
+				break;
+			case 4:
+				CargaLetra();
+				break;
+			case 5:
+				CargaCuota();
+				txtTipoCambio.Enabled = true;
+				txtTipoCambio.ReadOnly = false;
+				Text = "CANCELAR PAGO";
+				muestra_botones(activo: true);
+				posiciona_textbox();
+				break;
+			default:
+				break;
+		}
 	}
 
 	private void CargaMetodosPagos()
