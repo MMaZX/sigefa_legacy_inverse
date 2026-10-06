@@ -141,6 +141,17 @@ public partial class frmVentaCierreProgreso : Form
             IList<VentaCierreResultado> salida = await Task.Run(() => servicio.ejecutarOrdenAtomica(bloques, progreso));
             resultadosObtenidos = salida;
             fueExitoso = true;
+        }
+        catch (Exception ex)
+        {
+            alTerminarConError(ex);
+            return;
+        }
+
+        // Todo lo posterior al Commit va en su propio bloque: un fallo aqui ya no
+        // puede marcar la venta como fallida (fueExitoso queda intacto).
+        try
+        {
             marcarPasosTransaccionales("Listo");
 
             if (pbItems.Maximum > 0)
@@ -154,9 +165,9 @@ public partial class frmVentaCierreProgreso : Form
 
             alTerminarTodo();
         }
-        catch (Exception ex)
+        catch (Exception exPosterior)
         {
-            alTerminarConError(ex);
+            alTerminarConAdvertenciaPosterior(exPosterior);
         }
     }
 
@@ -566,6 +577,32 @@ public partial class frmVentaCierreProgreso : Form
             btnCopiar.Enabled = false;
         }
 
+        btnCerrar.Focus();
+    }
+
+    // Cierra tras un fallo posterior al Commit (UI o pasos posteriores). La venta ya esta
+    // confirmada: se registra, se muestra como advertencia y NUNCA toca fueExitoso.
+    private void alTerminarConAdvertenciaPosterior(Exception ex)
+    {
+        string facturaId = null;
+        string serieNumero = null;
+        if (resultadosObtenidos != null && resultadosObtenidos.Count > 0)
+        {
+            facturaId = resultadosObtenidos[0].facturaVentaId.ToString();
+            serieNumero = resultadosObtenidos[0].numeroDocumento;
+        }
+        ErrorPaso errorPosterior = new ErrorPaso("Después de guardar", ex, facturaId, serieNumero);
+        VentaCierreRegistroErrores.registrarErrorPaso(errorPosterior);
+        erroresPostCierre.Add(errorPosterior);
+
+        terminado = true;
+        lblEncabezado.Text = "Venta guardada con advertencias";
+        lblAvance.Text = "La venta se guardó correctamente, pero hubo un problema al mostrar el resultado.";
+        detalleError = errorPosterior.obtenerDetalleFormateado();
+        txtError.Text = detalleError;
+        txtError.Visible = true;
+        btnCopiar.Enabled = true;
+        btnCerrar.Enabled = true;
         btnCerrar.Focus();
     }
 
