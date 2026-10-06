@@ -32,7 +32,8 @@ Reemplazar la lógica dispersa de anulación de requerimientos de almacén de ve
 - Opción A (decidida por el usuario, 2026-10-06): servicio con una conexión y un `MySqlTransaction`; SQL inline parametrizado.
 - Helper estilo Query Builder (decidido): `Db.Consultar(sql, new { ... }).Get()` / `.First()`, `Db.Ejecutar(...)` -> `ResultadoEjecucion { Id, FilasAfectadas, Ok }`, `Db.Transaccion(tx => ...)`.
 - Vacíos (decidido): `Get()` devuelve lista vacía, nunca `null`; `First()` devuelve `null`; NULL de BD -> `null` en el diccionario; clave inexistente lanza excepción clara; claves `OrdinalIgnoreCase`; método de extensión `Valor<T>(clave, defecto)`.
-- Pendientes del usuario: estados que permiten anular (recomendado 7 y 13, solo `tipo_req=2`); si un extorno fallido revierte toda la anulación (recomendado: sí); estrategia de entrega en cadena cuando el total supere ~400 líneas.
+- Confirmado (2026-10-06): estados que permiten anular = 7 y 13, solo `tipo_req=2`.
+- Pendientes del usuario: si un extorno fallido revierte toda la anulación (recomendado: sí); estrategia de entrega en cadena cuando el total supere ~400 líneas.
 
 ## TDD
 
@@ -70,7 +71,7 @@ Archivos nuevos en `SIGEFA.Conexion/Db/`: `IConsultor.cs`, `Consulta.cs`, `Resul
 Carpeta nueva `SIGEFA.Administradores/ReqVenta/`, namespace `SIGEFA.Administradores.ReqVenta`. Sin BD, sin UI.
 - [ ] Constantes de estado (`secciones_de_etiquetas` origen 2): Pendiente 7, Aprobado 8, Cerrado 9, AtendidaParcial 10, AtendidaTotal 11, Anulado 12, AprobadoTransferido 13, Facturado 17; `TipoReqVenta = 2`.
 - [ ] `DecisionAnulacion Evaluar(int tipoReq, int estado)`: guard clauses + `switch`; devuelve `Accion` (`Ninguna`, `AnularPendiente`, `AnularConExtorno`), `Permitido` y `Motivo` legible.
-- [ ] Estados anulables en UNA constante fácil de cambiar: `{7, 13}` (**pendiente de confirmación del usuario**; el 8 casi no existe: 0 filas en dev, la aprobación de venta pasa a 13).
+- [ ] Estados anulables en UNA constante fácil de cambiar: `{7, 13}` (**confirmado por el usuario, 2026-10-06**; el 8 casi no existe: 0 filas en dev, la aprobación de venta pasa a 13).
 - [ ] Reglas: `tipoReq != 2` -> rechazado ("solo requerimientos de venta"); estado 12 -> rechazado ("ya está anulado"); 7 -> `AnularPendiente`; 13 -> `AnularConExtorno`; cualquier otro (8, 9, 10, 11, 17, desconocido) -> rechazado con motivo que nombre el estado.
 - [ ] Pruebas unitarias sin BD (primero, RED).
 
@@ -111,4 +112,4 @@ Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`)
 
 ## Siguiente paso
 
-opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Pendientes del usuario: confirmar ids anulables, rollback total ante extorno fallido y estrategia de cadena (antes de T2c).
+opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Ids anulables 7 y 13 confirmados por el usuario. Pendientes del usuario: rollback total ante extorno fallido y estrategia de cadena (antes de T2c).
