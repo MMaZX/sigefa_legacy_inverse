@@ -155,7 +155,7 @@ Revisar que la ruta vieja no cambió (diff solo agrega ramas detrás del flag), 
 - **Scroll:** `dgvdetalle` ya tiene scroll propio; el panel que queda corto es otro. Pendiente confirmar cuál (candidato: `groupBox10` "DETALLE PRODUCTO", 475×114, con `dgvStockAlmacenes`). Solución prevista: `AutoScroll = true` en el contenedor, sin cambiar tamaños ni `Dock` de sus hijos. Aplica solo con la confirmación del usuario.
 - **Riesgo:** el form es de layout absoluto y decompilado (`.Designer` embebido en el `.cs`); un control nuevo mal anclado puede solaparse a otra resolución. Mitigación: `Anchor` Bottom|Right, valor inicial "Ítems: 0", y prueba visual en la VM.
 - **Comportamiento con flag:** independiente de `VentaCierreRuta`; es solo presentación.
-- [ ] Implementar (pendiente de confirmar el panel del scroll). Verificación: compilar en VM (T7) y prueba visual con 1, 12 y 30 ítems.
+- [x] Contador implementado en `126d4cd` (2026-10-06): `RowsAdded`/`RowsRemoved` suscritos en `Load` a `ActualizarContadorItems()`, que escribe en el título de `groupBox3` ("DETALLE ORDEN | Ítems: N | Cant.: X"); se reutilizó el `dgvdetalle_RowsRemoved` vacío existente (estaba sin suscribir). Decisión: título en vez de borde inferior (la grilla ocupa 131 de 153 px, quedan ~4 px abajo; riesgo cero de layout). Sin tocar los puntos que mutan `dgvdetalle`, independiente del flag. Scroll pendiente de confirmar el panel. Verificación: no se compila en Linux; build en VM y prueba visual con 1, 12 y 30 ítems pendientes.
 - **Pospuesta por el usuario (2026-10-05):** es de diseño, no bloquea. No tomar hasta nueva orden.
 
 ## Ampliación de métodos de pago en captura (T13d [ex T9], T10a, T10b, T11, T12, agregada 2026-10-05, a pedido del usuario)
@@ -204,7 +204,9 @@ T13a y T13b se serializan (comparten `VentaCierre/*` y el flujo de `guardaVenta`
 
 **Código de nota de crédito (referencia, solo lectura):** captura en `frmCancelarPago.cs` (selección vía `frmListaNCreditosSinAplicar` en ~l.1676-1700; armado de `Pag` con `NotaCredito`/`CodNotaCredito` en ~l.1135-1145 y ~l.1263-1275; `CargaNotaCredito` ~l.537 para devolución tipo 100), dominio en `SIGEFA.Administradores/clsAdmNotaCredito.cs` + `SIGEFA.InterMySql/MysqlNotaCredito.cs`, creación en `frmNotadeCredito.cs`, y los efectos reales sobre la NC en el trigger `ActualizaNotaInsertPago` (BD, tabla `pago`).
 
-**Espejo Engram:** pendiente de sincronizar con esta actualización.
+**Espejo Engram:** sincronizado el 2026-10-06 (tópico `odd/venta-cierre-ruta-nueva/tasks`, observación 265) como resumen de estado con el locator de este archivo, no como copia íntegra del documento.
+
+**T8 delegada a opencode (decisión del usuario, 2026-10-06).** El contador de ítems puede implementarse ya; el scroll solo tras confirmar el panel con el usuario.
 
 ### T13a — Pasos "Después de guardar" y registro de errores por paso (antigravity, ~15 min)
 **Decisiones del usuario (2026-10-05):** las 4 acciones que hoy corren al pulsar "Cerrar" deben ser pasos visibles; ninguna anula la venta; hay que saber **por qué** falló cada una.
