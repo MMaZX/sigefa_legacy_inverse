@@ -169,7 +169,7 @@ internal class MysqlUsuario : IUsuario
 		}
 		catch (MySqlException ex)
 		{
-			throw ex;
+			throw new Exception($"{ex.Message} ERR:Login({Usu.Usuario},{Usu.CodEmpresaLogin},{Usu.Nivel});", ex);
 		}
 		finally
 		{

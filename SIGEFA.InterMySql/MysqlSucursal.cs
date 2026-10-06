@@ -143,7 +143,7 @@ internal class MysqlSucursal : ISucursal
 		}
 		catch (MySqlException ex)
 		{
-			throw ex;
+			throw new Exception($"{ex.Message} ERR:MuestraSucursal({Codigo});", ex);
 		}
 		finally
 		{

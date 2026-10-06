@@ -148,7 +148,7 @@ internal class MysqlEmpresa : IEmpresa
 		}
 		catch (MySqlException ex)
 		{
-			throw ex;
+			throw new Exception($"{ex.Message} ERR:MuestraEmpresa({Codigo});", ex);
 		}
 		finally
 		{
@@ -324,7 +324,7 @@ internal class MysqlEmpresa : IEmpresa
 		}
 		catch (MySqlException ex)
 		{
-			throw ex;
+			throw new Exception($"{ex.Message} ERR:CargaConfiguracion();", ex);
 		}
 		finally
 		{

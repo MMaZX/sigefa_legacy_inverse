@@ -149,12 +149,12 @@ public class frmLogin : Office2007Form
 				iContador++;
 				if (iContador == 3)
 				{
-					lblMensaje.Text = "3 intentos fallidos. Saliendo...";
+					lblMensaje.Text = $"3 intentos fallidos. Saliendo...\nERR:Login({Login.Usuario},{Login.CodEmpresaLogin},{Login.Nivel});";
 					await Task.Delay(1500);
 					Application.Exit();
 					return;
 				}
-				lblMensaje.Text = "Usuario o contraseña no coinciden.";
+				lblMensaje.Text = $"Usuario o contraseña incorrectos, o sin acceso a la empresa seleccionada.\nERR:Login({Login.Usuario},{Login.CodEmpresaLogin},{Login.Nivel});";
 				return;
 			}
 
