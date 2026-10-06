@@ -1301,6 +1301,7 @@ public class frmCancelarPago : Office2007Form
 		}
 	}
 
+	// Nota: ya nadie llama con Estado en true (el reinicio tras pago parcial lo hace PagoCamposHelper); se conserva por las llamadas con false.
 	private void Deshabilita_botones(bool Estado)
 	{
 		cboBanco.Enabled = Estado;
@@ -1366,9 +1367,21 @@ public class frmCancelarPago : Office2007Form
 				DialogResult d = MessageBox.Show("Desea pagar el restante?", "Aviso", MessageBoxButtons.YesNo);
 				if (d == DialogResult.Yes)
 				{
-					Deshabilita_botones(Estado: true);
+					// Nuevo ingreso por el restante: se vuelve a efectivo con los
+					// campos según el método y se rehabilita solo lo de un pago nuevo.
+					helperCamposPago.reiniciarAEfectivo();
+					txtMontoPago.Enabled = true;
+					dtpFecha.Enabled = true;
+					txtObservacion.Enabled = true;
+					btnAceptar.Enabled = true;
+					btnCancelar.Enabled = false;
 					txtMontoPago.Text = txtMontoPendiente.Text;
 					continua_pago = true;
+					txtOperacion.Text = "";
+					txtCheque.Text = "";
+					txtNc.Text = "";
+					Pag.NotaCredito = 0;
+					Pag.CodNotaCredito = 0;
 				}
 				else
 				{
