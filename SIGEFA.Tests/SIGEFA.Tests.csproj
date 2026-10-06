@@ -21,4 +21,8 @@
   <ItemGroup>
     <Compile Include="..\SIGEFA.Conexion\Db\*.cs" Link="Db\%(Filename)%(Extension)" />
   </ItemGroup>
+  <!-- Se enlazan las reglas puras de requerimientos de venta (sin BD ni WinForms) -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\ReqVenta\*.cs" Link="ReqVenta\%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>
