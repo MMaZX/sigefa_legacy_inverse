@@ -41,7 +41,7 @@ Cada tarea cierra con un commit de unidad de trabajo (Conventional Commit) y reg
 - [x] Rama `feat/tema-fluent` creada desde `main` (2026-10-06).
 
 ### T1 — Configuración de tema en `app.config`
-- [ ] Agregar la clave `<add key="TemaVisual" value="fluent" />` en `appSettings` de [`app.config`](file:///home/fulanito/development/sigefa_legacy_inverse/app.config) con comentario explicativo (`fluent` = Fluent de Telerik + Metro/Office2010; `legacy` = Office2007Black sin ThemeResolutionService).
+- [x] Agregar la clave `<add key="TemaVisual" value="fluent" />` en `appSettings` de [`app.config`](file:///home/fulanito/development/sigefa_legacy_inverse/app.config) con comentario explicativo (`fluent` = Fluent de Telerik + Metro/Office2010; `legacy` = Office2007Black sin ThemeResolutionService).
 
 ### T2 — Inicialización global del tema Fluent en `Program.cs`
 - [ ] En [`SIGEFA/Program.cs`](file:///home/fulanito/development/sigefa_legacy_inverse/SIGEFA/Program.cs), leer el flag `TemaVisual`.
