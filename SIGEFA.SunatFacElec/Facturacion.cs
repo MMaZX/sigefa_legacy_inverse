@@ -943,18 +943,51 @@ public class Facturacion
 		}
 	}
 
+	// Enmascara apariciones de la contraseña en textos de error.
+	private static string ocultarContrasena(string texto, string contrasena)
+	{
+		if (string.IsNullOrEmpty(texto) || string.IsNullOrEmpty(contrasena))
+		{
+			return texto;
+		}
+		int posicion = texto.IndexOf(contrasena, StringComparison.Ordinal);
+		if (posicion < 0)
+		{
+			return texto;
+		}
+		StringBuilder constructor = new StringBuilder();
+		int inicio = 0;
+		int longitudContrasena = contrasena.Length;
+		while (posicion >= 0)
+		{
+			constructor.Append(texto, inicio, posicion - inicio);
+			constructor.Append("***");
+			inicio = posicion + longitudContrasena;
+			posicion = texto.IndexOf(contrasena, inicio, StringComparison.Ordinal);
+		}
+		constructor.Append(texto, inicio, texto.Length - inicio);
+		return constructor.ToString();
+	}
+
 	// Reporta un error del comprobante electrónico: al colector si hay uno,
 	// o al MessageBox actual con el mismo texto. Nunca incluye la contraseña.
 	private void informarComprobante(Action<string, Exception> colectorErrores, string detalle, Exception causa)
 	{
-		string mensaje = "No se pudo generar el comprobante electrónico: " + detalle;
+		string contrasena = empresa?.Contrasena;
+		string mensajeFinal = ocultarContrasena("No se pudo generar el comprobante electrónico: " + detalle, contrasena);
 		if (colectorErrores != null)
 		{
-			colectorErrores(mensaje, causa);
+			Exception causaSegura = causa;
+			if (causa != null && !string.IsNullOrEmpty(contrasena) && causa.ToString().IndexOf(contrasena, StringComparison.Ordinal) >= 0)
+			{
+				string mensajeCausaEnmascarado = ocultarContrasena(causa.Message, contrasena);
+				causaSegura = new InvalidOperationException("[" + causa.GetType().Name + "] " + mensajeCausaEnmascarado);
+			}
+			colectorErrores(mensajeFinal, causaSegura);
 		}
 		else
 		{
-			MessageBox.Show(mensaje);
+			MessageBox.Show(mensajeFinal);
 		}
 	}
 
