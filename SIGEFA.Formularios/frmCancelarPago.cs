@@ -394,26 +394,35 @@ public class frmCancelarPago : Office2007Form
 		CargaMetodosPagos();
 		cmbMetodoPago_SelectionChangeCommitted(cmbMetodoPago, null);
 		Mon = AdmMoned.CargaMoneda(mon);
-		if (tipo == 1 || tipo == 2 || tipo == 5)
+		switch (tipo)
 		{
-			if (Mon != null)
-			{
-				txtMoneda.Text = Mon.SDescripcion;
-				tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
-				cargarTipoCambio(usaCompra: false);
-				cmbMoneda.SelectedValue = Mon.IcodMoneda;
-			}
-		}
-		else if ((tipo == 3 || tipo == 4) && Mon != null)
-		{
-			txtMoneda.Text = Mon.SDescripcion;
-			tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
-			cargarTipoCambio(usaCompra: true);
-			if (tc != null)
-			{
-				txtTipoCambio.ReadOnly = true;
-			}
-			cmbMoneda.SelectedValue = Mon.IcodMoneda;
+			case 1:
+			case 2:
+			case 5:
+				if (Mon != null)
+				{
+					txtMoneda.Text = Mon.SDescripcion;
+					tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
+					cargarTipoCambio(usaCompra: false);
+					cmbMoneda.SelectedValue = Mon.IcodMoneda;
+				}
+				break;
+			case 3:
+			case 4:
+				if (Mon != null)
+				{
+					txtMoneda.Text = Mon.SDescripcion;
+					tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
+					cargarTipoCambio(usaCompra: true);
+					if (tc != null)
+					{
+						txtTipoCambio.ReadOnly = true;
+					}
+					cmbMoneda.SelectedValue = Mon.IcodMoneda;
+				}
+				break;
+			default:
+				break;
 		}
 		cmbMoneda.MouseWheel += cmbMoneda_MouseWheel;
 	}

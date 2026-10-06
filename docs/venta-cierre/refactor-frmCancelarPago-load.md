@@ -129,6 +129,7 @@ Cuerpo propuesto: un método que fija `txtTipoCambio` desde `tc.Venta` o `tc.Com
 
 Riesgo: medio (las tres ramas difieren en `Venta` vs `Compra` y en el `ReadOnly`; hay que compararlas lado a lado al extraer).
 Verificación por `tipo`: 10 (sin `Mon`, solo TC venta), 1/2/5 (TC venta + moneda), 3/4 (TC compra + `ReadOnly = true` cuando hay TC; editable cuando no hay).
+Nota (2026-10-06, a pedido del usuario, posterior a la Etapa B): el despacho de moneda quedó en `switch` con `case` agrupados (1/2/5 y 3/4, `default` vacío, `Mon != null` por rama). Solo estética: la semántica es idéntica al `if/else if` anterior.
 
 ## 3. Regla de oro y proceso seguro (skill `refactor`)
 
