@@ -188,6 +188,24 @@ Revisar que la ruta vieja no cambió (diff solo agrega ramas detrás del flag), 
 ```
 T13a y T13b se serializan (comparten `VentaCierre/*` y el flujo de `guardaVenta`). T13d corre en paralelo con T13a (archivos disjuntos, `git add <rutas>` explícitas y commits secuenciales). Una vez cerrado T13, T10a (agy) puede correr en paralelo con lo que quede de opencode. T10b y T11 esperan a T13d y a T10a.
 
+### Actualización 2026-10-06 — combinar métodos de pago, incluido nota de crédito (10) y pendiente (12)
+
+**Disparador (prueba del usuario en la VM):** en "COBRANZA VENTAS" se capturó un pago en borrador y luego se eligió PENDIENTE (12) para el resto; `btnAceptar_Click` (`frmCancelarPago.cs`, rama `borradoresPago.Count > 0` con método no soportado) mostró "No se pueden combinar pagos en borrador con métodos de persistencia directa...". Es la restricción de diseño de T6/T13d, no un bug: hoy `metodosSoportadosEnCaptura = { 5, 6, 8, 9 }`. **El 10 y el 12 aún NO están aceptados** (el usuario creyó que sí); entran con T10a, T10b y T11, que ya están planificadas arriba.
+
+**Lo que ya está resuelto y no se rehace:** que efectivo (5) y pendiente (12) no habiliten banco, tarjeta, operación ni cheque lo cubre `PagoCamposHelper.aplicarMetodo` (T14, rama `default`: solo el monto queda habilitado). T10b/T11 no tocan esa tabla salvo que la prueba muestre un caso nuevo.
+
+**Ajustes al plan existente (sin tareas nuevas):**
+- **T11:** el aviso de bloqueo de mezcla (`borradoresPago.Count > 0`) debe dejar de dispararse para 10 y 12 una vez incluidos en `esMetodoSoportado`; el 7 (cheque) lo conserva. Con el supuesto 1, el 12 se acepta solo si `txtMontoPago == txtMontoPendiente` (siempre último borrador). Mensaje propio y claro cuando no se cumple, en lugar del genérico de persistencia directa.
+- **T10b:** al elegir 10 como segundo o tercer borrador, el pendiente mostrado debe ser el restante tras los borradores previos, y la NC ya usada en `borradoresPago` no puede repetirse.
+- **Orden de entrega:** T10a → T10b → T11 → B2 (build VM) → RV-C → T12, sin cambios. Cada tarea cierra con su commit de work unit.
+- **Humo manual ampliado (usuario, en VM):** (a) efectivo parcial + pendiente; (b) NC parcial + efectivo; (c) NC + transferencia + pendiente; (d) 12 primero con monto menor al pendiente (debe rechazarse con mensaje claro); (e) cheque (7) con borrador previo (debe seguir bloqueado).
+
+**Pregunta abierta de producto:** ¿se acepta el supuesto 1 (12 solo como último borrador) o se necesita 12 en cualquier posición? Cualquier posición obliga a replicar `GuardaPagoPendiente` dentro de la transacción (más riesgo; se evaluaría como tarea aparte).
+
+**Código de nota de crédito (referencia, solo lectura):** captura en `frmCancelarPago.cs` (selección vía `frmListaNCreditosSinAplicar` en ~l.1676-1700; armado de `Pag` con `NotaCredito`/`CodNotaCredito` en ~l.1135-1145 y ~l.1263-1275; `CargaNotaCredito` ~l.537 para devolución tipo 100), dominio en `SIGEFA.Administradores/clsAdmNotaCredito.cs` + `SIGEFA.InterMySql/MysqlNotaCredito.cs`, creación en `frmNotadeCredito.cs`, y los efectos reales sobre la NC en el trigger `ActualizaNotaInsertPago` (BD, tabla `pago`).
+
+**Espejo Engram:** pendiente de sincronizar con esta actualización.
+
 ### T13a — Pasos "Después de guardar" y registro de errores por paso (antigravity, ~15 min)
 **Decisiones del usuario (2026-10-05):** las 4 acciones que hoy corren al pulsar "Cerrar" deben ser pasos visibles; ninguna anula la venta; hay que saber **por qué** falló cada una.
 
@@ -320,7 +338,7 @@ Se ejecuta **cuando T13a, T13b, T13c y T13d estén commiteadas**, antes de empez
 - **Alcance:** `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs`, su interfaz, `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` y `VentaCierrePaso.cs`. Sin UI.
 - Paso nuevo **antes de `guardarPago`** (orden estricto: serie → stock → cabecera → detalle → **notas de crédito** → pago → commit): por cada `notaCreditoId` distinto en los borradores, `SELECT pendiente FROM notacredito WHERE codNotaI=? FOR UPDATE` y validar que la suma de `montoCobrado` de los borradores que la usan sea `<=` pendiente. Ante falla: `VentaCierreException` con paso nombrado y rollback existente; registrar el nombre del paso en `obtenerNombreProcedimiento`.
 - Sin cambios si ningún borrador lleva NC (ruta de efectivo idéntica).
-- [ ] Implementar. Verificación: compilar en VM (B2).
+- [x] Implementada en `180c427` (2026-10-06): paso nuevo `reservarNotaCredito` en `VentaCierrePaso` y `VentaCierrePasoTexto`; método `bloquearNotaCredito` en `IVentaCierreRepositorio` y `VentaCierreRepositorio` con `SELECT pendiente FROM notacredito WHERE codNotaI = @notaCreditoId FOR UPDATE` manejando `VentaCierreException`; validación en `VentaCierreService` (`ejecutarBloque` y `ejecutarOrdenAtomica`) antes de `guardarPago` bloqueando notas distintas en orden determinístico y validando `sumaCobradoNC <= pendienteActual`; sin cambios cuando ningún borrador lleva NC (ruta de efectivo idéntica); nombre de procedimiento asociado en `obtenerNombreProcedimiento`. Verificación: diff revisado, sin compilar en Linux; compilar en VM (B2) pendiente.
 
 ### T10b — Habilitar nota de crédito en captura (antigravity, ~8 min, después de T13d)
 - **Alcance:** `frmCancelarPago.cs` (y opcionalmente `frmListaNCreditosSinAplicar.cs`).
