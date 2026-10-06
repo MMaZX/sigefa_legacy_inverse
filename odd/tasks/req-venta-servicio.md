@@ -1,6 +1,6 @@
 # req-venta-servicio
 
-Estado: T1 en curso (2026-10-06). T2 en adelante pendientes de decisión.
+Estado: T1a-T1c escritos sin verificar; T1d pendiente (2026-10-06). T2 en adelante pendientes de decisión.
 Espejo Engram: tópico `odd/req-venta-servicio/tasks` (proyecto `sigefa_legacy_inverse`).
 Rama: `feat/req-venta-servicio` (desde `main`).
 
@@ -46,9 +46,12 @@ Cada tarea cierra con un commit de unidad de trabajo y registra su hash y eviden
 
 ### T1 — Helper de consultas con pruebas
 Archivos nuevos en `SIGEFA.Conexion/Db/`: `IConsultor.cs`, `Consulta.cs`, `ResultadoEjecucion.cs`, `ConsultorMySql.cs`, `Db.cs`, `FilaExtensiones.cs`. Proyecto `SIGEFA.Tests/` (net48, xUnit) fuera del glob de `SIGEFA.csproj`.
-- [ ] T1a — Pruebas sin BD (RED): conversión de objeto anónimo a parámetros, `DBNull` <-> `null`, `Get()` vacío, `First()` nulo, `Valor<T>`, clave inexistente.
-- [ ] T1b — Implementación del helper (GREEN) y exclusión del proyecto de pruebas en `SIGEFA.csproj`.
-- [ ] T1c — Pruebas de integración contra la BD dev con tabla `TEMPORARY` y transacción con rollback: `Id` en INSERT, `FilasAfectadas` en UPDATE, commit y rollback de `Transaccion`, parámetros contra inyección (`' OR 1=1`), columnas `bit(1)`.
+- [x] T1a — Pruebas sin BD (RED): conversión de objeto anónimo a parámetros, `DBNull` <-> `null`, `Get()` vacío, `First()` nulo, `Valor<T>`, clave inexistente.
+  - Escrito (no verificado en compilador). Commit `7d2ad82`.
+- [x] T1b — Implementación del helper (GREEN) y exclusión del proyecto de pruebas en `SIGEFA.csproj`.
+  - Escrito (no verificado en compilador). Commit `4f1de18`. Namespace de pruebas renombrado a `SIGEFA.Tests.Helper` para no chocar con la clase `Db`.
+- [x] T1c — Pruebas de integración contra la BD dev con tabla `TEMPORARY` y transacción con rollback: `Id` en INSERT, `FilasAfectadas` en UPDATE, commit y rollback de `Transaccion`, parámetros contra inyección (`' OR 1=1`), columnas `bit(1)`.
+  - Escrito (no verificado en compilador, no ejecutado). Commit `e76bfb2`. Desviacion: usa tabla real `zz_test_db_<guid>` con DROP en Dispose (el DDL fuera de transaccion) en vez de `TEMPORARY`, y la cadena sale solo de `SIGEFA_TEST_CONN`.
 - [ ] T1d — Build y pruebas en la VM Windows (requiere autorización explícita).
 - Ruta: delegated direct, un solo escritor (6+ archivos no triviales). Disparador: Writer trigger.
 
