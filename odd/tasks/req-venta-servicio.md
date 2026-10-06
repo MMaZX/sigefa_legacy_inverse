@@ -1,6 +1,6 @@
 # req-venta-servicio
 
-Estado: T1a-T1c escritos sin verificar; T1d pendiente (2026-10-06). T2 en adelante pendientes de decisión.
+Estado: T1 verificada en la VM (2026-10-06); corrección de HintPath pendiente de reverificar. T2 en adelante pendientes de decisión.
 Espejo Engram: tópico `odd/req-venta-servicio/tasks` (proyecto `sigefa_legacy_inverse`).
 Rama: `feat/req-venta-servicio` (desde `main`).
 
@@ -52,7 +52,15 @@ Archivos nuevos en `SIGEFA.Conexion/Db/`: `IConsultor.cs`, `Consulta.cs`, `Resul
   - Escrito (no verificado en compilador). Commit `4f1de18`. Namespace de pruebas renombrado a `SIGEFA.Tests.Helper` para no chocar con la clase `Db`.
 - [x] T1c — Pruebas de integración contra la BD dev con tabla `TEMPORARY` y transacción con rollback: `Id` en INSERT, `FilasAfectadas` en UPDATE, commit y rollback de `Transaccion`, parámetros contra inyección (`' OR 1=1`), columnas `bit(1)`.
   - Escrito (no verificado en compilador, no ejecutado). Commit `e76bfb2`. Desviacion: usa tabla real `zz_test_db_<guid>` con DROP en Dispose (el DDL fuera de transaccion) en vez de `TEMPORARY`, y la cadena sale solo de `SIGEFA_TEST_CONN`.
-- [ ] T1d — Build y pruebas en la VM Windows (requiere autorización explícita).
+- [x] T1d — Build y pruebas en la VM Windows (autorizado por el usuario, 2026-10-06).
+  - **Resultado (VM `sigefa_build`, rama `feat/req-venta-servicio`, `3747e93`):**
+    - RED sobre `7d2ad82`: `dotnet build SIGEFA.Tests` falla con 4 errores `CS0234` (`SIGEFA.Conexion` no existe en las 4 clases de pruebas): RED válido.
+    - GREEN: MSBuild `Debug|x86` de `SIGEFA.csproj`, `exit=0`, 0 errores, 480 advertencias, 33,5 s. Los 7 archivos de `Db/` compilan en el ejecutable; `SIGEFA.Tests\**` queda fuera.
+    - Pruebas sin `SIGEFA_TEST_CONN`: 47 totales, 32 correctas, 0 falladas, 15 omitidas (todas de integración).
+    - Integración contra la BD dev del host (Docker `manager_mysql`, vía `192.168.122.1:3307`, nunca producción): 47 de 47 correctas, 0 omitidas. Sin tablas `zz_test_db_*` residuales.
+    - `BIT(1)` con `MySql.Data 8.0.16.0`: llega como `System.UInt64` (valores 1 y 0); `Valor<bool>` lo admite.
+  - **Defecto hallado:** `HintPath` de `MySql.Data.dll` en `SIGEFA.Tests.csproj` apuntaba a `..\Debug_gr`; el proyecto está un nivel más abajo y debe ser `..\..\Debug_gr`. Corregido; **pendiente reverificar el build en la VM** (la verificación se hizo con una copia temporal de la DLL).
+  - Compilar y pasar pruebas del helper no prueba el flujo de negocio.
 - Ruta: delegated direct, un solo escritor (6+ archivos no triviales). Disparador: Writer trigger.
 
 ### T2 — Servicio de anulación `ReqVentaFlujoService` (pendiente de decisiones)
@@ -67,4 +75,4 @@ Archivos nuevos en `SIGEFA.Conexion/Db/`: `IConsultor.cs`, `Consulta.cs`, `Resul
 
 ## Siguiente paso
 
-Delegar T1a-T1c a un escritor; pedir autorización explícita para T1d (VM por SSH).
+Reverificar en la VM el `HintPath` corregido; decidir ids anulables, rollback total ante extorno fallido y estrategia de cadena; luego T2.
