@@ -383,12 +383,7 @@ public class frmCancelarPago : Office2007Form
 		cargarListasBase();
 		if (tipo == 100)
 		{
-			if (flagRuta == "nueva")
-			{
-				MessageBox.Show("El pago con letras no está soportado en la ruta nueva de cierre de venta. Se utilizará el flujo tradicional para esta operación.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-			}
-			CargaNotaCredito();
-			Text = "DEVOLVER PAGO";
+			cargarDevolucionPorLetras(flagRuta);
 		}
 		if (tipo == 10)
 		{
@@ -502,6 +497,17 @@ public class frmCancelarPago : Office2007Form
 		cboTarjeta.SelectedIndex = -1;
 		cboBanco.SelectedIndex = -1;
 		txtMora.Text = "0.00";
+	}
+
+	// Carga la devolución de un pago con letras (aviso de ruta nueva antes de cargar).
+	private void cargarDevolucionPorLetras(string flagRuta)
+	{
+		if (flagRuta == "nueva")
+		{
+			MessageBox.Show("El pago con letras no está soportado en la ruta nueva de cierre de venta. Se utilizará el flujo tradicional para esta operación.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		}
+		CargaNotaCredito();
+		Text = "DEVOLVER PAGO";
 	}
 
 	private void CargaMetodosPagos()
