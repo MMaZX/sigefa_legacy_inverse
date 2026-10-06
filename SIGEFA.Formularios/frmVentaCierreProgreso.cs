@@ -82,6 +82,7 @@ public partial class frmVentaCierreProgreso : Form
             VentaCierrePaso.bloquearStock,
             VentaCierrePaso.guardarCabecera,
             VentaCierrePaso.guardarDetalle,
+            VentaCierrePaso.reservarNotaCredito,
             VentaCierrePaso.guardarPago,
             VentaCierrePaso.confirmar
         };
@@ -217,11 +218,11 @@ public partial class frmVentaCierreProgreso : Form
     {
         if (bloques.Count <= 1)
         {
-            return 7;
+            return pasosOrdenados.Length;
         }
 
-        // 3 globales (abrir, serie, stock) + 3 por cada bloque (cabecera, detalle, pago) + 1 confirmar
-        return 3 + bloques.Count * 3 + 1;
+        // 3 globales (abrir, serie, stock) + 4 por cada bloque (cabecera, detalle, nota de crédito, pago) + 1 confirmar
+        return 3 + bloques.Count * 4 + 1;
     }
 
     // Calcula el índice exacto en el ListView para un paso y bloque dado.
@@ -229,8 +230,10 @@ public partial class frmVentaCierreProgreso : Form
     {
         if (bloques.Count <= 1)
         {
-            return (int)paso;
+            return Array.IndexOf(pasosOrdenados, paso);
         }
+
+        int baseBloque = 3 + Math.Max(0, bloqueActual - 1) * 4;
 
         switch (paso)
         {
@@ -241,15 +244,17 @@ public partial class frmVentaCierreProgreso : Form
             case VentaCierrePaso.bloquearStock:
                 return 2;
             case VentaCierrePaso.guardarCabecera:
-                return 3 + Math.Max(0, bloqueActual - 1) * 3;
+                return baseBloque;
             case VentaCierrePaso.guardarDetalle:
-                return 3 + Math.Max(0, bloqueActual - 1) * 3 + 1;
+                return baseBloque + 1;
+            case VentaCierrePaso.reservarNotaCredito:
+                return baseBloque + 2;
             case VentaCierrePaso.guardarPago:
-                return 3 + Math.Max(0, bloqueActual - 1) * 3 + 2;
+                return baseBloque + 3;
             case VentaCierrePaso.confirmar:
-                return 3 + bloques.Count * 3;
+                return 3 + bloques.Count * 4;
             default:
-                return 0;
+                return -1;
         }
     }
 
@@ -398,6 +403,11 @@ public partial class frmVentaCierreProgreso : Form
     private void marcarPasosHasta(VentaCierrePaso pasoActual, int bloqueActual)
     {
         int filaIndiceActual = obtenerIndiceFilaTransaccional(pasoActual, bloqueActual);
+        if (filaIndiceActual < 0)
+        {
+            return;
+        }
+
         int totalFilasTrans = obtenerTotalFilasTransaccionales();
 
         for (int i = 0; i < totalFilasTrans; i++)
@@ -499,6 +509,12 @@ public partial class frmVentaCierreProgreso : Form
                 fDetalle.SubItems.Add("Pendiente");
                 fDetalle.SubItems.Add(string.Empty);
                 lvwPasos.Items.Add(fDetalle);
+
+                ListViewItem fNotaCredito = new ListViewItem("Reservar nota de crédito (" + alm + ")");
+                fNotaCredito.Group = grpTransaccional;
+                fNotaCredito.SubItems.Add("Pendiente");
+                fNotaCredito.SubItems.Add(string.Empty);
+                lvwPasos.Items.Add(fNotaCredito);
 
                 ListViewItem fPago = new ListViewItem("Guardar pago (" + alm + ")");
                 fPago.Group = grpTransaccional;
