@@ -1,7 +1,7 @@
 using SIGEFA.Conexion;
 using Xunit;
 
-namespace SIGEFA.Tests.Db;
+namespace SIGEFA.Tests.Helper;
 
 public class ResultadoEjecucionTests
 {
