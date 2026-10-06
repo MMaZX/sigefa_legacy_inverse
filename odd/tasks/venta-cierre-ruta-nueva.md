@@ -314,7 +314,7 @@ Se ejecuta **cuando T13a, T13b, T13c y T13d estén commiteadas**, antes de empez
 - Humo manual (VM) del plan: `tipo 3` ruta nueva y legacy, cobro desde `frmCobros`, `tipo 1` (cancelar pago), `tipo 5` y la rama `tipo 100`/10 si hay datos; comprobar tipo de cambio, moneda, título del formulario y modo captura iguales a antes.
 - Orden: después de T14 (mismo archivo y `Load` llama al método que T14 modifica); antes de T10b y T11.
 - [x] Etapa A: plan escrito en `docs/venta-cierre/refactor-frmCancelarPago-load.md`, pendiente aprobación del usuario.
-- [ ] Etapa B: implementar y compilar en VM.
+- [x] Etapa B: implementada en `9a02211` (paso 1: quita `if` vacío) + `e6ee211` (paso 2: renombre a `es*` + `determinarModoCaptura`) + `c0cb41f` (paso 3: `cargarListasBase`) + `a0d830e` (paso 4: `cargarDevolucionPorLetras`) + `8bd0e93` (paso 5: `cargarDocumentoPorTipo` con `switch`) + `b845ef0` (paso 6: `cargarTipoCambio`) (2026-10-06). Sin cambios de comportamiento (diff revisado paso a paso), sin async, orden de inicialización intacto. Verificación: compilar en VM (lo hace claude; pasos 2 y 5 son los de mayor riesgo) y humo manual por `tipo` según la sección 5 del documento.
 
 ### T10a — Reserva y validación de nota de crédito en el servicio (antigravity, ~12 min)
 - **Alcance:** `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs`, su interfaz, `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` y `VentaCierrePaso.cs`. Sin UI.
