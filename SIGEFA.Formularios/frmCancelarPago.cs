@@ -285,9 +285,9 @@ public class frmCancelarPago : Office2007Form
 	// Lista en memoria de borradores de pagos capturados.
 	public List<BorradorPago> borradoresPago { get; } = new List<BorradorPago>();
 
-	// Métodos de pago soportados en modo captura (ruta nueva). Cheque (7) y
-	// pendiente (12) usan el flujo viejo (T11 habilita 12).
-	private static readonly int[] metodosSoportadosEnCaptura = new int[] { 5, 6, 8, 9, 10 };
+	// Métodos de pago soportados en modo captura (ruta nueva). Cheque (7)
+	// usa el flujo viejo.
+	private static readonly int[] metodosSoportadosEnCaptura = new int[] { 5, 6, 8, 9, 10, 12 };
 
 	// Helper de habilitado y limpieza de campos por método de pago (T14).
 	private PagoCamposHelper helperCamposPago;
@@ -679,10 +679,10 @@ public class frmCancelarPago : Office2007Form
 		{
 			int metodoSeleccionado = Convert.ToInt32(cmbMetodoPago.SelectedValue);
 			// En modo captura se soportan efectivo (5), depósito (6), tarjeta (8),
-			// transferencia (9) y nota de crédito (10): GuardaPago ya inserta ctactemovimientos
+			// transferencia (9), nota de crédito (10) y pendiente (12): GuardaPago ya inserta ctactemovimientos
 			// para esos métodos y GuardaPagoPendiente es no-op en venta nueva (solo descuenta
-			// de un pago tipo 12 ya existente para esa factura). Cheque (7) y
-			// pendiente (12) usan el flujo viejo con el aviso existente.
+			// de un pago tipo 12 ya existente para esa factura). Cheque (7)
+			// usa el flujo viejo con el aviso existente.
 			bool esMetodoSoportado = Array.IndexOf(metodosSoportadosEnCaptura, metodoSeleccionado) >= 0;
 			if (!esMetodoSoportado)
 			{
@@ -703,6 +703,13 @@ public class frmCancelarPago : Office2007Form
 					MessageBox.Show("El método de pago seleccionado no está soportado en el modo captura de la ruta nueva. Se utilizará el flujo tradicional para esta venta.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
 					modoCaptura = false;
 				}
+			}
+			// En captura el pendiente (12) siempre es el último borrador: debe cubrir
+			// todo el restante para no replicar GuardaPagoPendiente.
+			if (metodoSeleccionado == 12 && Convert.ToDecimal(txtMontoPago.Text) != Convert.ToDecimal(txtMontoPendiente.Text))
+			{
+				MessageBox.Show("El pendiente debe ser por el total restante. No se puede capturar un pendiente parcial.", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
 			}
 		}
 		if (Convert.ToInt32(cmbMetodoPago.SelectedValue) == 12)
