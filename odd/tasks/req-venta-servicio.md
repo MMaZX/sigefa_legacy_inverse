@@ -33,7 +33,8 @@ Reemplazar la lógica dispersa de anulación de requerimientos de almacén de ve
 - Helper estilo Query Builder (decidido): `Db.Consultar(sql, new { ... }).Get()` / `.First()`, `Db.Ejecutar(...)` -> `ResultadoEjecucion { Id, FilasAfectadas, Ok }`, `Db.Transaccion(tx => ...)`.
 - Vacíos (decidido): `Get()` devuelve lista vacía, nunca `null`; `First()` devuelve `null`; NULL de BD -> `null` en el diccionario; clave inexistente lanza excepción clara; claves `OrdinalIgnoreCase`; método de extensión `Valor<T>(clave, defecto)`.
 - Confirmado (2026-10-06): estados que permiten anular = 7 y 13, solo `tipo_req=2`.
-- Pendientes del usuario: si un extorno fallido revierte toda la anulación (recomendado: sí); estrategia de entrega en cadena cuando el total supere ~400 líneas.
+- Confirmado (2026-10-06): si un extorno falla, la anulación NO se termina de hacer: rollback total, el requerimiento queda como estaba y el usuario ve el error.
+- Pendiente del usuario: estrategia de entrega en cadena cuando el total supere ~400 líneas (antes de T2c).
 
 ## TDD
 
@@ -126,4 +127,4 @@ Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`)
 
 ## Siguiente paso
 
-opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Ids anulables 7 y 13 confirmados por el usuario. Pendientes del usuario: rollback total ante extorno fallido y estrategia de cadena (antes de T2c).
+opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Ids anulables 7 y 13 confirmados por el usuario. Pendiente del usuario: estrategia de cadena de PR (antes de T2c).
