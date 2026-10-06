@@ -31,6 +31,11 @@ internal class PagoCamposHelper
         this.txtMontoPago = txtMontoPago;
     }
 
+    // Ids de método de pago (tabla metodo_pago):
+    // 5 EFECTIVO (es efectivo), 6 DEPOSITO (requiere aprobación),
+    // 7 DEPOSITO POR CHEQUE, 8 TARJETA (es POS), 9 TRANSFERENCIA,
+    // 10 NOTA CREDITO, 11 TARJETA CREDITO (inactivo), 12 PENDIENTE,
+    // 13 Redondeo (inactivo), 14 Extra (inactivo).
     // Fija habilitado y limpieza según el método. El 12 (pendiente) y cualquier
     // otro no listado se tratan como efectivo para no arrastrar banco u
     // operación de otro método.
@@ -58,7 +63,7 @@ internal class PagoCamposHelper
                 fijar(tarjeta: false, banco: false, operacion: false, cheque: false, cuenta: false, monto: false, bloqueaNc: true);
                 break;
             default:
-                // Efectivo (5) y cualquier otro: todo bloqueado salvo el monto.
+                // Efectivo (5) y cualquier otro (11, 12, 13, 14): todo bloqueado salvo el monto.
                 fijar(tarjeta: false, banco: false, operacion: false, cheque: false, cuenta: false, monto: true);
                 break;
         }
