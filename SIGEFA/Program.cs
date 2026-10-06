@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -59,7 +60,17 @@ internal static class Program
 			}
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(defaultValue: false);
-			StyleManager.Style = eStyle.Office2007Black;
+			string temaVisual = (ConfigurationManager.AppSettings["TemaVisual"] ?? string.Empty).Trim().ToLowerInvariant();
+			if (temaVisual == "fluent")
+			{
+				new Telerik.WinControls.Themes.FluentTheme();
+				Telerik.WinControls.ThemeResolutionService.ApplicationThemeName = "Fluent";
+				StyleManager.Style = eStyle.Metro;
+			}
+			else
+			{
+				StyleManager.Style = eStyle.Office2007Black;
+			}
 			Thread.CurrentThread.CurrentCulture = new CultureInfo("es-PE");
 			Application.Run(new frmLogin());
 		}
