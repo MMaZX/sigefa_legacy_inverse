@@ -750,6 +750,10 @@ public class frmVenta2019 : Office2007Form
 		cargaComboZona();
 		cargaCombocategoriaclientes();
 		cargaComboCanalesVenta();
+		// Contador de ítems del detalle (T8): cubre agregar, recargar, quitar y limpiar.
+		dgvdetalle.RowsAdded += dgvdetalle_RowsAdded;
+		dgvdetalle.RowsRemoved += dgvdetalle_RowsRemoved;
+		ActualizarContadorItems();
 	}
 
 	private void cargaComboCanalesVenta()
@@ -2706,8 +2710,25 @@ public class frmVenta2019 : Office2007Form
 		montosventa();
 	}
 
+	// Actualiza el título de groupBox3 con el conteo de ítems y la suma de cantidades.
+	private void ActualizarContadorItems()
+	{
+		decimal totalCantidad = 0m;
+		foreach (DataGridViewRow fila in (IEnumerable)dgvdetalle.Rows)
+		{
+			totalCantidad += Convert.ToDecimal(fila.Cells[cantidad.Name].Value);
+		}
+		groupBox3.Text = $"DETALLE ORDEN  |  Ítems: {dgvdetalle.Rows.Count}  |  Cant.: {totalCantidad:#,##0.00}";
+	}
+
+	private void dgvdetalle_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+	{
+		ActualizarContadorItems();
+	}
+
 	private void dgvdetalle_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
 	{
+		ActualizarContadorItems();
 	}
 
 	private void dgvproductos_CellClick(object sender, DataGridViewCellEventArgs e)
