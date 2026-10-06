@@ -42,79 +42,51 @@ internal class PagoCamposHelper
             case 9:
                 // Depósito y transferencia: solo banco y operación. La cuenta se
                 // habilita al elegir banco (cboBanco_SelectionChangeCommitted).
-                cboTarjeta.Enabled = false;
-                cboBanco.Enabled = true;
-                cboTarjeta.SelectedIndex = -1;
-                txtCheque.Text = "";
-                txtOperacion.Text = "";
-                txtNc.Text = "";
-                txtOperacion.Enabled = true;
-                txtCheque.Enabled = false;
-                txtMontoPago.Enabled = true;
-                cboNumCta.Enabled = false;
-                cboNumCta.SelectedIndex = -1;
+                // El banco no se limpia acá: CargarBancos() reenlaza después.
+                fijar(tarjeta: false, banco: true, operacion: true, cheque: false, cuenta: false, monto: true, limpiaBanco: false);
                 break;
             case 7:
                 // Depósito por cheque: banco, operación y cheque.
-                cboTarjeta.Enabled = false;
-                cboBanco.Enabled = true;
-                cboBanco.SelectedIndex = -1;
-                cboTarjeta.SelectedIndex = -1;
-                txtOperacion.Text = "";
-                txtNc.Text = "";
-                txtCheque.Text = "";
-                txtOperacion.Enabled = true;
-                txtCheque.Enabled = true;
-                txtMontoPago.Enabled = true;
-                cboNumCta.Enabled = false;
-                cboNumCta.SelectedIndex = -1;
+                fijar(tarjeta: false, banco: true, operacion: true, cheque: true, cuenta: false, monto: true);
                 break;
             case 8:
                 // Tarjeta: conserva la cuenta corriente habilitada.
-                cboTarjeta.Enabled = true;
-                cboBanco.Enabled = true;
-                cboBanco.SelectedIndex = -1;
-                cboTarjeta.SelectedIndex = -1;
-                txtOperacion.Text = "";
-                txtNc.Text = "";
-                txtCheque.Text = "";
-                txtOperacion.Enabled = true;
-                txtCheque.Enabled = false;
-                txtMontoPago.Enabled = true;
-                cboNumCta.Enabled = true;
-                cboNumCta.SelectedIndex = -1;
+                fijar(tarjeta: true, banco: true, operacion: true, cheque: false, cuenta: true, monto: true);
                 break;
             case 10:
                 // Nota de crédito: todo bloqueado, el monto lo pone el diálogo.
-                cboTarjeta.Enabled = false;
-                cboBanco.Enabled = false;
-                cboBanco.SelectedIndex = -1;
-                cboTarjeta.SelectedIndex = -1;
-                txtOperacion.Text = "";
-                txtCheque.Text = "";
-                txtNc.Text = "";
-                txtOperacion.Enabled = false;
-                txtCheque.Enabled = false;
-                txtNc.Enabled = false;
-                cboNumCta.Enabled = false;
-                txtMontoPago.Enabled = false;
-                cboNumCta.SelectedIndex = -1;
+                fijar(tarjeta: false, banco: false, operacion: false, cheque: false, cuenta: false, monto: false, bloqueaNc: true);
                 break;
             default:
                 // Efectivo (5) y cualquier otro: todo bloqueado salvo el monto.
-                cboTarjeta.Enabled = false;
-                cboBanco.Enabled = false;
-                cboBanco.SelectedIndex = -1;
-                cboTarjeta.SelectedIndex = -1;
-                txtCheque.Text = "";
-                txtNc.Text = "";
-                txtOperacion.Text = "";
-                txtOperacion.Enabled = false;
-                txtCheque.Enabled = false;
-                txtMontoPago.Enabled = true;
-                cboNumCta.Enabled = false;
-                cboNumCta.SelectedIndex = -1;
+                fijar(tarjeta: false, banco: false, operacion: false, cheque: false, cuenta: false, monto: true);
                 break;
+        }
+    }
+
+    // Aplica un perfil: qué queda habilitado y qué se limpia para no arrastrar
+    // valores del método anterior. Solo el 10 bloquea txtNc (como hoy, nada lo
+    // vuelve a habilitar).
+    private void fijar(bool tarjeta, bool banco, bool operacion, bool cheque, bool cuenta, bool monto, bool limpiaBanco = true, bool bloqueaNc = false)
+    {
+        cboTarjeta.Enabled = tarjeta;
+        cboBanco.Enabled = banco;
+        txtOperacion.Enabled = operacion;
+        txtCheque.Enabled = cheque;
+        cboNumCta.Enabled = cuenta;
+        txtMontoPago.Enabled = monto;
+        if (limpiaBanco)
+        {
+            cboBanco.SelectedIndex = -1;
+        }
+        cboTarjeta.SelectedIndex = -1;
+        cboNumCta.SelectedIndex = -1;
+        txtOperacion.Text = "";
+        txtCheque.Text = "";
+        txtNc.Text = "";
+        if (bloqueaNc)
+        {
+            txtNc.Enabled = false;
         }
     }
 
