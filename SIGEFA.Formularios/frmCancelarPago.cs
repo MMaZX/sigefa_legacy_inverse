@@ -285,9 +285,9 @@ public class frmCancelarPago : Office2007Form
 	// Lista en memoria de borradores de pagos capturados.
 	public List<BorradorPago> borradoresPago { get; } = new List<BorradorPago>();
 
-	// Métodos de pago soportados en modo captura (ruta nueva). Cheque (7), nota de
-	// crédito (10) y pendiente (12) usan el flujo viejo (T10b/T11 habilitan 10 y 12).
-	private static readonly int[] metodosSoportadosEnCaptura = new int[] { 5, 6, 8, 9 };
+	// Métodos de pago soportados en modo captura (ruta nueva). Cheque (7) y
+	// pendiente (12) usan el flujo viejo (T11 habilita 12).
+	private static readonly int[] metodosSoportadosEnCaptura = new int[] { 5, 6, 8, 9, 10 };
 
 	// Helper de habilitado y limpieza de campos por método de pago (T14).
 	private PagoCamposHelper helperCamposPago;
@@ -678,11 +678,11 @@ public class frmCancelarPago : Office2007Form
 		if (modoCaptura)
 		{
 			int metodoSeleccionado = Convert.ToInt32(cmbMetodoPago.SelectedValue);
-			// En modo captura se soportan efectivo (5), depósito (6), tarjeta (8) y
-			// transferencia (9): GuardaPago ya inserta ctactemovimientos para esos
-			// métodos y GuardaPagoPendiente es no-op en venta nueva (solo descuenta
-			// de un pago tipo 12 ya existente para esa factura). Cheque (7), nota de
-			// crédito (10) y pendiente (12) usan el flujo viejo con el aviso existente.
+			// En modo captura se soportan efectivo (5), depósito (6), tarjeta (8),
+			// transferencia (9) y nota de crédito (10): GuardaPago ya inserta ctactemovimientos
+			// para esos métodos y GuardaPagoPendiente es no-op en venta nueva (solo descuenta
+			// de un pago tipo 12 ya existente para esa factura). Cheque (7) y
+			// pendiente (12) usan el flujo viejo con el aviso existente.
 			bool esMetodoSoportado = Array.IndexOf(metodosSoportadosEnCaptura, metodoSeleccionado) >= 0;
 			if (!esMetodoSoportado)
 			{
@@ -1108,6 +1108,8 @@ public class frmCancelarPago : Office2007Form
 								MessageBox.Show("Ingresar Datos Necesarios", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 								return;
 							}
+							Pag.NotaCredito = 0;
+							Pag.CodNotaCredito = 0;
 							Pagar();
 							btnImprimir.Visible = false;
 						}
@@ -1119,6 +1121,8 @@ public class frmCancelarPago : Office2007Form
 							}
 							else
 							{
+								Pag.NotaCredito = 0;
+								Pag.CodNotaCredito = 0;
 								Pagar();
 							}
 						}
@@ -1129,6 +1133,8 @@ public class frmCancelarPago : Office2007Form
 								MessageBox.Show("Ingresar Datos Necesarios", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 								return;
 							}
+							Pag.NotaCredito = 0;
+							Pag.CodNotaCredito = 0;
 							Pagar();
 							btnImprimir.Visible = false;
 						}
@@ -1149,12 +1155,14 @@ public class frmCancelarPago : Office2007Form
 								montoNC4 = montpen4;
 							}
 							Pagar();
-							if (VentComp != 1)
+							if (!modoCaptura && VentComp != 1)
 							{
 							}
 						}
 						else
 						{
+							Pag.NotaCredito = 0;
+							Pag.CodNotaCredito = 0;
 							Pagar();
 						}
 						return;
@@ -1226,6 +1234,8 @@ public class frmCancelarPago : Office2007Form
 							MessageBox.Show("Ingresar Datos Necesarios", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 							return;
 						}
+						Pag.NotaCredito = 0;
+						Pag.CodNotaCredito = 0;
 						Pagar();
 						btnImprimir.Visible = false;
 						if (!modoCaptura && Pag.CodTipoPago != 12)
@@ -1240,6 +1250,8 @@ public class frmCancelarPago : Office2007Form
 							MessageBox.Show("Ingresar Datos Necesarios", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 							return;
 						}
+						Pag.NotaCredito = 0;
+						Pag.CodNotaCredito = 0;
 						Pagar();
 						if (!modoCaptura && Pag.CodTipoPago != 12)
 						{
@@ -1253,6 +1265,8 @@ public class frmCancelarPago : Office2007Form
 							MessageBox.Show("Ingresar Datos Necesarios", "Pago", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 							return;
 						}
+						Pag.NotaCredito = 0;
+						Pag.CodNotaCredito = 0;
 						Pagar();
 						btnImprimir.Visible = false;
 						if (!modoCaptura && Pag.CodTipoPago != 12)
@@ -1277,19 +1291,24 @@ public class frmCancelarPago : Office2007Form
 							montoNC5 = montpen5;
 						}
 						Pagar();
-						if (VentComp == 1)
+						if (!modoCaptura)
 						{
-							notaI.CodReferencia = Convert.ToInt32(CodNota);
-							AdmVenta.ActualizaPendienteCredito(montoNC5, Convert.ToInt32(notaI.CodNotaIngreso), notaI.CodAlmacen, 1);
-							AdmNotaI.ActualizaNCreditoVentaSinAplicar(notaI);
-						}
-						if (Pag.CodTipoPago != 12)
-						{
-							Admpag.insertPagoPendiente(Pag);
+							if (VentComp == 1)
+							{
+								notaI.CodReferencia = Convert.ToInt32(CodNota);
+								AdmVenta.ActualizaPendienteCredito(montoNC5, Convert.ToInt32(notaI.CodNotaIngreso), notaI.CodAlmacen, 1);
+								AdmNotaI.ActualizaNCreditoVentaSinAplicar(notaI);
+							}
+							if (Pag.CodTipoPago != 12)
+							{
+								Admpag.insertPagoPendiente(Pag);
+							}
 						}
 					}
 					else
 					{
+						Pag.NotaCredito = 0;
+						Pag.CodNotaCredito = 0;
 						Pagar();
 						if (!modoCaptura && Pag.CodTipoPago != 12 && pagoventa == 0)
 						{
@@ -1688,6 +1707,14 @@ public class frmCancelarPago : Office2007Form
 				{
 					if (form.notaC.CodNotaCredito != null)
 					{
+						int codNcSeleccionado = Convert.ToInt32(form.notaC.CodNotaCredito);
+						if (modoCaptura && borradoresPago.Any(b => b.notaCreditoId == codNcSeleccionado))
+						{
+							MessageBox.Show("La nota de crédito ya fue seleccionada en un pago previo.", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+							txtNc.Text = "";
+							txtMontoPago.Text = "";
+							return;
+						}
 						notaC = form.notaC;
 						txtNc.Text = notaC.DocumentoNotaCredito;
 						if (notaC.Pendiente >= Convert.ToDouble(txtMontoPendiente.Text))
