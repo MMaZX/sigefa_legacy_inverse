@@ -442,9 +442,6 @@ public class frmCancelarPago : Office2007Form
 		else if (tipo == 4)
 		{
 			CargaLetra();
-			if (letra == null)
-			{
-			}
 		}
 		else if (tipo == 5)
 		{
