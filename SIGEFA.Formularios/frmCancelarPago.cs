@@ -380,12 +380,7 @@ public class frmCancelarPago : Office2007Form
 		esCajaAperturada = true;
 		string flagRuta = ConfigurationManager.AppSettings["VentaCierreRuta"];
 		determinarModoCaptura(flagRuta);
-		cargaMoneda();
-		CargarBancos();
-		CargarTarjetas();
-		cboTarjeta.SelectedIndex = -1;
-		cboBanco.SelectedIndex = -1;
-		txtMora.Text = "0.00";
+		cargarListasBase();
 		if (tipo == 100)
 		{
 			if (flagRuta == "nueva")
@@ -496,6 +491,17 @@ public class frmCancelarPago : Office2007Form
 		{
 			modoCaptura = false;
 		}
+	}
+
+	// Carga las listas base del formulario sin dejar selección.
+	private void cargarListasBase()
+	{
+		cargaMoneda();
+		CargarBancos();
+		CargarTarjetas();
+		cboTarjeta.SelectedIndex = -1;
+		cboBanco.SelectedIndex = -1;
+		txtMora.Text = "0.00";
 	}
 
 	private void CargaMetodosPagos()
