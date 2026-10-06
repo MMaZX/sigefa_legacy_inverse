@@ -1,6 +1,6 @@
 # req-venta-servicio
 
-Estado: T1 verificada en la VM (2026-10-06); corrección de HintPath pendiente de reverificar. T2 en adelante pendientes de decisión.
+Estado: T1 verificada en la VM (2026-10-06); HintPath corregido pendiente de reverificar. T2a y T2b asignadas a opencode; T2c en adelante pendientes.
 Espejo Engram: tópico `odd/req-venta-servicio/tasks` (proyecto `sigefa_legacy_inverse`).
 Rama: `feat/req-venta-servicio` (desde `main`).
 
@@ -63,10 +63,46 @@ Archivos nuevos en `SIGEFA.Conexion/Db/`: `IConsultor.cs`, `Consulta.cs`, `Resul
   - Compilar y pasar pruebas del helper no prueba el flujo de negocio.
 - Ruta: delegated direct, un solo escritor (6+ archivos no triviales). Disparador: Writer trigger.
 
-### T2 — Servicio de anulación `ReqVentaFlujoService` (pendiente de decisiones)
-- [ ] Reglas puras `ReqVentaReglas` (estados 7 y 13, `tipo_req=2`) con pruebas.
-- [ ] `Anular(codReq, codUser)` con guard clauses, `FOR UPDATE`, una transacción, `Resultado { Ok, Mensaje }`.
-- [ ] Integración detrás de `VentaCierreRuta=nueva` en `FrmTPenPedido`, sin tocar la ruta legacy.
+### Principio rector del servicio (decidido por el usuario, 2026-10-06)
+**La vista nunca aporta el estado.** Hoy `btnEliminar_Click` lee `codEstado` de la fila de la grilla (`FrmTPenPedido.cs:233`), que es una foto vieja: un requerimiento visto como 7 puede ser 13 en la BD. El servicio recibe solo `codReq` y `codUser`, y lee todo lo demás de la BD dentro de la transacción con `SELECT ... FOR UPDATE`.
+
+### T2a — Reglas puras `ReqVentaReglas` (opencode)
+Carpeta nueva `SIGEFA.Administradores/ReqVenta/`, namespace `SIGEFA.Administradores.ReqVenta`. Sin BD, sin UI.
+- [ ] Constantes de estado (`secciones_de_etiquetas` origen 2): Pendiente 7, Aprobado 8, Cerrado 9, AtendidaParcial 10, AtendidaTotal 11, Anulado 12, AprobadoTransferido 13, Facturado 17; `TipoReqVenta = 2`.
+- [ ] `DecisionAnulacion Evaluar(int tipoReq, int estado)`: guard clauses + `switch`; devuelve `Accion` (`Ninguna`, `AnularPendiente`, `AnularConExtorno`), `Permitido` y `Motivo` legible.
+- [ ] Estados anulables en UNA constante fácil de cambiar: `{7, 13}` (**pendiente de confirmación del usuario**; el 8 casi no existe: 0 filas en dev, la aprobación de venta pasa a 13).
+- [ ] Reglas: `tipoReq != 2` -> rechazado ("solo requerimientos de venta"); estado 12 -> rechazado ("ya está anulado"); 7 -> `AnularPendiente`; 13 -> `AnularConExtorno`; cualquier otro (8, 9, 10, 11, 17, desconocido) -> rechazado con motivo que nombre el estado.
+- [ ] Pruebas unitarias sin BD (primero, RED).
+
+### T2b — Lecturas con nombre `ReqVentaConsultas` (opencode)
+Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`) para poder correr dentro de una transacción. SQL parametrizado; sin `MessageBox`.
+- [ ] `Dictionary<string,object> ObtenerRequerimiento(IConsultor c, int codReq, bool bloquear)`: lee `req_almacen` por `id_req_almacen`; `FOR UPDATE` si `bloquear`. Devuelve `null` si no existe. Columnas mínimas: `id_req_almacen`, `estado`, `tipo_req`, `cod_almacen_solicitante`, `cod_almacen_despacho`, `codPedidoVenta`, `codFacturaVenta`.
+- [ ] `List<Dictionary<string,object>> ObtenerTransferencias(IConsultor c, int codReq, bool bloquear)`: transferencias ORIGINALES del requerimiento (`id_req_almacen = @id AND codDocExtornacion IS NULL`) con columnas `codTransDir`, `codAlmacenOrigen`, `codAlmacenDestino`, `total`, `estado+0 AS estado`, `pendiente+0 AS pendiente` y `tiene_extorno` calculado con `LEFT JOIN transferencia e ON e.codDocExtornacion = o.codTransDir` (los extornos antiguos NO tienen `id_req_almacen`, por eso se busca por `codDocExtornacion`, no por requerimiento).
+- [ ] `List<Dictionary<string,object>> ObtenerDetalle(IConsultor c, int codReq)`: líneas de `detalle_req_almacen` del requerimiento (descubrir columnas con `DESCRIBE`; incluir las de producto, unidad, cantidad pendiente aprobada y el id de detalle que usa `RetornandoStockAlAnularReqAlmacen`).
+- [ ] Pruebas de integración de solo lectura contra la BD dev (`SIGEFA_TEST_CONN`; se omiten sin ella): id inexistente -> `null`; casos históricos estables (req 6318: anulado, original aprobada sin extorno; req 11713: dos originales rechazadas; un requerimiento con extorno: `tiene_extorno`). Sin escribir ni borrar nada.
+
+### T2c — Anular pendiente (estado 7)
+- [ ] Rechazar pendientes, devolver stock y marcar anulado en una transacción. Pendiente de T2a/T2b.
+
+### T2d — Anular aprobado con extorno (estado 13)
+- [ ] Antes de escribir: leer firmas y salidas de `GuardaTransferencia`, `GuardaDetalleTransferencia`, `GuardaNotaSalida`, `GuardaDetalleSalida`, `GuardaNotaIngreso`, `GuardaDetalleIngreso`, `AprobarTransferencia` y los triggers de stock; llamarlos desde la MISMA conexión. Rollback total ante cualquier fallo (decisión pendiente del usuario; recomendado).
+
+### T2e — `ReqVentaFlujoService.Anular(codReq, codUser)` con guard clauses y `Resultado`.
+
+### T2f — Conectar `FrmTPenPedido.btnEliminar_Click` detrás de `VentaCierreRuta=nueva`; luego migrar uno a uno los otros 6 puntos de entrada.
+
+#### Reparto por agente
+| Agente | Tareas | Rol |
+|---|---|---|
+| **opencode** | T2a, T2b | Escribir código y pruebas (no puede compilar: host sin dotnet) |
+| **claude** | verificación en VM, T2c-T2f, orquestación | Build y pruebas en la VM (con autorización explícita del usuario) |
+
+#### Protocolo de traspaso (obligatorio)
+1. Antes de empezar: `mem_search "req-venta-servicio"`, leer este documento y `AGENTS.md`.
+2. Trabajar SOLO en `SIGEFA.Administradores/ReqVenta/*.cs`, `SIGEFA.Tests/` (pruebas nuevas) y la línea `Compile Include` correspondiente en `SIGEFA.Tests/SIGEFA.Tests.csproj`. No tocar formularios, `SIGEFA.csproj` ni la ruta legacy.
+3. No afirmar "compila" ni "las pruebas pasan": no hay `dotnet` en el host. Reportar "escrito, no verificado en compilador".
+4. Un commit por unidad de trabajo (Conventional Commits en español, sin atribución de IA): tests RED de T2a, implementación T2a, tests de T2b, implementación T2b. Registrar hash en este documento y actualizar Engram `odd/req-venta-servicio/tasks`.
+5. No subir a ningún remoto.
 
 ## Evidencia y entrega
 
@@ -75,4 +111,4 @@ Archivos nuevos en `SIGEFA.Conexion/Db/`: `IConsultor.cs`, `Consulta.cs`, `Resul
 
 ## Siguiente paso
 
-Reverificar en la VM el `HintPath` corregido; decidir ids anulables, rollback total ante extorno fallido y estrategia de cadena; luego T2.
+opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Pendientes del usuario: confirmar ids anulables, rollback total ante extorno fallido y estrategia de cadena (antes de T2c).
