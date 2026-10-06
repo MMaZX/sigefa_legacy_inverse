@@ -391,6 +391,26 @@ Cada mensaje sale por el colector (con la excepción original cuando exista, par
 - [x] Implementada en `4bbad19` (2026-10-06): `Firmar` devuelve `bool` con colector opcional, reinicia `respuestaFirmado` y valida con los mensajes de la tabla (certificado, contraseña, XML, `!Exito` con "sin detalle", trama vacía; nunca la contraseña); `GeneraDocumento` corta con `return` si falla la firma o `!response.Exito` y valida tramas antes de `FromBase64String`; `catch` final con `mensajeSeguro` (nulos → "falta un dato obligatorio"); sin cambios en `GeneraDocumentoEnvio`, NC ni ND. Verificación: no se compila en Linux; build en VM y humo (a)-(e) pendientes.
 - **Pregunta abierta para el usuario:** ¿la VM debe tener el certificado en `C:\DOCUMENTOS-<RUC>\CERTIFIK\`, o allí la facturación electrónica se espera apagada? Define si en pruebas la incidencia clara es el resultado correcto.
 
+### T16 — Diálogo de progreso alineado con el enum `VentaCierrePaso` renumerado (antigravity, ~10 min, hallazgo P2 de codex, 2026-10-06)
+**Evidencia (codex, verificado por lectura; yo revisé las líneas citadas):** T10a insertó `reservarNotaCredito = 5` y movió `guardarPago` a 6 y `confirmar` a 7 (`VentaCierrePaso.cs`). `frmVentaCierreProgreso.cs` no se actualizó: con un solo bloque usa `(int)paso` como índice de fila (`obtenerIndiceFilaTransaccional`, ~l.228-233) sobre 7 filas construidas desde `pasosOrdenados` (~l.78-87), que no incluye `reservarNotaCredito`. Resultado: `guardarPago` (6) marca la fila "Confirmar", `confirmar` (7) queda fuera de rango y `reservarNotaCredito` (5) marca "Guardar pago". Con varios bloques, `reservarNotaCredito` cae en `default: return 0` y marca "Abrir transacción". `obtenerTotalFilasTransaccionales` (~l.216) tiene el 7 fijo y `3 + bloques * 3 + 1`. Es solo visual: no afecta datos ni commit, pero un error de NC se mostraría bajo la etapa equivocada.
+
+**Alcance:** solo `SIGEFA.Formularios/frmVentaCierreProgreso.cs`. No tocar `VentaCierrePaso.cs`, servicio ni repositorio.
+
+**Diseño:**
+1. Agregar `VentaCierrePaso.reservarNotaCredito` a `pasosOrdenados`, entre `guardarDetalle` y `guardarPago` (8 filas con un bloque; el texto sale de `VentaCierrePasoTexto`, que ya lo tiene).
+2. Un solo bloque: el índice de fila sale de `Array.IndexOf(pasosOrdenados, paso)`, **nunca de `(int)paso`**. Si el resultado es -1, no marcar nada (no caer en la fila 0).
+3. Varios bloques: cada bloque pasa de 3 a 4 filas (cabecera, detalle, nota de crédito, pago). Fórmulas: base del bloque = `3 + (bloque - 1) * 4`; cabecera `+0`, detalle `+1`, nota de crédito `+2`, pago `+3`; `confirmar = 3 + bloques.Count * 4`. Total de filas = `3 + bloques.Count * 4 + 1`. Quitar el `default: return 0`: un paso desconocido devuelve -1.
+4. `obtenerTotalFilasTransaccionales` debe derivarse de `pasosOrdenados.Length` (un bloque) y de la fórmula anterior (varios); sin el 7 fijo. Revisar y mantener coherentes los usos de ese total en `offsetPost` (~l.261 y ~l.615) y en ~l.433. Crear las filas del modo multibloque (~l.470 en adelante) con la misma estructura de 4 filas por bloque.
+5. Todo `marcarPasosHasta` y `marcarPasoTransaccionalConError` deben tolerar índice -1 sin excepción.
+6. La fila "Reservar nota de crédito" está siempre presente; si no hay notas de crédito, el servicio no la informa y queda "Listo" cuando se informa un paso posterior (comportamiento actual de `marcarPasosHasta`).
+
+**Convenciones:** las de `AGENTS.md` (guardas, sin `if` anidados de tres niveles, sin repetir cálculos: guardar el índice en una variable local). Sin `MessageBox` nuevo.
+**TDD:** no aplica (sin runner de pruebas). Verificación: build en la VM y humo manual.
+- [ ] Implementar. Verificación: build en la VM; humo manual: (a) venta contado de un almacén solo efectivo: 8 filas, avanzan en orden y "Confirmar" queda en Listo al final; (b) con nota de crédito: la fila "Reservar nota de crédito" pasa a En curso y luego Listo, y "Guardar pago" no se adelanta; (c) NC con saldo insuficiente (forzar): el error aparece **bajo "Reservar nota de crédito"**; (d) dos almacenes con NC: 4 filas por bloque y el error de la NC del bloque 2 cae en la fila del bloque 2.
+
+### Hallazgo P1 de codex — pendiente de decisión del usuario (2026-10-06)
+Con un solo almacén, el cheque (7) sale al flujo viejo (`frmCancelarPago.cs` ~l.698-704), que persiste comprobante y pago durante "Cobrar" (~l.724-744 y ~l.1403-1414). Si se registra un pago parcial y se cierra la ventana, `FormClosing` marca cancelado (~l.2180-2185), `frmVenta2019` aborta antes de agregar la venta a `lista_facturas` (~l.3669-3683) y el `catch` no la compensa (~l.3928-3933): quedan comprobante y primer pago guardados aunque el cierre se reporte cancelado. Opciones: (1) bloquear el 7 en la ruta nueva con aviso claro; (2) aceptar la excepción y documentarla. **Sin decidir; no hay tarea hasta que el usuario elija.**
+
 ### RV-C — Revisión de T13d y T10a–T11 (codex, solo lectura, ~5 min)
 Revisar que la ruta vieja y el efectivo no cambian con flag ausente o `legacy`, que el 7 sigue en flujo viejo, que la NC no se consume dos veces y que el 12 solo puede ser el último borrador.
 
