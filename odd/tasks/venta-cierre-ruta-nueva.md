@@ -371,6 +371,21 @@ Se ejecuta **cuando T13a, T13b, T13c y T13d estén commiteadas**, antes de empez
 2. `GeneraDocumento`: pasa el colector a `Firmar`; si devuelve false, `return` (sin guardar repositorio ni PDF). Tras `!response.Exito` también `return`, y se valida `TramaXmlSinFirma` no vacía antes de `FromBase64String` (l.254).
 3. Decisión adoptada (revertible): el `return` aplica también a la ruta legacy; la única diferencia es que desaparece el segundo `MessageBox` redundante que hoy sale del null, porque el código posterior ya no se ejecutaba tras esa excepción.
 4. Sin cambios en `GeneraDocumentoEnvio`, `GeneraNotaCredito` ni `GeneraNotaDebito`.
+5. **Mensajes controlados (decisión del usuario, 2026-10-06):** ningún error de este flujo puede llegar al usuario como `ArgumentNullException` ni como "El valor no puede ser nulo". Cada causa conocida tiene su texto, con el prefijo "No se pudo generar el comprobante electrónico:". Se muestra la ruta del certificado, nunca la contraseña. Un `catch` final con causa desconocida conserva el mensaje de la excepción, pero `ArgumentNullException` y `NullReferenceException` se reemplazan por "falta un dato obligatorio del comprobante (<paso>)".
+
+| Causa | Mensaje al usuario |
+|---|---|
+| `empresa.Certificado` vacío | "la empresa no tiene configurado el certificado digital" |
+| Archivo de certificado inexistente | "no se encontró el certificado digital en <ruta>" |
+| Contraseña de certificado vacía | "la empresa no tiene configurada la contraseña del certificado" |
+| XML sin firma inexistente | "no se encontró el XML generado en <ruta>" |
+| El servicio de firma responde `!Exito` | "falló la firma digital: <MensajeError>" (o "sin detalle" si viene vacío) |
+| Firma devuelve trama vacía | "la firma digital no devolvió el documento firmado" |
+| Generación responde `!Exito` | "el servicio no generó el XML: <MensajeError>" (o "sin detalle") |
+| Generación devuelve trama vacía | "el servicio no devolvió el XML sin firmar" |
+| Faltan datos de la empresa | texto actual de l.218 |
+
+Cada mensaje sale por el colector (con la excepción original cuando exista, para "Copiar detalle" y el log) o, sin colector, por el `MessageBox` actual con el mismo texto.
 
 **TDD:** modo estricto configurado, pero el proyecto no tiene runner de pruebas; no aplica RED/GREEN. Verificación funcional ordinaria: build en la VM y humo manual.
 - [ ] Implementar (opencode, un escritor, un archivo). Verificación: build en la VM (`SIGEFA.csproj`, `Debug|x86`) y humo manual: (a) sin certificado → una sola incidencia clara con la ruta esperada, la venta queda guardada y `fueExitoso` no cambia; (b) clave inválida → incidencia con el mensaje de firma; (c) certificado correcto → flujo idéntico al actual; (d) flag `legacy` → solo `MessageBox` real, sin el segundo error engañoso; (e) re-probar la impresión: las incidencias de `DocumentoReferenciaAnticipo` ya no deben aparecer.
