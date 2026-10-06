@@ -394,23 +394,21 @@ public class frmCancelarPago : Office2007Form
 		CargaMetodosPagos();
 		cmbMetodoPago_SelectionChangeCommitted(cmbMetodoPago, null);
 		Mon = AdmMoned.CargaMoneda(mon);
-		switch (tipo)
+		// Sin moneda no hay nada que fijar: el formulario sigue sin moneda, como hoy.
+		if (Mon != null)
 		{
-			case 1:
-			case 2:
-			case 5:
-				if (Mon != null)
-				{
+			switch (tipo)
+			{
+				case 1:
+				case 2:
+				case 5:
 					txtMoneda.Text = Mon.SDescripcion;
 					tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
 					cargarTipoCambio(usaCompra: false);
 					cmbMoneda.SelectedValue = Mon.IcodMoneda;
-				}
-				break;
-			case 3:
-			case 4:
-				if (Mon != null)
-				{
+					break;
+				case 3:
+				case 4:
 					txtMoneda.Text = Mon.SDescripcion;
 					tc = AdmTc.CargaTipoCambio(DateTime.Now.Date, 2);
 					cargarTipoCambio(usaCompra: true);
@@ -419,10 +417,10 @@ public class frmCancelarPago : Office2007Form
 						txtTipoCambio.ReadOnly = true;
 					}
 					cmbMoneda.SelectedValue = Mon.IcodMoneda;
-				}
-				break;
-			default:
-				break;
+					break;
+				default:
+					break;
+			}
 		}
 		cmbMoneda.MouseWheel += cmbMoneda_MouseWheel;
 	}
