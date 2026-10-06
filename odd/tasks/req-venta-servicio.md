@@ -97,6 +97,14 @@ Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`)
   - El `HintPath` corregido en `f18a8a3` funciona sin copiar la DLL.
   - Límite: no se probó el flujo de negocio ni la UI; los datos de las pruebas de integración son los de la BD dev y pueden cambiar.
 
+#### Estudio de procedures y triggers (2026-10-06, solo lectura, subagente Opus; verificado por claude)
+Informe completo: [`docs/anulacion-requerimiento-procedures.md`](../../docs/anulacion-requerimiento-procedures.md). Hallazgos que cambian el diseño de T2c-T2e:
+- **Cabe en una sola transacción** (hecho): ningún procedure ni trigger del flujo hace commit implícito ni DDL; no hay eventos. Riesgos: `GuardaDetalleSalida` devuelve `newid=0` sin error; varios triggers dejan stock en NULL en silencio.
+- **Nadie respeta el estado 12** (hecho): 4 procedures, 1 trigger (`ActualizaDisponibleAprobarTransferencia`) y varios puntos del C# (`frmDespacho`, `frmEntrega`, notas de crédito) pueden pisar un requerimiento anulado. Explica los 6 casos con `fecha_anulo` y estado distinto de 12. **El servicio nuevo no lo resuelve por sí solo**: decisión pendiente del usuario (guarda en procedures o en los puntos de llamada).
+- **Los 18 extornos huérfanos** se explican por el chequeo de stock sin factor de unidad, por `bandera` y `detalle` sin reiniciar en `FrmTPenPedido` y por intentos repetidos.
+- **Reglas para el servicio:** leer el estado de la BD con `FOR UPDATE`; validar stock con el factor de unidad antes de `GuardaDetalleSalida`; tratar `newid=0` o NULL como fallo con rollback; copiar valores de la original al extorno (204 de 3.040 líneas difieren hoy); elegir la original con `NOT EXISTS` de extorno; `READ COMMITTED` y orden de bloqueo requerimiento, transferencia, `productoalmacen`.
+- Limitación: dev es MySQL 5.7.44 con binlog desactivado; la versión y configuración de producción no se verificaron.
+
 ### T2c — Anular pendiente (estado 7)
 - [ ] Rechazar pendientes, devolver stock y marcar anulado en una transacción. Pendiente de T2a/T2b.
 
