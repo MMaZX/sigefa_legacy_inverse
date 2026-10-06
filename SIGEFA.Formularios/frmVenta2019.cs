@@ -3641,15 +3641,15 @@ public class frmVenta2019 : Office2007Form
 								form.permitirFlujoViejo = (bloquesCierre.Count == 1);
 								form.ShowDialog();
 
-								if (!form.caja_aperturada)
+								if (!form.esCajaAperturada)
 								{
 									throw new Exception("La caja no se encuentra aperturada para registrar el cobro.");
 								}
-								if (!form.ventana_cobro)
+								if (!form.esVentanaCobro)
 								{
 									throw new Exception("Se canceló el registro del pago en el formulario de cobro. No se guardó ningún comprobante.");
 								}
-								if (!form.ventaRecibida)
+								if (!form.esVentaRecibida)
 								{
 									// Comportamiento viejo: si salio a flujo viejo (!modoCaptura) algo pudo
 									// guardarse: se agrega para compensar y se lanza. En captura
@@ -3835,13 +3835,13 @@ public class frmVenta2019 : Office2007Form
 									form.opcionSuma = 1;
 									form.pagoventa = 1;
 									form.ShowDialog();
-									if (form.caja_aperturada)
+									if (form.esCajaAperturada)
 									{
-										if (!form.ventana_cobro)
+										if (!form.esVentanaCobro)
 										{
 											throw new Exception("Se cancelo el registro del pago para la venta en el formulario de pagos.");
 										}
-										if (!form.ventaRecibida)
+										if (!form.esVentaRecibida)
 										{
 											lista_facturas.Add(this.venta);
 											throw new Exception("Ocurrió un problema al registrar la venta en el formulario de pagos.");

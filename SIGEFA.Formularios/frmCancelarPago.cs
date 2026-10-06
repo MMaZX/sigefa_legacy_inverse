@@ -269,11 +269,11 @@ public class frmCancelarPago : Office2007Form
 
 	public ComboBox cmbMetodoPago;
 
-	public bool ventaRecibida { get; set; }
+	public bool esVentaRecibida { get; set; }
 
-	public bool ventana_cobro { get; set; }
+	public bool esVentanaCobro { get; set; }
 
-	public bool caja_aperturada { get; set; }
+	public bool esCajaAperturada { get; set; }
 
 	// Modo captura de contado para la ruta nueva (transacción única de venta + pagos).
 	public bool modoCaptura { get; private set; }
@@ -364,7 +364,7 @@ public class frmCancelarPago : Office2007Form
 			if (Caja == null)
 			{
 				MessageBox.Show("Debe de aperturar caja", "Pagos", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-				caja_aperturada = false;
+				esCajaAperturada = false;
 			}
 		}
 		catch (Exception ex)
@@ -375,20 +375,11 @@ public class frmCancelarPago : Office2007Form
 
 	private void frmCancelarPago_Load(object sender, EventArgs e)
 	{
-		ventana_cobro = true;
-		ventaRecibida = false;
-		caja_aperturada = true;
+		esVentanaCobro = true;
+		esVentaRecibida = false;
+		esCajaAperturada = true;
 		string flagRuta = ConfigurationManager.AppSettings["VentaCierreRuta"];
-		if (flagRuta == "nueva" && VentComp == 1 && tipo == 3 && venta != null && venta.CodFacturaVenta == null)
-		{
-			modoCaptura = true;
-			// Captura nueva: nunca arrastrar borradores de un uso anterior del formulario.
-			borradoresPago.Clear();
-		}
-		else
-		{
-			modoCaptura = false;
-		}
+		determinarModoCaptura(flagRuta);
 		cargaMoneda();
 		CargarBancos();
 		CargarTarjetas();
@@ -490,6 +481,21 @@ public class frmCancelarPago : Office2007Form
 			cmbMoneda.SelectedValue = Mon.IcodMoneda;
 		}
 		cmbMoneda.MouseWheel += cmbMoneda_MouseWheel;
+	}
+
+	// Define si el formulario captura pagos en memoria (ruta nueva) o persiste directo.
+	private void determinarModoCaptura(string flagRuta)
+	{
+		if (flagRuta == "nueva" && VentComp == 1 && tipo == 3 && venta != null && venta.CodFacturaVenta == null)
+		{
+			modoCaptura = true;
+			// Captura nueva: nunca arrastrar borradores de un uso anterior del formulario.
+			borradoresPago.Clear();
+		}
+		else
+		{
+			modoCaptura = false;
+		}
 	}
 
 	private void CargaMetodosPagos()
@@ -699,7 +705,7 @@ public class frmCancelarPago : Office2007Form
 				{
 					if ((tipo == 3 || tipo == 4) && Convert.ToDouble(txtMontoPendiente.Text) != 0.0)
 					{
-						ventana_cobro = false;
+						esVentanaCobro = false;
 					}
 					MessageBox.Show("EL PAGO NO SE HA REGISTRADO POR QUE LA VENTA NO SE GUARDO DE MANERA CORRECTA", "Advertencia", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 					Close();
@@ -735,7 +741,7 @@ public class frmCancelarPago : Office2007Form
 		}
 		fechaDocumento = venta.FechaSalida;
 		VerificaSaldoCaja();
-		if (caja_aperturada)
+		if (esCajaAperturada)
 		{
 			Pag.BanderaRetDet = band_det_ret;
 			Pag.RetDet = Convert.ToDecimal(det_ret);
@@ -1393,7 +1399,7 @@ public class frmCancelarPago : Office2007Form
 			else
 			{
 				Deshabilita_botones(Estado: false);
-				ventaRecibida = true;
+				esVentaRecibida = true;
 				Close();
 			}
 		}
@@ -1488,7 +1494,7 @@ public class frmCancelarPago : Office2007Form
 	{
 		if ((tipo == 3 || tipo == 4) && Convert.ToDouble(txtMontoPendiente.Text) != 0.0)
 		{
-			ventana_cobro = false;
+			esVentanaCobro = false;
 		}
 		Close();
 		Dispose();
@@ -2120,7 +2126,7 @@ public class frmCancelarPago : Office2007Form
 	{
 		if (tipo == 3 && Convert.ToDouble(txtMontoPendiente.Text) != 0.0)
 		{
-			ventana_cobro = false;
+			esVentanaCobro = false;
 		}
 	}
 
