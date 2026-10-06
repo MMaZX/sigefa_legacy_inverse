@@ -84,6 +84,12 @@ Misma carpeta. Todas reciben un `IConsultor` (de `SIGEFA.Conexion`, helper `Db`)
 - [ ] Pruebas de integración de solo lectura contra la BD dev (`SIGEFA_TEST_CONN`; se omiten sin ella): id inexistente -> `null`; casos históricos estables (req 6318: anulado, original aprobada sin extorno; req 11713: dos originales rechazadas; un requerimiento con extorno: `tiene_extorno`). Sin escribir ni borrar nada.
 - [x] Escrito, no verificado en compilador (2026-10-06, opencode). Test RED `6f7fa04`, feat `3f2f6cc`. Archivos: `SIGEFA.Administradores/ReqVenta/ReqVentaConsultas.cs`; pruebas `SIGEFA.Tests/ReqVenta/ReqVentaConsultasTests.cs` (solo lectura: req -1 null/vacío, 6318 estado 12 tipo 2 + original 13791 sin extorno, 11713 dos originales, req 1 con extorno). `SIGEFA.Tests.csproj` ya enlazaba la carpeta (sin cambios).
 
+#### Revisión de claude sobre T2a/T2b (2026-10-06, sin compilador)
+- Defecto 1 (T2b, nacido de la instrucción de claude): `tiene_extorno` con `LEFT JOIN` duplicaba la original con varios extornos (req 10785: 1 original y 3 extornos devolvía 3 filas; verificado en la BD dev). Corregido con `EXISTS` y prueba nueva (RED `bc231b6`, corrección en commit posterior).
+- Defecto 2 (T2a): `EstadosAnulables` existía pero `Evaluar` no la usaba (`switch` con 7 y 13 fijos); cambiarla no cambiaba el comportamiento. Ahora es la única fuente de verdad.
+- Verificado en la BD dev: columnas de `detalle_req_almacen` existen; el SQL corregido da el resultado esperado en los reqs 10785, 6318, 11713 y 1.
+- Pendiente: compilar y ejecutar en la VM (requiere autorización explícita del usuario).
+
 ### T2c — Anular pendiente (estado 7)
 - [ ] Rechazar pendientes, devolver stock y marcar anulado en una transacción. Pendiente de T2a/T2b.
 
