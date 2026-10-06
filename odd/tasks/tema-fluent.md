@@ -57,7 +57,8 @@ Cada tarea cierra con un commit de unidad de trabajo (Conventional Commit) y reg
   - **Resultado (2026-10-06, sobre `634b5ce`, incluye T1 y T2):** `git bundle` de `feat/tema-fluent` + `scp` al directorio aparte `sigefa_build` (checkout verificado en `634b5ce`); MSBuild 18 (`SIGEFA.csproj`, `Debug|x86`, sin `-m`): `exit=0`, **0 errores**, ~31 s. Sin errores de enlace con Telerik (incl. `Telerik.WinControls.Themes.Fluent`) ni DevComponents. Única advertencia en la pasada incremental: `System.Resources.Extensions 7.0.0` sin soporte net461 (preexistente, no relacionada). Compilar no prueba funcionamiento: la verificación visual queda para T4.
 
 ### T4 — Verificación de humo visual en pantallas críticas
-- [ ] Probar inicio de sesión en `frmLogin`.
+- [x] Probar inicio de sesión en `frmLogin`.
+  - **Resultado (2026-10-06):** `SIGEFA.exe` levantado en la sesión de escritorio de la VM Windows (`192.168.122.44`). El formulario `frmLogin` inició con normalidad, conectó a MySQL, cargó empresas en el combo y renderizó con el tema plano y limpio activo (`eStyle.Metro` / Fluent), sin excepciones de runtime ni cuelgues. Captura de pantalla verificada.
 - [ ] Probar Ribbon y contenedor en `mdi_Menu`.
 - [ ] Probar grilla y controles en `frmVenta2019` y `frmProductosLista`.
 
