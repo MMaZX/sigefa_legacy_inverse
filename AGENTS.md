@@ -53,6 +53,17 @@ Formularios (WinForms UI) → Administradores (Business Logic)
 - **SUNAT integration** — communicates with Peru tax authority SOAP web services for electronic invoices, credit notes, debit notes, etc.
 - **Not a git repo** — no `.gitignore`, VS user files (`.vs/`) included.
 
+## Code conventions (anti-patterns to avoid)
+
+Most existing code is decompiled, so long `if/else` chains and repeated assignments are common. Do not copy that style into new code, and clean it up when a task already touches the same method.
+
+- **Nested `if`s are an anti-pattern.** Do not add a third level of nesting. Prefer guard clauses (return early), extract a well-named method, or use a `switch` on the discriminating value (`switch` with grouped `case`s works in C# 10; this project already uses file-scoped namespaces).
+- **Do not repeat the same cast or lookup** (e.g. `Convert.ToInt32(cmbMetodoPago.SelectedValue)`) in every branch: read it once into a local variable.
+- **Centralize UI state rules in a small helper** (see `PagoCamposHelper`): one place decides which controls are enabled or cleared per payment method. Never re-enable controls with a blanket `Enabled = true` helper.
+- **Separate concerns**: UI rules (enabled/cleared), data logic, and side effects (dialogs, focus, I/O) go in different methods. Helpers must not touch the database.
+- **Keep the legacy route untouched** unless the task says otherwise; new behavior goes behind the `VentaCierreRuta=nueva` flag and is verified with `git diff -w`.
+- **Never swallow errors with a bare `MessageBox` in new code**: record them (see `VentaCierreRegistroErrores`) and surface them as a warning or error in the UI.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
