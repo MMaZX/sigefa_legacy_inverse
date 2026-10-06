@@ -135,6 +135,7 @@ Verificación por `tipo`: 10 (sin `Mon`, solo TC venta), 1/2/5 (TC venta + moned
 Regla de oro: **el refactor no cambia lo que el código hace, solo cómo está escrito**. En esta pasada, además:
 
 - No cambian firmas públicas ni campos públicos (`tipo`, `tip`, `VentComp`, `venta`, `mon`, `Mon`, `vieneDe`, `montoPag`, `borradoresPago`, etc.), **con una sola excepción**: el renombre de los tres flags del paso 2 (`ventana_cobro`, `caja_aperturada`, `ventaRecibida` → prefijo `es`), que actualiza todos sus lectores en el mismo commit y se verifica con el build en VM.
+- Por qué esta restricción (no es desconocimiento): los miembros públicos del formulario son su contrato con ~10 formularios llamadores, que los escriben **antes** de `ShowDialog()` (`tipo`, `venta`, `Monto`...) y los leen **después** (`ventaRecibida`, `borradoresPago`...). **Renombrar** es seguro si se miden todos los lectores y viajan en el mismo commit: si falta uno, no compila (el compilador es la red). Lo que **no** se hace es cambiar tipos, significados u orden de inicialización: eso sí cambia el comportamiento en tiempo de ejecución y solo el humo manual lo detectaría, con cobertura fina (tipos 2/4/5/10 sin llamador fijo).
 - No cambia el orden de inicialización (O7).
 - No hay cambios de arquitectura (sin DI, sin clases nuevas, sin tocar DAL ni servicio).
 - Proceso por paso (adaptado de la skill: no hay tests, el "test" es el humo): un paso → `git diff -w` → humo del `tipo` afectado → commit. Un commit por extracción. Si un humo falla, se revierte solo ese paso.
