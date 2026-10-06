@@ -30,7 +30,7 @@ Modernizar el aspecto visual de SIGEFA aplicando el tema **Fluent** de Telerik U
 
 | Agente | Tareas | Rol |
 |---|---|---|
-| **antigravity** | T1, T2 | Configuración en `app.config`, inicialización de Fluent y DevComponents en `Program.cs` |
+| **opencode** | T1, T2 | Configuración en `app.config`, inicialización de Fluent y DevComponents en `Program.cs` |
 | **claude** | T3, T4 | Build en la VM Windows por SSH y verificación/reporte de humo |
 
 ## Tareas
@@ -59,6 +59,15 @@ Cada tarea cierra con un commit de unidad de trabajo (Conventional Commit) y reg
 - [ ] Probar inicio de sesión en `frmLogin`.
 - [ ] Probar Ribbon y contenedor en `mdi_Menu`.
 - [ ] Probar grilla y controles en `frmVenta2019` y `frmProductosLista`.
+
+## Protocolo de traspaso entre agentes (obligatorio)
+
+Cada agente, al empezar:
+1. Consultar contexto en Engram (`mem_search "tema-fluent"`).
+2. Leer `odd/tasks/tema-fluent.md`.
+3. Trabajar **únicamente** en los archivos asignados a su tarea.
+4. **No compilar en Linux** ni declarar que compila sin evidencia de la VM.
+5. Al terminar: commit convencional (sin `Co-Authored-By` ni menciones de IA), marcar la casilla con hash y evidencia en este archivo, actualizar el espejo en Engram (`odd/tema-fluent/tasks`) y **detenerse**.
 
 ## Riesgos y decisiones
 
