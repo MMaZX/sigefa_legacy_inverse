@@ -183,7 +183,7 @@ Revisar que la ruta vieja no cambió (diff solo agrega ramas detrás del flag), 
 1. T13a (agy: VentaCierre/* + diálogo) ─> T13b (agy: frmVenta2019 + Facturacion) ─> T13c (agy: cierre multialmacén atómico) ─> B1' (build VM + prueba del usuario)
 2. Recién entonces métodos de pago:
    agy:      T10a (VentaCierre/*) ─> T10b (frmCancelarPago)
-   opencode: T13d [ex T9] (frmCancelarPago; en paralelo con T13a) ─> T11 (frmCancelarPago)
+   opencode: T13d [ex T9] (hecha) ─> T14 (helper de campos de pago; frmCancelarPago; bug del usuario, va ANTES de T10b y T11) ─> T11 (frmCancelarPago)
    B2 (build VM) ─> RV-C (codex) ─> T12 (claude, build final)
 ```
 T13a y T13b se serializan (comparten `VentaCierre/*` y el flujo de `guardaVenta`). T13d corre en paralelo con T13a (archivos disjuntos, `git add <rutas>` explícitas y commits secuenciales). Una vez cerrado T13, T10a (agy) puede correr en paralelo con lo que quede de opencode. T10b y T11 esperan a T13d y a T10a.
@@ -252,6 +252,40 @@ Se ejecuta **cuando T13a, T13b, T13c y T13d estén commiteadas**, antes de empez
 - Actualizar el comentario (ya no es cierto que `GuardaPagoPendiente` bloquee: es no-op en venta nueva; ver Evidencia). Mantener el bloqueo de mezcla de borradores con métodos no soportados.
 - No tocar servicio, repositorio ni `BorradorPago`. Confirmar que `Pag.codCtaCte`, `CtaCte`, `CodBanco`, `CodTarjeta`, `NOperacion` viajan al borrador (ya lo hace `desdePago`).
 - [x] Implementada en `efc68da` (2026-10-05) y refactorizada en `641b7da`: `esMetodoSoportado` compara contra la constante `metodosSoportadosEnCaptura` (`5, 6, 8, 9`) con comentario actualizado (GuardaPagoPendiente es no-op en venta nueva); 7, 10 y 12 conservan aviso y flujo viejo, y el bloqueo de mezcla con borradores queda intacto. Confirmado por lectura que `desdePago` ya lleva `codCtaCte`, `CtaCte`, `CodBanco`, `CodTarjeta` y `NOperacion` al borrador; sin tocar servicio, repositorio ni `BorradorPago`. Verificación: no se compila en Linux; compilar en VM (B2) y humo manual pendientes: un depósito, una transferencia, una tarjeta y un mixto efectivo + transferencia, revisando `pago` y `ctactemovimientos` en BD local.
+
+### T14 — Helper de campos de pago y reinicio tras pago parcial (opencode, ~15 min, agregada 2026-10-05 por bug del usuario)
+**Bug (prueba del usuario en VM):** en `frmCancelarPago`, al responder "Sí" a "Desea pagar el restante?" en cualquier método de pago, **se habilitan todos los selects** (banco, tarjeta, cuenta corriente) y campos (operación, cheque, serie, número) en vez de quedar bloqueados según el método. Causa verificada: `Pagar()` (~l.1365) llama a `Deshabilita_botones(Estado: true)` (~l.1300), que pone `Enabled = true` a todos sin mirar el método y no reinicia nada. Además el bloque que sí aplica reglas por método está duplicado en un `if/else` largo dentro de `cmbMetodoPago_SelectionChangeCommitted` (~l.1609-1713) con asignaciones repetidas.
+
+**Decisión del usuario:** reiniciar a efectivo tras un pago parcial y centralizar las reglas en un helper reutilizable, con un `switch` por método, en vez de repetir `Enabled`/`SelectedIndex` por todos lados.
+
+**Alcance:** archivo nuevo `SIGEFA.Formularios/PagoCamposHelper.cs` (se incluye solo por globbing; namespace de archivo `SIGEFA.Formularios`, como `frmCancelarPago`) y `SIGEFA.Formularios/frmCancelarPago.cs`. Solo UI: sin tocar servicio, repositorio, `BorradorPago`, ni la lógica de datos de `btnAceptar_Click`/`Pagar()` fuera del punto del bug.
+
+**Helper `PagoCamposHelper` (clase interna, sin lógica de negocio ni acceso a datos):**
+- Recibe en el constructor los controles: `cmbMetodoPago`, `cboBanco`, `cboTarjeta`, `cboNumCta`, `txtOperacion`, `txtCheque`, `txtNc`, `txtMontoPago`.
+- `aplicarMetodo(int metodoId)`: un `switch` que fija, por método, qué controles quedan habilitados y qué se limpia. Perfiles tomados del código actual:
+
+| Método | Tarjeta | Banco | Operación | Cheque | Cuenta cte. | Monto | Se limpia |
+|---|---|---|---|---|---|---|---|
+| 5 Efectivo | no | no | no | no | no | sí | banco, tarjeta, cuenta, operación, cheque, NC |
+| 6 Depósito / 9 Transferencia | no | sí | sí | no | no (se habilita al elegir banco, ya lo hace `cboBanco_SelectionChangeCommitted`) | sí | tarjeta, cuenta, operación, cheque, NC |
+| 7 Dep. por cheque | no | sí | sí | sí | no | sí | todo |
+| 8 Tarjeta | sí | sí | sí | no | sí (se conserva el comportamiento actual) | sí | todo |
+| 10 Nota de crédito | no | no | no | no | no | **no** | todo (y `txtNc` deshabilitado) |
+| 12 Pendiente y cualquier otro | como efectivo | | | | | | |
+
+  Nota: hoy el método 12 (y 11, 13, 14) hace `return` sin tocar nada y arrastra los campos del método anterior; el helper lo trata como efectivo. Es un cambio deliberado para que no viajen banco/operación de otro método. El usuario puede vetarlo.
+- `reiniciarAEfectivo()`: fija `cmbMetodoPago.SelectedValue = 5` y llama a `aplicarMetodo(5)`.
+- Los efectos que no son de habilitado (`CargarBancos()`, `Focus()`, `buscaAprobacion`, el diálogo de nota de crédito `frmListaNCreditosSinAplicar` y la carga de `notaC`) **se quedan en el formulario**; el helper solo gobierna habilitado y limpieza.
+
+**Cambios en `frmCancelarPago.cs`:**
+1. Crear el helper en el constructor/`Load` (después de inicializar los controles) y sustituir el `if/else` de `cmbMetodoPago_SelectionChangeCommitted` por: `buscaAprobacion(...)`, `helper.aplicarMetodo(id)` y, a continuación, solo los efectos propios de cada método (`CargarBancos`, `Focus`, diálogo NC con su `return` actual). El comportamiento visible por método debe ser el mismo que hoy (tabla de arriba).
+2. En `Pagar()`, rama "Sí, pagar el restante": **no** llamar a `Deshabilita_botones(true)`. Hacer: `helper.reiniciarAEfectivo()`, rehabilitar solo lo que corresponde a un nuevo ingreso (`txtMontoPago`, `dtpFecha`, `txtObservacion`, `btnAceptar`, y `btnCancelar` según el criterio actual), `txtMontoPago.Text = txtMontoPendiente.Text`, `continua_pago = true`. Limpiar también `txtOperacion`, `txtCheque`, `txtNc`, y poner en 0 `Pag.NotaCredito` y `Pag.CodNotaCredito` (`Pag` nunca se resetea: un efectivo posterior a una nota de crédito saldría marcado como nota de crédito).
+3. `Deshabilita_botones(Estado: false)` (las otras llamadas) queda como está: sigue siendo el bloqueo final.
+4. No dejes `Deshabilita_botones(true)` sin uso que invite a repetir el error: si ya no lo llama nadie con `true`, conserva el método (lo usan las rutas con `false`) y agrega un comentario de una línea.
+5. `Pagar()` y este formulario los usan también otras rutas (`frmCobros`, rutas viejas); la corrección es solo de interfaz y aplica a todas. No toques lógica de datos.
+
+**Verificación:** compilar en VM. Humo manual: (a) pago parcial con efectivo → "Sí" al restante: banco, tarjeta, cuenta, operación y cheque quedan bloqueados y vacíos, método = Efectivo, monto = restante; (b) pago parcial con transferencia → mismo resultado; (c) elegir cada método a mano (5, 6, 7, 8, 9, 10) y comprobar la tabla; (d) nota de crédito seguida de efectivo: el segundo pago no sale marcado como NC; (e) venta con un solo pago total: sin cambios.
+- [x] Implementada en `20553c3` (feat) + `4271008` (fix) (2026-10-06): helper interno `PagoCamposHelper` (`switch` por método según la tabla; 12 y otros como efectivo; `reiniciarAEfectivo`); `SelectionChangeCommitted` reducido a `buscaAprobacion` + `aplicarMetodo` + efectos propios (`CargarBancos` tras el helper para no dejar banco residual, `Focus`, diálogo NC intacto); rama "Sí" de `Pagar()` reinicia a efectivo, rehabilita solo lo de un nuevo ingreso, monto = restante, limpia operación/cheque/NC y resetea `Pag.NotaCredito`/`CodNotaCredito`; `Deshabilita_botones(true)` sin llamadas, método conservado con comentario. Sin tocar servicio, repositorio, `BorradorPago` ni datos de `Pagar()`. Verificación: diff revisado, sin compilar en Linux; compilar en VM (B2) y humo manual (a)-(e) pendientes.
 
 ### T10a — Reserva y validación de nota de crédito en el servicio (antigravity, ~12 min)
 - **Alcance:** `SIGEFA.InterMySql/VentaCierre/VentaCierreRepositorio.cs`, su interfaz, `SIGEFA.Administradores/VentaCierre/VentaCierreService.cs` y `VentaCierrePaso.cs`. Sin UI.
