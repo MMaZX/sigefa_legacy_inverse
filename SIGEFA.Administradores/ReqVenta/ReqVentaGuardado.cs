@@ -263,6 +263,11 @@ public static class ReqVentaGuardado
 
     // Los 2 CALL usan SET @newid con variable de sesión; requieren Allow User
     // Variables normalizada en ConsultorMySql, igual que los 6 CALL del extorno.
+    // Órdenes verificados contra SHOW CREATE PROCEDURE en dev (2026-10-07):
+    // cabecera en el mismo orden que MysqlRequerimientoAlmacen.insert (26 args);
+    // detalle (_codReqAlmacen, _codProducto, _codUnidad, _cantidad,
+    // _cantidadPedida, _cantidadPendiente, _cantidadConfirmada,
+    // _cantidadPendienteAprobada, _codDetalleReqAlmacen, OUT newid).
     private static int InsertarCabecera(IConsultor consultor, DatosGuardadoRequerimiento cabecera)
     {
         object codPropuesta = null;
@@ -321,7 +326,6 @@ public static class ReqVentaGuardado
         }
 
         var parametros = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        parametros["codDet"] = codDetalle;
         parametros["codReq"] = codRequerimiento;
         parametros["codProd"] = detalle.CodProducto;
         parametros["codUnd"] = detalle.CodUnidad;
@@ -330,11 +334,12 @@ public static class ReqVentaGuardado
         parametros["cantPend"] = detalle.CantidadPendiente;
         parametros["cantConf"] = detalle.CantidadConfirmada;
         parametros["cantPendAprob"] = detalle.CantidadPendienteAprobada;
+        parametros["codDet"] = codDetalle;
 
         Dictionary<string, object> fila = consultor.Consultar(
             "SET @newid = 0; " +
-            "CALL GuardaDetalleRequerimientoAlmacen(@codDet, @codReq, @codProd, @codUnd, " +
-            "@cant, @cantPed, @cantPend, @cantConf, @cantPendAprob, @newid); " +
+            "CALL GuardaDetalleRequerimientoAlmacen(@codReq, @codProd, @codUnd, " +
+            "@cant, @cantPed, @cantPend, @cantConf, @cantPendAprob, @codDet, @newid); " +
             "SELECT @newid AS newid;",
             parametros).First();
 

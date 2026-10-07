@@ -870,15 +870,15 @@ public class frmReqAlmacen : Form
 						return;
 					}
 				}
-			ser = admSerie.CargaSerieEmpresa(Convert.ToInt32(cmbAlmacenesSolicitantes.SelectedValue), doc.CodTipoDocumento);
-			if (ser != null)
-			{
-				if (TipoReq == 2 && ConfigurationManager.AppSettings["VentaCierreRuta"] == "nueva")
+				ser = admSerie.CargaSerieEmpresa(Convert.ToInt32(cmbAlmacenesSolicitantes.SelectedValue), doc.CodTipoDocumento);
+				if (ser != null)
 				{
-					GuardarRequerimientoRutaNueva();
-					return;
-				}
-				req_alm = getDatosRequerimientoAlmacen();
+					if (TipoReq == 2 && ConfigurationManager.AppSettings["VentaCierreRuta"] == "nueva")
+					{
+						GuardarRequerimientoRutaNueva();
+						return;
+					}
+					req_alm = getDatosRequerimientoAlmacen();
 					if (admreqalm.insert(req_alm, req_alm.ListadoDetalle))
 					{
 						MessageBox.Show("Requerimiento de Almacen Guardado Con Exito", "Informacion", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
