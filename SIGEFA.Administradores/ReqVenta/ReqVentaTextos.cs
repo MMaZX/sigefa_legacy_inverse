@@ -24,8 +24,8 @@ public static class ReqVentaTextos
         return new List<PasoOperacion>
         {
             new PasoOperacion(ComprobarRequerimiento, "Comprobar el requerimiento", EstadoPaso.Pendiente),
-            new PasoOperacion(RechazarTransferencias, "Rechazar los envíos pendientes", EstadoPaso.Pendiente),
-            new PasoOperacion(DevolverReservas, "Devolver las reservas al almacén", EstadoPaso.Pendiente),
+            new PasoOperacion(RechazarTransferencias, "Rechazar las transferencias pendientes", EstadoPaso.Pendiente),
+            new PasoOperacion(DevolverReservas, "Devolver el stock reservado al almacén de despacho", EstadoPaso.Pendiente),
             new PasoOperacion(MarcarAnulado, "Marcar el requerimiento como anulado", EstadoPaso.Pendiente),
         };
     }
@@ -36,11 +36,11 @@ public static class ReqVentaTextos
         return new List<PasoOperacion>
         {
             new PasoOperacion(ComprobarRequerimiento, "Comprobar el requerimiento", EstadoPaso.Pendiente),
-            new PasoOperacion(RevisarStock, "Revisar el stock disponible", EstadoPaso.Pendiente),
-            new PasoOperacion(CrearExtorno, "Crear el movimiento que revierte el envío", EstadoPaso.Pendiente),
-            new PasoOperacion(RegistrarSalida, "Registrar la salida del almacén", EstadoPaso.Pendiente),
-            new PasoOperacion(RegistrarIngreso, "Registrar el ingreso al almacén de despacho", EstadoPaso.Pendiente),
-            new PasoOperacion(AprobarExtorno, "Aprobar la reversión", EstadoPaso.Pendiente),
+            new PasoOperacion(RevisarStock, "Revisar que haya stock para devolver", EstadoPaso.Pendiente),
+            new PasoOperacion(CrearExtorno, "Crear el extorno de la transferencia", EstadoPaso.Pendiente),
+            new PasoOperacion(RegistrarSalida, "Registrar la nota de salida", EstadoPaso.Pendiente),
+            new PasoOperacion(RegistrarIngreso, "Registrar la nota de ingreso en el almacén de despacho", EstadoPaso.Pendiente),
+            new PasoOperacion(AprobarExtorno, "Aprobar el extorno", EstadoPaso.Pendiente),
             new PasoOperacion(MarcarAnulado, "Marcar el requerimiento como anulado", EstadoPaso.Pendiente),
         };
     }
