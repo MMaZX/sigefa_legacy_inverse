@@ -30,7 +30,6 @@ public partial class frmProgresoOperacion : Form
         get { return Resultado != null && !Resultado.Ok ? Resultado.Mensaje : string.Empty; }
     }
 
-
     public frmProgresoOperacion(
         string titulo,
         string textoSinPasos,
@@ -69,6 +68,8 @@ public partial class frmProgresoOperacion : Form
             pbMarquee.MarqueeAnimationSpeed = 30;
 
             ClientSize = new Size(520, 110);
+            btnCerrar.Location = new Point(384, 244);
+            btnCopiar.Location = new Point(16, 244);
         }
         else
         {
@@ -78,6 +79,8 @@ public partial class frmProgresoOperacion : Form
 
             inicializarListaPasos();
             ClientSize = new Size(560, 320);
+            btnCerrar.Location = new Point(424, 276);
+            btnCopiar.Location = new Point(16, 276);
         }
 
         txtDetalle.Visible = false;
@@ -105,6 +108,7 @@ public partial class frmProgresoOperacion : Form
             }
 
             ListViewItem item = new ListViewItem(paso.Texto ?? paso.Clave ?? string.Empty);
+            item.Tag = paso.Estado;
             item.SubItems.Add(obtenerTextoEstado(paso.Estado));
             item.SubItems.Add(paso.Detalle ?? string.Empty);
             aplicarColorEstado(item, paso.Estado);
@@ -134,7 +138,7 @@ public partial class frmProgresoOperacion : Form
 
         if (Resultado.Ok)
         {
-            await alTerminarConExito();
+            alTerminarConExito();
         }
         else
         {
@@ -160,6 +164,7 @@ public partial class frmProgresoOperacion : Form
 
         if (!string.IsNullOrEmpty(avance.Clave) && mapaPasos.TryGetValue(avance.Clave, out ListViewItem item))
         {
+            item.Tag = avance.Estado;
             if (!string.IsNullOrEmpty(avance.Texto))
             {
                 item.Text = avance.Texto;
@@ -172,6 +177,7 @@ public partial class frmProgresoOperacion : Form
         else
         {
             ListViewItem nuevoItem = new ListViewItem(avance.Texto ?? avance.Clave ?? string.Empty);
+            nuevoItem.Tag = avance.Estado;
             nuevoItem.SubItems.Add(obtenerTextoEstado(avance.Estado));
             nuevoItem.SubItems.Add(avance.Detalle ?? string.Empty);
             aplicarColorEstado(nuevoItem, avance.Estado);
@@ -184,10 +190,9 @@ public partial class frmProgresoOperacion : Form
         }
     }
 
-    private async Task alTerminarConExito()
+    private void alTerminarConExito()
     {
         terminado = true;
-        DialogResult = DialogResult.OK;
 
         if (esModoSinPasos)
         {
@@ -195,46 +200,29 @@ public partial class frmProgresoOperacion : Form
             return;
         }
 
-        bool hayDetallesInformativos = false;
-        foreach (ListViewItem item in lvwPasos.Items)
-        {
-            if (item.SubItems.Count > 2 && !string.IsNullOrWhiteSpace(item.SubItems[2].Text))
-            {
-                hayDetallesInformativos = true;
-                break;
-            }
-        }
-
-        if (hayDetallesInformativos)
-        {
-            btnCerrar.Visible = true;
-            btnCerrar.Enabled = true;
-            CancelButton = btnCerrar;
-            AcceptButton = btnCerrar;
-            btnCerrar.Focus();
-        }
-        else
-        {
-            await Task.Delay(500);
-            if (!IsDisposed && IsHandleCreated)
-            {
-                Close();
-            }
-        }
+        btnCerrar.Visible = true;
+        btnCerrar.Enabled = true;
+        CancelButton = btnCerrar;
+        AcceptButton = btnCerrar;
+        btnCerrar.Focus();
     }
 
     private void alTerminarConError(string mensajeError)
     {
         terminado = true;
-        DialogResult = DialogResult.Abort;
 
-        if (!esModoSinPasos)
+        if (esModoSinPasos)
+        {
+            lblTexto.Text = "No se pudo completar la operación.";
+        }
+        else
         {
             foreach (ListViewItem item in lvwPasos.Items)
             {
-                if (item.SubItems.Count > 1 && item.SubItems[1].Text == "En curso")
+                if (item.Tag is EstadoPaso estado && estado == EstadoPaso.EnCurso)
                 {
-                    item.SubItems[1].Text = "Error";
+                    item.Tag = EstadoPaso.Error;
+                    item.SubItems[1].Text = obtenerTextoEstado(EstadoPaso.Error);
                     aplicarColorEstado(item, EstadoPaso.Error);
                 }
             }
