@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
@@ -11,6 +12,7 @@ using System.Windows.Forms;
 using CrystalDecisions.CrystalReports.Engine;
 using CrystalDecisions.Shared;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.ReqVenta;
 using SIGEFA.Entidades;
 using SIGEFA.Properties;
 using SIGEFA.Reportes;
@@ -868,10 +870,15 @@ public class frmReqAlmacen : Form
 						return;
 					}
 				}
-				ser = admSerie.CargaSerieEmpresa(Convert.ToInt32(cmbAlmacenesSolicitantes.SelectedValue), doc.CodTipoDocumento);
-				if (ser != null)
+			ser = admSerie.CargaSerieEmpresa(Convert.ToInt32(cmbAlmacenesSolicitantes.SelectedValue), doc.CodTipoDocumento);
+			if (ser != null)
+			{
+				if (TipoReq == 2 && ConfigurationManager.AppSettings["VentaCierreRuta"] == "nueva")
 				{
-					req_alm = getDatosRequerimientoAlmacen();
+					GuardarRequerimientoRutaNueva();
+					return;
+				}
+				req_alm = getDatosRequerimientoAlmacen();
 					if (admreqalm.insert(req_alm, req_alm.ListadoDetalle))
 					{
 						MessageBox.Show("Requerimiento de Almacen Guardado Con Exito", "Informacion", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
@@ -924,6 +931,86 @@ public class frmReqAlmacen : Form
 		{
 			MessageBox.Show(ex.Message, "Error Encontrado", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 		}
+	}
+
+	// Ruta nueva (VentaCierreRuta=nueva, T6): confirmación y guardado en segundo
+	// plano con diálogo sin pasos. Todo lo que lee controles ya quedó armado en
+	// req_alm antes del diálogo; el trabajo corre en un solo bloque.
+	private void GuardarRequerimientoRutaNueva()
+	{
+		DialogResult confirmacion = MessageBox.Show("¿Está seguro de guardar el requerimiento? Quedará en estado pendiente.", "Guardar requerimiento", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+		if (confirmacion == DialogResult.No)
+		{
+			return;
+		}
+		req_alm = getDatosRequerimientoAlmacen();
+		DatosGuardadoRequerimiento datos = MapearCabeceraParaGuardado(req_alm);
+		IList<DatosGuardadoDetalle> detalles = MapearDetallesParaGuardado(req_alm.ListadoDetalle);
+		using (frmProgresoOperacion dialogo = new frmProgresoOperacion(
+			"Guardando el requerimiento",
+			"Guardando el requerimiento...",
+			null,
+			progreso => ReqVentaGuardado.Guardar(datos, detalles)))
+		{
+			dialogo.ShowDialog(this);
+			if (dialogo.Resultado == null || !dialogo.Resultado.Ok)
+			{
+				return;
+			}
+		}
+		req_alm.Codigo = datos.Codigo;
+		ventanaListaReqVentas.cargarlista();
+		codRequerimientoAlmacen = req_alm.Codigo;
+		base.DialogResult = DialogResult.Yes;
+		Close();
+	}
+
+	private static DatosGuardadoRequerimiento MapearCabeceraParaGuardado(clsRequerimientoAlmacen origen)
+	{
+		return new DatosGuardadoRequerimiento(
+			origen.CodTipoDocumento,
+			origen.NumDocumento,
+			origen.CodSerie,
+			origen.NumSerie,
+			origen.CodAlmacenRegistro,
+			origen.CodUserRegistro,
+			origen.FechaRegistro,
+			origen.CodAlmacenSolicitante,
+			origen.CodAlmacenDespacho,
+			origen.FechaRequerimiento,
+			origen.IEstado,
+			origen.ComentarioSolicitante,
+			origen.ComentarioDespacho,
+			origen.Tipo,
+			origen.CodPropuestaDePedido,
+			origen.CodPedidoVenta,
+			origen.NombreContacto,
+			origen.TelefonoContacto,
+			origen.Delivery,
+			origen.DireccionDelivery,
+			origen.AutorizadoPor);
+	}
+
+	private static IList<DatosGuardadoDetalle> MapearDetallesParaGuardado(List<clsDetalleRequerimientoAlmacen> origen)
+	{
+		List<DatosGuardadoDetalle> destino = new List<DatosGuardadoDetalle>();
+		if (origen == null)
+		{
+			return destino;
+		}
+		foreach (clsDetalleRequerimientoAlmacen linea in origen)
+		{
+			destino.Add(new DatosGuardadoDetalle(
+				linea.Codigo,
+				linea.CodProducto,
+				linea.CodUnidad,
+				linea.Cantidad,
+				linea.CantidadPedida,
+				linea.CantidadPendiente,
+				linea.CantidadConfirmada,
+				linea.CantidadPendienteAprobada));
+		}
+		return destino;
 	}
 
 	private bool validarContacto()
