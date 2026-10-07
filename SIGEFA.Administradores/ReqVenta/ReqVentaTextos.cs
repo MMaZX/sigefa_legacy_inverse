@@ -44,4 +44,27 @@ public static class ReqVentaTextos
             new PasoOperacion(MarcarAnulado, "Marcar el requerimiento como anulado", EstadoPaso.Pendiente),
         };
     }
+
+    // Arma el paso para informar el progreso con el texto del catálogo por clave.
+    // Si la clave no está en el catálogo, usa la clave como texto para no perderla.
+    public static PasoOperacion Paso(string clave, EstadoPaso estado, string detalle = null)
+    {
+        foreach (PasoOperacion paso in PasosAnulacionConExtorno())
+        {
+            if (paso.Clave == clave)
+            {
+                return new PasoOperacion(clave, paso.Texto, estado, detalle);
+            }
+        }
+
+        foreach (PasoOperacion paso in PasosAnulacionPendiente())
+        {
+            if (paso.Clave == clave)
+            {
+                return new PasoOperacion(clave, paso.Texto, estado, detalle);
+            }
+        }
+
+        return new PasoOperacion(clave, clave, estado, detalle);
+    }
 }

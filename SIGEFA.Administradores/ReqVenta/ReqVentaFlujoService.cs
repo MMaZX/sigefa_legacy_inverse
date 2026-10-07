@@ -23,10 +23,56 @@ public static class ReqVentaFlujoService
         public ResultadoAnulacion Resultado { get; }
     }
 
+    // Reenvía cada paso al progreso real y recuerda el último estado por clave.
+    // Así el servicio puede cerrar MarcarAnulado en Error cuando la anulación
+    // falla antes de cerrarlo, sin duplicarlo si ya quedó en Error.
+    private sealed class SeguimientoProgreso : IProgress<PasoOperacion>
+    {
+        private readonly IProgress<PasoOperacion> _destino;
+        private readonly Dictionary<string, EstadoPaso> _estados = new Dictionary<string, EstadoPaso>(StringComparer.Ordinal);
+
+        public SeguimientoProgreso(IProgress<PasoOperacion> destino)
+        {
+            _destino = destino;
+        }
+
+        public void Report(PasoOperacion paso)
+        {
+            if (paso == null)
+            {
+                return;
+            }
+
+            _estados[paso.Clave] = paso.Estado;
+            if (_destino != null)
+            {
+                _destino.Report(paso);
+            }
+        }
+
+        public bool EstaCerrado(string clave)
+        {
+            EstadoPaso estado;
+            if (!_estados.TryGetValue(clave, out estado))
+            {
+                return false;
+            }
+
+            return estado == EstadoPaso.Listo || estado == EstadoPaso.Error;
+        }
+    }
+
     // Anula el requerimiento contra la base configurada. Confirma solo si todo salió bien.
     public static ResultadoAnulacion Anular(int codReq, int codUser)
     {
-        return Anular(codReq, codUser, BuscarUsuario, Db.Transaccion<ResultadoAnulacion>, ReqVentaRegistroErrores.Registrar);
+        return Anular(codReq, codUser, null);
+    }
+
+    // Anula informando cada paso al progreso (puede ser null). MarcarAnulado queda
+    // Listo solo cuando la transacción ya confirmó; ante cualquier fallo queda en Error.
+    public static ResultadoAnulacion Anular(int codReq, int codUser, IProgress<PasoOperacion> progreso)
+    {
+        return Anular(codReq, codUser, BuscarUsuario, Db.Transaccion<ResultadoAnulacion>, ReqVentaRegistroErrores.Registrar, progreso);
     }
 
     // Login del usuario (columna usuario.usuario) por su código real, usuario.codUsuario. No confundir con la columna
@@ -52,26 +98,33 @@ public static class ReqVentaFlujoService
         int codUser,
         Func<int, string> buscarUsuario,
         Func<Func<IConsultor, ResultadoAnulacion>, ResultadoAnulacion> transaccion,
-        Action<string> registrar)
+        Action<string> registrar,
+        IProgress<PasoOperacion> progreso = null)
     {
+        SeguimientoProgreso seguimiento = new SeguimientoProgreso(progreso);
         if (transaccion == null)
         {
-            return Fallo("El ejecutor de la transacción es obligatorio.");
+            return FalloConPaso(seguimiento, "El ejecutor de la transacción es obligatorio.");
         }
 
         if (codReq <= 0)
         {
-            return Fallo("El requerimiento debe ser mayor que cero.");
+            return FalloConPaso(seguimiento, "El requerimiento debe ser mayor que cero.");
         }
 
         if (codUser <= 0)
         {
-            return Fallo("Debe indicar el usuario que solicita la anulación.");
+            return FalloConPaso(seguimiento, "Debe indicar el usuario que solicita la anulación.");
         }
 
-        ResultadoAnulacion resultado = EjecutarRevirtiendoSiFalla(codReq, codUser, transaccion);
-        if (!resultado.Ok)
+        ResultadoAnulacion resultado = EjecutarRevirtiendoSiFalla(codReq, codUser, transaccion, seguimiento);
+        if (resultado.Ok)
         {
+            seguimiento.Report(ReqVentaTextos.Paso(ReqVentaTextos.MarcarAnulado, EstadoPaso.Listo));
+        }
+        else
+        {
+            CerrarMarcarAnuladoEnError(seguimiento, resultado.Mensaje);
             Registrar(registrar, codReq, DescribirUsuario(codUser, buscarUsuario), resultado.Mensaje);
         }
 
@@ -83,11 +136,12 @@ public static class ReqVentaFlujoService
     private static ResultadoAnulacion EjecutarRevirtiendoSiFalla(
         int codReq,
         int codUser,
-        Func<Func<IConsultor, ResultadoAnulacion>, ResultadoAnulacion> transaccion)
+        Func<Func<IConsultor, ResultadoAnulacion>, ResultadoAnulacion> transaccion,
+        IProgress<PasoOperacion> progreso)
     {
         try
         {
-            return transaccion(tx => AnularConfirmando(tx, codReq, codUser));
+            return transaccion(tx => AnularConfirmando(tx, codReq, codUser, progreso));
         }
         catch (AnulacionRevertidaException revertida)
         {
@@ -100,9 +154,9 @@ public static class ReqVentaFlujoService
     }
 
     // Acción que corre dentro de la transacción: si el resultado es fallido, lanza para forzar el rollback.
-    private static ResultadoAnulacion AnularConfirmando(IConsultor consultor, int codReq, int codUser)
+    private static ResultadoAnulacion AnularConfirmando(IConsultor consultor, int codReq, int codUser, IProgress<PasoOperacion> progreso)
     {
-        ResultadoAnulacion resultado = AnularEn(consultor, codReq, codUser);
+        ResultadoAnulacion resultado = AnularEn(consultor, codReq, codUser, progreso);
         if (!resultado.Ok)
         {
             throw new AnulacionRevertidaException(resultado);
@@ -112,7 +166,8 @@ public static class ReqVentaFlujoService
     }
 
     // Decide el camino con el estado leído (FOR UPDATE) y delega. No confirma ni revierte.
-    public static ResultadoAnulacion AnularEn(IConsultor consultor, int codReq, int codUser)
+    // Reenvía el progreso a la anulación elegida, que informa sus pasos dentro de la transacción.
+    public static ResultadoAnulacion AnularEn(IConsultor consultor, int codReq, int codUser, IProgress<PasoOperacion> progreso = null)
     {
         Dictionary<string, object> requerimiento = ReqVentaConsultas.ObtenerRequerimiento(consultor, codReq, true);
         if (requerimiento == null)
@@ -126,9 +181,9 @@ public static class ReqVentaFlujoService
         switch (decision.Accion)
         {
             case AccionAnulacion.AnularPendiente:
-                return ReqVentaAnulacionPendiente.AnularPendiente(consultor, codReq, codUser);
+                return ReqVentaAnulacionPendiente.AnularPendiente(consultor, codReq, codUser, progreso);
             case AccionAnulacion.AnularConExtorno:
-                return ReqVentaAnulacionConExtorno.AnularConExtorno(consultor, codReq, codUser);
+                return ReqVentaAnulacionConExtorno.AnularConExtorno(consultor, codReq, codUser, progreso);
             default:
                 return Fallo(decision.Motivo);
         }
@@ -188,6 +243,24 @@ public static class ReqVentaFlujoService
         }
 
         return string.Join(" <- ", partes.ToArray());
+    }
+
+    // Fallo que además deja MarcarAnulado en Error si aún no se cerró.
+    private static ResultadoAnulacion FalloConPaso(SeguimientoProgreso seguimiento, string mensaje)
+    {
+        CerrarMarcarAnuladoEnError(seguimiento, mensaje);
+        return Fallo(mensaje);
+    }
+
+    // Garantiza MarcarAnulado en Error al salir con fallo, salvo que ya esté cerrado.
+    private static void CerrarMarcarAnuladoEnError(SeguimientoProgreso seguimiento, string motivo)
+    {
+        if (seguimiento == null || seguimiento.EstaCerrado(ReqVentaTextos.MarcarAnulado))
+        {
+            return;
+        }
+
+        seguimiento.Report(ReqVentaTextos.Paso(ReqVentaTextos.MarcarAnulado, EstadoPaso.Error, motivo));
     }
 
     private static ResultadoAnulacion Fallo(string mensaje)

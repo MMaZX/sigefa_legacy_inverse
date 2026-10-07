@@ -16,7 +16,9 @@ public static class ReqVentaAnulacionConExtorno
         public const int TransaccionTransferencia = 15;
     }
 
-    public static ResultadoAnulacion AnularConExtorno(IConsultor consultor, int codReq, int codUser)
+    // Anula con extorno informando cada paso al progreso (puede ser null).
+    // MarcarAnulado solo se inicia aquí: lo marca Listo el servicio tras confirmar.
+    public static ResultadoAnulacion AnularConExtorno(IConsultor consultor, int codReq, int codUser, IProgress<PasoOperacion> progreso = null)
     {
         if (consultor == null)
         {
@@ -35,7 +37,7 @@ public static class ReqVentaAnulacionConExtorno
 
         try
         {
-            return Ejecutar(consultor, codReq, codUser);
+            return Ejecutar(consultor, codReq, codUser, progreso);
         }
         catch (Exception ex)
         {
@@ -43,13 +45,15 @@ public static class ReqVentaAnulacionConExtorno
         }
     }
 
-    private static ResultadoAnulacion Ejecutar(IConsultor consultor, int codReq, int codUser)
+    private static ResultadoAnulacion Ejecutar(IConsultor consultor, int codReq, int codUser, IProgress<PasoOperacion> progreso)
     {
+        Informar(progreso, ReqVentaTextos.ComprobarRequerimiento, EstadoPaso.EnCurso);
+
         // 1. Bloqueo de req_almacen con FOR UPDATE
         Dictionary<string, object> requerimiento = ReqVentaConsultas.ObtenerRequerimiento(consultor, codReq, true);
         if (requerimiento == null)
         {
-            return Fallo("El requerimiento " + codReq + " no existe.");
+            return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, "El requerimiento " + codReq + " no existe.");
         }
 
         int tipoReq = requerimiento.Valor<int>("tipo_req");
@@ -60,7 +64,7 @@ public static class ReqVentaAnulacionConExtorno
             case AccionAnulacion.AnularConExtorno:
                 break;
             default:
-                return Fallo(decision.Motivo);
+                return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, decision.Motivo);
         }
 
         // 2. Tomar la transferencia original con ObtenerTransferencias bloqueando con FOR UPDATE
@@ -77,12 +81,12 @@ public static class ReqVentaAnulacionConExtorno
 
         if (vigentesSinExtorno.Count == 0)
         {
-            return Fallo("El requerimiento " + codReq + " no tiene ninguna transferencia original sin extorno.");
+            return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, "El requerimiento " + codReq + " no tiene ninguna transferencia original sin extorno.");
         }
 
         if (vigentesSinExtorno.Count > 1)
         {
-            return Fallo("El requerimiento " + codReq + " tiene más de una transferencia original sin extorno.");
+            return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, "El requerimiento " + codReq + " tiene más de una transferencia original sin extorno.");
         }
 
         int codTransOriginal = vigentesSinExtorno[0].Valor<int>("codTransDir");
@@ -94,7 +98,7 @@ public static class ReqVentaAnulacionConExtorno
             new { id = codTransOriginal }).First();
         if (originalHeader == null)
         {
-            return Fallo("No se encontró la cabecera de la transferencia original " + codTransOriginal + ".");
+            return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, "No se encontró la cabecera de la transferencia original " + codTransOriginal + ".");
         }
 
         // Leer detalles de la transferencia original
@@ -106,74 +110,93 @@ public static class ReqVentaAnulacionConExtorno
             new { id = codTransOriginal }).Get();
         if (lineasOriginal.Count == 0)
         {
-            return Fallo("La transferencia original " + codTransOriginal + " no tiene líneas de detalle.");
+            return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, "La transferencia original " + codTransOriginal + " no tiene líneas de detalle.");
         }
+
+        Informar(progreso, ReqVentaTextos.ComprobarRequerimiento, EstadoPaso.Listo);
 
         int almacenSolicitante = requerimiento.Valor<int>("cod_almacen_solicitante");
         int almacenDespacho = requerimiento.Valor<int>("cod_almacen_despacho");
         int monedaCabecera = originalHeader.Valor<int>("moneda");
 
         // 3. Bloqueo de productoalmacen y validación de stock con el factor de unidad ANTES de GuardaDetalleSalida
+        Informar(progreso, ReqVentaTextos.RevisarStock, EstadoPaso.EnCurso);
         ResultadoAnulacion validacionStock = ValidarYBloquearStock(consultor, lineasOriginal, almacenSolicitante, almacenDespacho);
         if (!validacionStock.Ok)
         {
-            return validacionStock;
+            return FalloDePaso(progreso, ReqVentaTextos.RevisarStock, validacionStock.Mensaje);
         }
 
+        Informar(progreso, ReqVentaTextos.RevisarStock, EstadoPaso.Listo);
+
         // 4. GuardaTransferencia para el extorno (almacenes invertidos: origen=solicitante, destino=despacho)
+        // 5. GuardaDetalleTransferencia para cada línea
+        Informar(progreso, ReqVentaTextos.CrearExtorno, EstadoPaso.EnCurso);
         int idExtorno = InsertarCabeceraExtorno(consultor, codReq, codTransOriginal, originalHeader, almacenSolicitante, almacenDespacho, codUser);
         if (idExtorno <= 0)
         {
-            return Fallo("Fallo al registrar la cabecera de transferencia de extorno (newid = 0).");
+            return FalloDePaso(progreso, ReqVentaTextos.CrearExtorno, "Fallo al registrar la cabecera de transferencia de extorno (newid = 0).");
         }
 
-        // 5. GuardaDetalleTransferencia para cada línea
         ResultadoAnulacion resDetExt = InsertarDetallesExtorno(consultor, idExtorno, lineasOriginal, almacenSolicitante, almacenDespacho, codUser);
         if (!resDetExt.Ok)
         {
-            return resDetExt;
+            return FalloDePaso(progreso, ReqVentaTextos.CrearExtorno, resDetExt.Mensaje);
         }
 
+        Informar(progreso, ReqVentaTextos.CrearExtorno, EstadoPaso.Listo);
+
         // 6. GuardaNotaSalida y GuardaDetalleSalida
+        Informar(progreso, ReqVentaTextos.RegistrarSalida, EstadoPaso.EnCurso);
         int idNotaSalida = InsertarCabeceraNotaSalida(consultor, idExtorno, originalHeader, almacenSolicitante, codUser);
         if (idNotaSalida <= 0)
         {
-            return Fallo("Fallo al registrar la cabecera de nota de salida para el extorno (newid = 0).");
+            return FalloDePaso(progreso, ReqVentaTextos.RegistrarSalida, "Fallo al registrar la cabecera de nota de salida para el extorno (newid = 0).");
         }
 
         ResultadoAnulacion resDetSalida = InsertarDetallesNotaSalida(consultor, idNotaSalida, lineasOriginal, almacenSolicitante, codUser);
         if (!resDetSalida.Ok)
         {
-            return resDetSalida;
+            return FalloDePaso(progreso, ReqVentaTextos.RegistrarSalida, resDetSalida.Mensaje);
         }
 
+        Informar(progreso, ReqVentaTextos.RegistrarSalida, EstadoPaso.Listo);
+
         // 7. GuardaNotaIngreso y GuardaDetalleIngreso
+        Informar(progreso, ReqVentaTextos.RegistrarIngreso, EstadoPaso.EnCurso);
         int idNotaIngreso = InsertarCabeceraNotaIngreso(consultor, idExtorno, originalHeader, almacenDespacho, codUser);
         if (idNotaIngreso <= 0)
         {
-            return Fallo("Fallo al registrar la cabecera de nota de ingreso para el extorno (newid = 0).");
+            return FalloDePaso(progreso, ReqVentaTextos.RegistrarIngreso, "Fallo al registrar la cabecera de nota de ingreso para el extorno (newid = 0).");
         }
 
         ResultadoAnulacion resDetIngreso = InsertarDetallesNotaIngreso(consultor, idNotaIngreso, lineasOriginal, almacenDespacho, monedaCabecera, codUser);
         if (!resDetIngreso.Ok)
         {
-            return resDetIngreso;
+            return FalloDePaso(progreso, ReqVentaTextos.RegistrarIngreso, resDetIngreso.Mensaje);
         }
 
+        Informar(progreso, ReqVentaTextos.RegistrarIngreso, EstadoPaso.Listo);
+
         // 8. AprobarTransferencia del extorno con verificación de efecto para rollback
+        Informar(progreso, ReqVentaTextos.AprobarExtorno, EstadoPaso.EnCurso);
         ResultadoAnulacion resAprobar = AprobarConVerificacion(consultor, idExtorno);
         if (!resAprobar.Ok)
         {
-            return resAprobar;
+            return FalloDePaso(progreso, ReqVentaTextos.AprobarExtorno, resAprobar.Mensaje);
         }
 
-        // 9. Marcar el requerimiento como anulado (12)
+        Informar(progreso, ReqVentaTextos.AprobarExtorno, EstadoPaso.Listo);
+
+        // 9. Marcar el requerimiento como anulado (12). Solo se informa el inicio:
+        // Listo lo marca el servicio tras confirmar la transacción.
+        Informar(progreso, ReqVentaTextos.MarcarAnulado, EstadoPaso.EnCurso);
         ResultadoEjecucion marcado = consultor.Ejecutar(
             "UPDATE req_almacen SET estado = 12, fecha_anulo = NOW(), cod_user_anulo = @user WHERE id_req_almacen = @id",
             new { user = codUser, id = codReq });
         if (marcado.FilasAfectadas != 1)
         {
-            return Fallo("No se pudo marcar como anulado el requerimiento " + codReq + ".");
+            return FalloDePaso(progreso, ReqVentaTextos.MarcarAnulado, "No se pudo marcar como anulado el requerimiento " + codReq + ".");
         }
 
         return new ResultadoAnulacion(true, "Requerimiento " + codReq + " anulado con extorno " + idExtorno + ".");
@@ -614,6 +637,24 @@ public static class ReqVentaAnulacionConExtorno
         }
 
         return new ResultadoAnulacion(true, string.Empty);
+    }
+
+    // Informa el paso con el texto del catálogo; sin progreso no hace nada.
+    private static void Informar(IProgress<PasoOperacion> progreso, string clave, EstadoPaso estado, string detalle = null)
+    {
+        if (progreso == null)
+        {
+            return;
+        }
+
+        progreso.Report(ReqVentaTextos.Paso(clave, estado, detalle));
+    }
+
+    // Deja el paso en Error con el motivo y devuelve el fallo para salir de la fase.
+    private static ResultadoAnulacion FalloDePaso(IProgress<PasoOperacion> progreso, string clave, string mensaje)
+    {
+        Informar(progreso, clave, EstadoPaso.Error, mensaje);
+        return Fallo(mensaje);
     }
 
     private static string MensajeConCausa(Exception ex)

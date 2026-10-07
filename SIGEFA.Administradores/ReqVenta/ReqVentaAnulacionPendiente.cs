@@ -12,7 +12,9 @@ public static class ReqVentaAnulacionPendiente
 {
     // Anula un requerimiento pendiente: rechaza sus transferencias pendientes,
     // devuelve el stock reservado y lo marca con estado 12.
-    public static ResultadoAnulacion AnularPendiente(IConsultor consultor, int codReq, int codUser)
+    // Informa cada paso al progreso (puede ser null). MarcarAnulado solo se inicia
+    // aquí: lo marca Listo el servicio cuando la transacción ya confirmó.
+    public static ResultadoAnulacion AnularPendiente(IConsultor consultor, int codReq, int codUser, IProgress<PasoOperacion> progreso = null)
     {
         if (consultor == null)
         {
@@ -31,7 +33,7 @@ public static class ReqVentaAnulacionPendiente
 
         try
         {
-            return Ejecutar(consultor, codReq, codUser);
+            return Ejecutar(consultor, codReq, codUser, progreso);
         }
         catch (Exception ex)
         {
@@ -41,12 +43,13 @@ public static class ReqVentaAnulacionPendiente
 
     // Flujo con la fila del requerimiento ya bloqueada (FOR UPDATE):
     // valida la regla, rechaza transferencias, devuelve stock y marca el 12.
-    private static ResultadoAnulacion Ejecutar(IConsultor consultor, int codReq, int codUser)
+    private static ResultadoAnulacion Ejecutar(IConsultor consultor, int codReq, int codUser, IProgress<PasoOperacion> progreso)
     {
+        Informar(progreso, ReqVentaTextos.ComprobarRequerimiento, EstadoPaso.EnCurso);
         Dictionary<string, object> requerimiento = ReqVentaConsultas.ObtenerRequerimiento(consultor, codReq, true);
         if (requerimiento == null)
         {
-            return Fallo("el requerimiento " + codReq + " no existe.");
+            return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, "el requerimiento " + codReq + " no existe.");
         }
 
         // El tipo y el estado se leen una sola vez; la regla decide, no se duplica aquí.
@@ -58,28 +61,38 @@ public static class ReqVentaAnulacionPendiente
             case AccionAnulacion.AnularPendiente:
                 break;
             default:
-                return Fallo(decision.Motivo);
+                return FalloDePaso(progreso, ReqVentaTextos.ComprobarRequerimiento, decision.Motivo);
         }
 
+        Informar(progreso, ReqVentaTextos.ComprobarRequerimiento, EstadoPaso.Listo);
+
+        Informar(progreso, ReqVentaTextos.RechazarTransferencias, EstadoPaso.EnCurso);
         ResultadoAnulacion rechazo = RechazarPendientes(consultor, codReq);
         if (!rechazo.Ok)
         {
-            return rechazo;
+            return FalloDePaso(progreso, ReqVentaTextos.RechazarTransferencias, rechazo.Mensaje);
         }
 
+        Informar(progreso, ReqVentaTextos.RechazarTransferencias, EstadoPaso.Listo);
+
+        Informar(progreso, ReqVentaTextos.DevolverReservas, EstadoPaso.EnCurso);
         int almacenDespacho = requerimiento.Valor<int>("cod_almacen_despacho");
         ResultadoAnulacion devolucion = DevolverReservas(consultor, codReq, almacenDespacho);
         if (!devolucion.Ok)
         {
-            return devolucion;
+            return FalloDePaso(progreso, ReqVentaTextos.DevolverReservas, devolucion.Mensaje);
         }
 
+        Informar(progreso, ReqVentaTextos.DevolverReservas, EstadoPaso.Listo);
+
+        // Solo se informa el inicio: Listo lo marca el servicio tras confirmar la transacción.
+        Informar(progreso, ReqVentaTextos.MarcarAnulado, EstadoPaso.EnCurso);
         ResultadoEjecucion marcado = consultor.Ejecutar(
             "UPDATE req_almacen SET estado = 12, fecha_anulo = NOW(), cod_user_anulo = @user WHERE id_req_almacen = @id",
             new { user = codUser, id = codReq });
         if (marcado.FilasAfectadas != 1)
         {
-            return Fallo("no se pudo marcar como anulado el requerimiento " + codReq + ".");
+            return FalloDePaso(progreso, ReqVentaTextos.MarcarAnulado, "no se pudo marcar como anulado el requerimiento " + codReq + ".");
         }
 
         return new ResultadoAnulacion(true, "requerimiento " + codReq + " anulado.");
@@ -191,6 +204,24 @@ public static class ReqVentaAnulacionPendiente
         }
 
         return new ResultadoAnulacion(true, string.Empty);
+    }
+
+    // Informa el paso con el texto del catálogo; sin progreso no hace nada.
+    private static void Informar(IProgress<PasoOperacion> progreso, string clave, EstadoPaso estado, string detalle = null)
+    {
+        if (progreso == null)
+        {
+            return;
+        }
+
+        progreso.Report(ReqVentaTextos.Paso(clave, estado, detalle));
+    }
+
+    // Deja el paso en Error con el motivo y devuelve el fallo para salir de la fase.
+    private static ResultadoAnulacion FalloDePaso(IProgress<PasoOperacion> progreso, string clave, string mensaje)
+    {
+        Informar(progreso, clave, EstadoPaso.Error, mensaje);
+        return Fallo(mensaje);
     }
 
     private static ResultadoAnulacion Fallo(string mensaje)
