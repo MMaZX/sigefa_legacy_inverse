@@ -11,6 +11,8 @@ namespace SIGEFA.Tests.ReqVenta;
 // Las unitarias usan un IConsultor falso en este mismo archivo y no tocan BD.
 // La integración usa el req 5273 (pendiente estable en dev) dentro de una
 // transacción que siempre se revierte; fuera de ella solo hay SELECT.
+// Misma colección que las demás pruebas que bloquean filas compartidas: en paralelo daban deadlock.
+[Collection("BdReqVentaFilasCompartidas")]
 public class ReqVentaAnulacionPendienteTests
 {
     // Falso mínimo de IConsultor: sirve filas precargadas según la tabla del SELECT

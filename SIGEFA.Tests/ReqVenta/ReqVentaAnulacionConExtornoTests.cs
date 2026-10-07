@@ -11,6 +11,8 @@ namespace SIGEFA.Tests.ReqVenta;
 // Pruebas de anulación con extorno de requerimientos de venta aprobados (estado 13, T2d).
 // Las unitarias usan un IConsultor falso de este archivo y no tocan BD.
 // La integración usa el req 8416 dentro de una transacción que siempre se revierte.
+// Misma colección que las demás pruebas que bloquean esas filas: en paralelo daban deadlock.
+[Collection("BdReqVentaFilasCompartidas")]
 public class ReqVentaAnulacionConExtornoTests
 {
     private const string CadenaDummy = "Server=127.0.0.1;Database=x;Uid=x;Pwd=x;";

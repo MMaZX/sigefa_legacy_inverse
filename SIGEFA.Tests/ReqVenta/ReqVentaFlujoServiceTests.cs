@@ -12,6 +12,9 @@ namespace SIGEFA.Tests.ReqVenta;
 // Las unitarias usan un IConsultor falso y un ejecutor de transacción falso con la
 // misma semántica que Db.Transaccion: confirma si la acción termina sin lanzar y
 // revierte si lanza. La integración corre SIEMPRE con rollback.
+// Colección compartida con las demás pruebas que bloquean el req 8416 y su stock: en paralelo
+// provocaban deadlocks por orden de bloqueo distinto entre pruebas.
+[Collection("BdReqVentaFilasCompartidas")]
 public class ReqVentaFlujoServiceTests
 {
     private sealed class ConsultorFalso : IConsultor
