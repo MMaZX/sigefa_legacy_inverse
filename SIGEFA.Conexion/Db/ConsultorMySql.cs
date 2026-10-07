@@ -21,7 +21,7 @@ public sealed class ConsultorMySql : IConsultor
         {
             throw new ArgumentException("La cadena de conexion es obligatoria.", nameof(cadenaConexion));
         }
-        _cadenaConexion = cadenaConexion;
+        _cadenaConexion = NormalizarCadena(cadenaConexion);
     }
 
     public ConsultorMySql(MySqlConnection conexion, MySqlTransaction transaccion)
@@ -59,6 +59,36 @@ public sealed class ConsultorMySql : IConsultor
         {
             conexion.Open();
             return accion(conexion);
+        }
+    }
+
+    // Punto 2 T2d: sin ampliar IConsultor (fuera de archivos permitidos) no caben parámetros OUT;
+    // se activa Allow User Variables aquí, sin tocar app.config, para los CALL con @newid.
+    private static string NormalizarCadena(string cadena)
+    {
+        try
+        {
+            var constructor = new MySqlConnectionStringBuilder(cadena);
+            if (!constructor.AllowUserVariables)
+            {
+                constructor.AllowUserVariables = true;
+            }
+
+            return constructor.ConnectionString;
+        }
+        catch
+        {
+            if (cadena.IndexOf("Allow User Variables", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return cadena;
+            }
+
+            if (cadena.IndexOf("AllowUserVariables", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return cadena;
+            }
+
+            return cadena.TrimEnd(' ', ';') + ";Allow User Variables=true;";
         }
     }
 

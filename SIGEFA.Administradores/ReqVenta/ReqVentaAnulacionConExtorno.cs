@@ -39,7 +39,7 @@ public static class ReqVentaAnulacionConExtorno
         }
         catch (Exception ex)
         {
-            return Fallo("No se pudo anular con extorno el requerimiento " + codReq + ": " + ex.Message);
+            return Fallo("No se pudo anular con extorno el requerimiento " + codReq + ": " + MensajeConCausa(ex));
         }
     }
 
@@ -111,6 +111,7 @@ public static class ReqVentaAnulacionConExtorno
 
         int almacenSolicitante = requerimiento.Valor<int>("cod_almacen_solicitante");
         int almacenDespacho = requerimiento.Valor<int>("cod_almacen_despacho");
+        int monedaCabecera = originalHeader.Valor<int>("moneda");
 
         // 3. Bloqueo de productoalmacen y validación de stock con el factor de unidad ANTES de GuardaDetalleSalida
         ResultadoAnulacion validacionStock = ValidarYBloquearStock(consultor, lineasOriginal, almacenSolicitante, almacenDespacho);
@@ -153,14 +154,18 @@ public static class ReqVentaAnulacionConExtorno
             return Fallo("Fallo al registrar la cabecera de nota de ingreso para el extorno (newid = 0).");
         }
 
-        ResultadoAnulacion resDetIngreso = InsertarDetallesNotaIngreso(consultor, idNotaIngreso, lineasOriginal, almacenDespacho, codUser);
+        ResultadoAnulacion resDetIngreso = InsertarDetallesNotaIngreso(consultor, idNotaIngreso, lineasOriginal, almacenDespacho, monedaCabecera, codUser);
         if (!resDetIngreso.Ok)
         {
             return resDetIngreso;
         }
 
-        // 8. AprobarTransferencia del extorno
-        ResultadoEjecucion ejecAprobar = consultor.Ejecutar("CALL AprobarTransferencia(@id)", new { id = idExtorno });
+        // 8. AprobarTransferencia del extorno con verificación de efecto para rollback
+        ResultadoAnulacion resAprobar = AprobarConVerificacion(consultor, idExtorno);
+        if (!resAprobar.Ok)
+        {
+            return resAprobar;
+        }
 
         // 9. Marcar el requerimiento como anulado (12)
         ResultadoEjecucion marcado = consultor.Ejecutar(
@@ -187,69 +192,162 @@ public static class ReqVentaAnulacionConExtorno
             productos.Add(linea.Valor<int>("codProducto"));
         }
 
-        // Bloqueamos primero el almacén solicitante (que es de donde saldrá el extorno)
+        // Bloqueamos primero el almacén solicitante (de donde saldrá el extorno); si falta la fila, fallo.
         foreach (int prod in productos)
         {
-            consultor.Consultar(
+            Dictionary<string, object> fila = consultor.Consultar(
                 "SELECT stockactual, stockdisponible, Unidad FROM productoalmacen WHERE codProducto = @prod AND codAlmacen = @alm FOR UPDATE",
                 new { prod = prod, alm = almacenSolicitante }).First();
+            if (fila == null)
+            {
+                return Fallo("No existe registro de producto " + prod + " en el almacén solicitante " + almacenSolicitante + ".");
+            }
         }
 
-        // Luego bloqueamos el almacén destino (despacho)
+        // Luego bloqueamos el almacén de despacho; si falta alguna fila, fallo antes de escribir.
         foreach (int prod in productos)
         {
-            consultor.Consultar(
+            Dictionary<string, object> fila = consultor.Consultar(
                 "SELECT stockactual, stockdisponible, Unidad FROM productoalmacen WHERE codProducto = @prod AND codAlmacen = @alm FOR UPDATE",
                 new { prod = prod, alm = almacenDespacho }).First();
+            if (fila == null)
+            {
+                return Fallo("No existe registro de producto " + prod + " en el almacén de despacho " + almacenDespacho + ".");
+            }
         }
 
-        // Validamos que en el almacén solicitante exista stock suficiente considerando el factor de unidad
+        Dictionary<int, int> unidadesBase = LeerUnidadesBase(consultor, productos, almacenSolicitante);
+        if (unidadesBase == null)
+        {
+            return Fallo("No se pudo leer la unidad base de los productos del almacén solicitante " + almacenSolicitante + ".");
+        }
+
+        Dictionary<int, decimal> requeridos = new Dictionary<int, decimal>();
         foreach (Dictionary<string, object> linea in lineas)
         {
             int prod = linea.Valor<int>("codProducto");
             int unidadIngresada = linea.Valor<int>("unidadingresada");
             decimal cantidad = linea.Valor<decimal>("cantidad");
-
-            Dictionary<string, object> pa = consultor.Consultar(
-                "SELECT stockactual, stockdisponible, Unidad FROM productoalmacen WHERE codProducto = @prod AND codAlmacen = @alm",
-                new { prod = prod, alm = almacenSolicitante }).First();
-            if (pa == null)
+            decimal factor;
+            string errorFactor;
+            bool conFactor = TryObtenerFactor(consultor, prod, unidadIngresada, unidadesBase[prod], out factor, out errorFactor);
+            if (!conFactor)
             {
-                return Fallo("No existe registro de producto " + prod + " en el almacén solicitante " + almacenSolicitante + ".");
-            }
-
-            object stockObj = pa["stockactual"];
-            if (stockObj == null || stockObj == DBNull.Value)
-            {
-                return Fallo("El stock del producto " + prod + " en el almacén solicitante " + almacenSolicitante + " es NULL.");
-            }
-
-            decimal stockActual = Convert.ToDecimal(stockObj);
-            int unidadBase = pa.Valor<int>("Unidad");
-
-            decimal factor = 1m;
-            if (unidadIngresada != unidadBase)
-            {
-                Dictionary<string, object> fRow = consultor.Consultar(
-                    "SELECT factor FROM unidadequivalente WHERE codProducto = @prod AND codUnidadMedida = @um AND codUndEqui = @base AND compra_venta = 2",
-                    new { prod = prod, um = unidadIngresada, @base = unidadBase }).First();
-                if (fRow == null || fRow["factor"] == null || fRow["factor"] == DBNull.Value)
-                {
-                    return Fallo("No existe factor de conversión para el producto " + prod + " de unidad " + unidadIngresada + " a unidad base " + unidadBase + ".");
-                }
-                factor = Convert.ToDecimal(fRow["factor"]);
+                return Fallo(errorFactor);
             }
 
             decimal cantidadRequerida = cantidad * factor;
-            if (stockActual < cantidadRequerida)
+            if (requeridos.ContainsKey(prod))
             {
-                return Fallo("Stock insuficiente para el producto " + prod + " en almacén solicitante " + almacenSolicitante + ". Stock actual: " + stockActual + ", requerido: " + cantidadRequerida + ".");
+                requeridos[prod] = requeridos[prod] + cantidadRequerida;
+            }
+            else
+            {
+                requeridos[prod] = cantidadRequerida;
+            }
+        }
+
+        // El trigger de detallenotasalida con transacción 15 descuenta stockactual Y stockdisponible
+        // con cantidad por factor; por eso se exige que AMBAS columnas cubran el total por producto.
+        foreach (KeyValuePair<int, decimal> par in requeridos)
+        {
+            Dictionary<string, object> pa = consultor.Consultar(
+                "SELECT stockactual, stockdisponible, Unidad FROM productoalmacen WHERE codProducto = @prod AND codAlmacen = @alm",
+                new { prod = par.Key, alm = almacenSolicitante }).First();
+            if (pa == null)
+            {
+                return Fallo("No existe registro de producto " + par.Key + " en el almacén solicitante " + almacenSolicitante + ".");
+            }
+
+            object actualObj = pa["stockactual"];
+            object disponibleObj = pa["stockdisponible"];
+            if (actualObj == null || actualObj == DBNull.Value || disponibleObj == null || disponibleObj == DBNull.Value)
+            {
+                return Fallo("El stock del producto " + par.Key + " en el almacén solicitante " + almacenSolicitante + " es NULL.");
+            }
+
+            decimal stockActual = Convert.ToDecimal(actualObj);
+            decimal stockDisponible = Convert.ToDecimal(disponibleObj);
+            if (stockActual < par.Value || stockDisponible < par.Value)
+            {
+                return Fallo("Stock insuficiente para el producto " + par.Key + " en almacén solicitante " + almacenSolicitante + ". Stock actual: " + stockActual + ", disponible: " + stockDisponible + ", requerido: " + par.Value + ".");
             }
         }
 
         return new ResultadoAnulacion(true, string.Empty);
     }
 
+    private static Dictionary<int, int> LeerUnidadesBase(IConsultor consultor, SortedSet<int> productos, int almacen)
+    {
+        Dictionary<int, int> bases = new Dictionary<int, int>();
+        foreach (int prod in productos)
+        {
+            Dictionary<string, object> pa = consultor.Consultar(
+                "SELECT stockactual, stockdisponible, Unidad FROM productoalmacen WHERE codProducto = @prod AND codAlmacen = @alm",
+                new { prod = prod, alm = almacen }).First();
+            if (pa == null)
+            {
+                return null;
+            }
+
+            bases[prod] = pa.Valor<int>("Unidad");
+        }
+
+        return bases;
+    }
+
+    private static bool TryObtenerFactor(
+        IConsultor consultor,
+        int prod,
+        int unidadIngresada,
+        int unidadBase,
+        out decimal factor,
+        out string mensajeError)
+    {
+        factor = 1m;
+        mensajeError = null;
+        if (unidadIngresada == unidadBase)
+        {
+            return true;
+        }
+
+        Dictionary<string, object> fRow = consultor.Consultar(
+            "SELECT factor FROM unidadequivalente WHERE codProducto = @prod AND codUnidadMedida = @um AND codUndEqui = @base AND compra_venta = 2",
+            new { prod = prod, um = unidadIngresada, @base = unidadBase }).First();
+        if (fRow == null || fRow["factor"] == null || fRow["factor"] == DBNull.Value)
+        {
+            mensajeError = "No existe factor de conversión para el producto " + prod + " de unidad " + unidadIngresada + " a unidad base " + unidadBase + ".";
+            factor = 0m;
+            return false;
+        }
+
+        factor = Convert.ToDecimal(fRow["factor"]);
+        return true;
+    }
+
+    private static ResultadoAnulacion AprobarConVerificacion(IConsultor consultor, int idExtorno)
+    {
+        consultor.Ejecutar("CALL AprobarTransferencia(@id)", new { id = idExtorno });
+
+        Dictionary<string, object> estado = consultor.Consultar(
+            "SELECT pendiente+0 AS pendiente, EstadoTrnas FROM transferencia WHERE codTransDir = @id FOR UPDATE",
+            new { id = idExtorno }).First();
+        if (estado == null)
+        {
+            return Fallo("No se encontró la transferencia de extorno " + idExtorno + " tras aprobar.");
+        }
+
+        int pendiente = estado.Valor<int>("pendiente");
+        int estadoTrnas = estado.Valor<int>("EstadoTrnas");
+        if (pendiente != 0 || estadoTrnas != 1)
+        {
+            return Fallo("La aprobación del extorno " + idExtorno + " no surtió efecto (pendiente=" + pendiente + ", EstadoTrnas=" + estadoTrnas + ").");
+        }
+
+        return new ResultadoAnulacion(true, string.Empty);
+    }
+
+    // Los 6 CALL usan SET @newid con variable de sesión; requieren Allow User Variables normalizada en ConsultorMySql.
     private static int InsertarCabeceraExtorno(
         IConsultor consultor,
         int codReq,
@@ -476,6 +574,7 @@ public static class ReqVentaAnulacionConExtorno
         int idNotaIngreso,
         List<Dictionary<string, object>> lineasOriginal,
         int almacenDespacho,
+        int monedaCabecera,
         int codUser)
     {
         foreach (Dictionary<string, object> linea in lineasOriginal)
@@ -491,7 +590,7 @@ public static class ReqVentaAnulacionConExtorno
                     codpro = prod,
                     codnota = idNotaIngreso,
                     codalma = almacenDespacho,
-                    moneda = linea.Valor<int>("PrecioIgv"),
+                    moneda = monedaCabecera,
                     unidad = linea.Valor<int>("unidadingresada"),
                     serielote = "0",
                     canti = linea.Valor<decimal>("cantidad"),
@@ -515,6 +614,19 @@ public static class ReqVentaAnulacionConExtorno
         }
 
         return new ResultadoAnulacion(true, string.Empty);
+    }
+
+    private static string MensajeConCausa(Exception ex)
+    {
+        List<string> partes = new List<string>();
+        Exception actual = ex;
+        while (actual != null)
+        {
+            partes.Add(actual.GetType().Name + ": " + actual.Message);
+            actual = actual.InnerException;
+        }
+
+        return string.Join(" <- ", partes.ToArray());
     }
 
     private static ResultadoAnulacion Fallo(string mensaje)
