@@ -184,7 +184,7 @@ public class ReqVentaFlujoServiceTests
         var transaccion = new TransaccionFalsa(Pendiente());
         var registro = new Registro();
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(codReq, codUser, transaccion.Ejecutar, registro.Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(codReq, codUser, "JUAN GR", transaccion.Ejecutar, registro.Registrar);
 
         Assert.False(resultado.Ok);
         Assert.False(string.IsNullOrWhiteSpace(resultado.Mensaje));
@@ -197,7 +197,7 @@ public class ReqVentaFlujoServiceTests
         ConsultorFalso consultor = Pendiente();
         var transaccion = new TransaccionFalsa(consultor);
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, transaccion.Ejecutar, new Registro().Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", transaccion.Ejecutar, new Registro().Registrar);
 
         Assert.True(resultado.Ok, resultado.Mensaje);
         Assert.True(transaccion.Confirmada);
@@ -211,7 +211,7 @@ public class ReqVentaFlujoServiceTests
         var consultor = new ConsultorFalso(null, null, null);
         var transaccion = new TransaccionFalsa(consultor);
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(999999, 18, transaccion.Ejecutar, new Registro().Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(999999, 18, "JUAN GR", transaccion.Ejecutar, new Registro().Registrar);
 
         Assert.False(resultado.Ok);
         Assert.Contains("999999", resultado.Mensaje);
@@ -230,7 +230,7 @@ public class ReqVentaFlujoServiceTests
         var consultor = new ConsultorFalso(Requerimiento(tipoReq, estado), null, null);
         var transaccion = new TransaccionFalsa(consultor);
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, transaccion.Ejecutar, new Registro().Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", transaccion.Ejecutar, new Registro().Registrar);
 
         Assert.False(resultado.Ok);
         Assert.Contains(fragmento, resultado.Mensaje);
@@ -246,7 +246,7 @@ public class ReqVentaFlujoServiceTests
         var consultor = new ConsultorFalso(Requerimiento(2, 13), null, null);
         var transaccion = new TransaccionFalsa(consultor);
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, transaccion.Ejecutar, new Registro().Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", transaccion.Ejecutar, new Registro().Registrar);
 
         Assert.False(resultado.Ok);
         Assert.Contains("transferencia original", resultado.Mensaje, StringComparison.OrdinalIgnoreCase);
@@ -266,7 +266,7 @@ public class ReqVentaFlujoServiceTests
         consultor.FilasParaRechazo = 0;
         var transaccion = new TransaccionFalsa(consultor);
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, transaccion.Ejecutar, new Registro().Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", transaccion.Ejecutar, new Registro().Registrar);
 
         Assert.False(resultado.Ok);
         Assert.Contains("14001", resultado.Mensaje);
@@ -281,7 +281,7 @@ public class ReqVentaFlujoServiceTests
         consultor.FilasParaAnulado = 0;
         var transaccion = new TransaccionFalsa(consultor);
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, transaccion.Ejecutar, new Registro().Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", transaccion.Ejecutar, new Registro().Registrar);
 
         Assert.False(resultado.Ok);
         Assert.True(transaccion.Revertida);
@@ -296,7 +296,7 @@ public class ReqVentaFlujoServiceTests
         var transaccion = new TransaccionFalsa(consultor);
         var registro = new Registro();
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, transaccion.Ejecutar, registro.Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", transaccion.Ejecutar, registro.Registrar);
 
         Assert.False(resultado.Ok);
         Assert.Contains("se cayó la conexión", resultado.Mensaje);
@@ -312,9 +312,37 @@ public class ReqVentaFlujoServiceTests
         var consultor = new ConsultorFalso(Requerimiento(2, 12), null, null);
         var registro = new Registro();
 
-        ReqVentaFlujoService.Anular(5273, 18, new TransaccionFalsa(consultor).Ejecutar, registro.Registrar);
+        ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", new TransaccionFalsa(consultor).Ejecutar, registro.Registrar);
 
         Assert.Single(registro.Lineas);
+    }
+
+    [Fact]
+    public void Anular_Fallo_RegistraElNombreDelUsuarioYNoSuCodigo()
+    {
+        var consultor = new ConsultorFalso(Requerimiento(2, 12), null, null);
+        var registro = new Registro();
+
+        ReqVentaFlujoService.Anular(123456, 18, "JUAN GR", new TransaccionFalsa(consultor).Ejecutar, registro.Registrar);
+
+        Assert.Single(registro.Lineas);
+        Assert.StartsWith("Anulación de requerimiento | Req: 123456 | Usuario: JUAN GR | ", registro.Lineas[0]);
+        Assert.DoesNotContain("Usuario: 18", registro.Lineas[0]);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Anular_Fallo_SinNombreRegistraElCodigoComoRespaldo(string nombre)
+    {
+        var consultor = new ConsultorFalso(Requerimiento(2, 12), null, null);
+        var registro = new Registro();
+
+        ReqVentaFlujoService.Anular(5273, 18, nombre, new TransaccionFalsa(consultor).Ejecutar, registro.Registrar);
+
+        Assert.Single(registro.Lineas);
+        Assert.Contains("Usuario: código 18 | ", registro.Lineas[0]);
     }
 
     [Fact]
@@ -322,7 +350,7 @@ public class ReqVentaFlujoServiceTests
     {
         var registro = new Registro();
 
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, new TransaccionFalsa(Pendiente()).Ejecutar, registro.Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", new TransaccionFalsa(Pendiente()).Ejecutar, registro.Registrar);
 
         Assert.True(resultado.Ok, resultado.Mensaje);
         Assert.Empty(registro.Lineas);
@@ -334,7 +362,7 @@ public class ReqVentaFlujoServiceTests
         var consultor = new ConsultorFalso(Requerimiento(2, 12), null, null);
 
         ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(
-            5273, 18, new TransaccionFalsa(consultor).Ejecutar, linea => throw new InvalidOperationException("disco lleno"));
+            5273, 18, "JUAN GR", new TransaccionFalsa(consultor).Ejecutar, linea => throw new InvalidOperationException("disco lleno"));
 
         Assert.False(resultado.Ok);
         Assert.Contains("12", resultado.Mensaje);
@@ -343,7 +371,7 @@ public class ReqVentaFlujoServiceTests
     [Fact]
     public void Anular_EjecutorNulo_Denega()
     {
-        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, null, new Registro().Registrar);
+        ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(5273, 18, "JUAN GR", null, new Registro().Registrar);
 
         Assert.False(resultado.Ok);
         Assert.False(string.IsNullOrWhiteSpace(resultado.Mensaje));
@@ -401,7 +429,7 @@ public class ReqVentaFlujoServiceTests
 
             int estadoDentro = 0;
             ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(
-                5273, 1,
+                5273, 1, "JUAN GR",
                 TransaccionRealConRollback(tx => estadoDentro = ReqVentaConsultas.ObtenerRequerimiento(tx, 5273, false).Valor<int>("estado")),
                 new Registro().Registrar);
 
@@ -435,7 +463,7 @@ public class ReqVentaFlujoServiceTests
             int estadoDentro = 0;
             bool extornoDentro = false;
             ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(
-                8416, 18,
+                8416, 18, "JUAN GR",
                 TransaccionRealConRollback(tx =>
                 {
                     estadoDentro = ReqVentaConsultas.ObtenerRequerimiento(tx, 8416, false).Valor<int>("estado");
@@ -482,7 +510,7 @@ public class ReqVentaFlujoServiceTests
             decimal actualAntes = stockAntes.Valor<decimal>("stockactual");
             var registro = new Registro();
             ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(
-                8416, 18,
+                8416, 18, "JUAN GR",
                 accion =>
                 {
                     ResultadoAnulacion r = null;
