@@ -234,6 +234,7 @@ public class FrmTPenPedido : Office2007Form
 			anularRequerimientoRutaNueva();
 			return;
 		}
+		
 		clsAdmTransferencia admTransferencia = new clsAdmTransferencia();
 		if (dgvTransferenciasPendientes.Rows.Count > 0)
 		{
@@ -350,8 +351,7 @@ public class FrmTPenPedido : Office2007Form
 	}
 
 	// Ruta nueva (VentaCierreRuta=nueva): la anulación completa corre en una sola transacción dentro de
-	// ReqVentaFlujoService, que lee el estado real de la BD y registra los fallos. El formulario solo
-	// confirma, informa el resultado y recarga la lista.
+	// ReqVentaFlujoService con diálogo modal de progreso (frmProgresoOperacion).
 	private void anularRequerimientoRutaNueva()
 	{
 		if (dgvTransferenciasPendientes.Rows.Count == 0 || dgvTransferenciasPendientes.CurrentRow == null)
@@ -359,22 +359,43 @@ public class FrmTPenPedido : Office2007Form
 			MessageBox.Show("No se puede anular el Requerimiento", "Requerimiento Transferencia", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 			return;
 		}
+
+		int codEstado = Convert.ToInt32(dgvTransferenciasPendientes.CurrentRow.Cells[colCodEstado.Name].Value);
 		int codReqAlm = Convert.ToInt32(dgvTransferenciasPendientes.CurrentRow.Cells[codigo.Name].Value);
+
 		DialogResult confirmacion = MessageBox.Show("Esta seguro que desea anular el Requerimiento para Venta seleccionada", "Requerimiento para Venta", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 		if (confirmacion == DialogResult.No)
 		{
 			return;
 		}
-		ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(codReqAlm, frmLogin.iCodUser);
-		if (!resultado.Ok)
+
+		IList<PasoOperacion> pasosIniciales;
+		switch (codEstado)
 		{
-			MessageBox.Show(resultado.Mensaje, "Requerimiento No Anulado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-			cargarlista();
-			return;
+			case 7:
+				pasosIniciales = ReqVentaTextos.PasosAnulacionPendiente().ToList();
+				break;
+			case 13:
+				pasosIniciales = ReqVentaTextos.PasosAnulacionConExtorno().ToList();
+				break;
+			default:
+				pasosIniciales = null;
+				break;
 		}
-		MessageBox.Show("Se Anulo Correctamente", "", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-		btnnuevo.Visible = true;
+
+		int codUser = frmLogin.iCodUser;
+
+		using (frmProgresoOperacion dialogo = new frmProgresoOperacion(
+			"Anulando el requerimiento",
+			"Anulando el requerimiento...",
+			pasosIniciales,
+			progreso => ResultadoOperacion.De(ReqVentaFlujoService.Anular(codReqAlm, codUser, progreso))))
+		{
+			dialogo.ShowDialog(this);
+		}
+
 		cargarlista();
+		btnnuevo.Visible = true;
 	}
 
 	private void btnEditar_Click(object sender, EventArgs e)
