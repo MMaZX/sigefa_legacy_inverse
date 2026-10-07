@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Transactions;
 using System.Windows.Forms;
 using DevComponents.DotNetBar;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.ReqVenta;
 using SIGEFA.Entidades;
 
 namespace SIGEFA.Formularios;
@@ -227,6 +229,11 @@ public class FrmTPenPedido : Office2007Form
 
 	private void btnEliminar_Click(object sender, EventArgs e)
 	{
+		if (ConfigurationManager.AppSettings["VentaCierreRuta"] == "nueva")
+		{
+			anularRequerimientoRutaNueva();
+			return;
+		}
 		clsAdmTransferencia admTransferencia = new clsAdmTransferencia();
 		if (dgvTransferenciasPendientes.Rows.Count > 0)
 		{
@@ -340,6 +347,34 @@ public class FrmTPenPedido : Office2007Form
 		{
 			MessageBox.Show("No se puede anular el Requerimiento", "Requerimiento Transferencia", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 		}
+	}
+
+	// Ruta nueva (VentaCierreRuta=nueva): la anulación completa corre en una sola transacción dentro de
+	// ReqVentaFlujoService, que lee el estado real de la BD y registra los fallos. El formulario solo
+	// confirma, informa el resultado y recarga la lista.
+	private void anularRequerimientoRutaNueva()
+	{
+		if (dgvTransferenciasPendientes.Rows.Count == 0 || dgvTransferenciasPendientes.CurrentRow == null)
+		{
+			MessageBox.Show("No se puede anular el Requerimiento", "Requerimiento Transferencia", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			return;
+		}
+		int codReqAlm = Convert.ToInt32(dgvTransferenciasPendientes.CurrentRow.Cells[codigo.Name].Value);
+		DialogResult confirmacion = MessageBox.Show("Esta seguro que desea anular el Requerimiento para Venta seleccionada", "Requerimiento para Venta", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+		if (confirmacion == DialogResult.No)
+		{
+			return;
+		}
+		ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(codReqAlm, frmLogin.iCodUser);
+		if (!resultado.Ok)
+		{
+			MessageBox.Show(resultado.Mensaje, "Requerimiento No Anulado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			cargarlista();
+			return;
+		}
+		MessageBox.Show("Se Anulo Correctamente", "", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+		btnnuevo.Visible = true;
+		cargarlista();
 	}
 
 	private void btnEditar_Click(object sender, EventArgs e)
