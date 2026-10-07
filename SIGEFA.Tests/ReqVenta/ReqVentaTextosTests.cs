@@ -87,7 +87,6 @@ public class ReqVentaTextosTests
             "CALL",
             "Guarda",
             "req_almacen",
-            "transferencia",
             "productoalmacen",
             "detallenota",
         };
@@ -104,6 +103,34 @@ public class ReqVentaTextosTests
                     "El texto '" + paso.Texto + "' contiene jerga técnica: " + termino + ".");
             }
         }
+    }
+
+    // Los textos usan el vocabulario de las pantallas (transferencia, extorno, nota de salida y de ingreso)
+    // y no rodeos vagos: el usuario ve esas mismas palabras en el resto del programa.
+    [Fact]
+    public void Textos_UsanElVocabularioDeLasPantallas()
+    {
+        string pendiente = TextoDe(ReqVentaTextos.PasosAnulacionPendiente(), ReqVentaTextos.RechazarTransferencias);
+        Assert.Contains("transferencias", pendiente, StringComparison.OrdinalIgnoreCase);
+
+        IReadOnlyList<PasoOperacion> extorno = ReqVentaTextos.PasosAnulacionConExtorno();
+        Assert.Contains("extorno", TextoDe(extorno, ReqVentaTextos.CrearExtorno), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nota de salida", TextoDe(extorno, ReqVentaTextos.RegistrarSalida), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("nota de ingreso", TextoDe(extorno, ReqVentaTextos.RegistrarIngreso), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("extorno", TextoDe(extorno, ReqVentaTextos.AprobarExtorno), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TextoDe(IReadOnlyList<PasoOperacion> pasos, string clave)
+    {
+        foreach (PasoOperacion paso in pasos)
+        {
+            if (paso.Clave == clave)
+            {
+                return paso.Texto;
+            }
+        }
+
+        return string.Empty;
     }
 
     // Las claves no se repiten dentro de cada lista: el diálogo busca por clave.
