@@ -24,9 +24,10 @@ public static class ReqVentaFlujoService
     }
 
     // Anula el requerimiento contra la base configurada. Confirma solo si todo salió bien.
-    public static ResultadoAnulacion Anular(int codReq, int codUser)
+    // codUser se usa para escribir en la BD; nombreUsuario solo para la bitácora de fallos.
+    public static ResultadoAnulacion Anular(int codReq, int codUser, string nombreUsuario)
     {
-        return Anular(codReq, codUser, Db.Transaccion<ResultadoAnulacion>, ReqVentaRegistroErrores.Registrar);
+        return Anular(codReq, codUser, nombreUsuario, Db.Transaccion<ResultadoAnulacion>, ReqVentaRegistroErrores.Registrar);
     }
 
     // Variante con el ejecutor de transacción y el registrador inyectados (pruebas).
@@ -34,6 +35,7 @@ public static class ReqVentaFlujoService
     public static ResultadoAnulacion Anular(
         int codReq,
         int codUser,
+        string nombreUsuario,
         Func<Func<IConsultor, ResultadoAnulacion>, ResultadoAnulacion> transaccion,
         Action<string> registrar)
     {
@@ -49,13 +51,13 @@ public static class ReqVentaFlujoService
 
         if (codUser <= 0)
         {
-            return Fallo("El usuario que anula debe ser mayor que cero.");
+            return Fallo("Debe indicar el usuario que solicita la anulación.");
         }
 
         ResultadoAnulacion resultado = EjecutarRevirtiendoSiFalla(codReq, codUser, transaccion);
         if (!resultado.Ok)
         {
-            Registrar(registrar, codReq, codUser, resultado.Mensaje);
+            Registrar(registrar, codReq, DescribirUsuario(codUser, nombreUsuario), resultado.Mensaje);
         }
 
         return resultado;
@@ -117,7 +119,18 @@ public static class ReqVentaFlujoService
         }
     }
 
-    private static void Registrar(Action<string> registrar, int codReq, int codUser, string mensaje)
+    // Nombre para la bitácora; si no llega, el código evita dejar el usuario en blanco.
+    private static string DescribirUsuario(int codUser, string nombreUsuario)
+    {
+        if (string.IsNullOrWhiteSpace(nombreUsuario))
+        {
+            return "código " + codUser;
+        }
+
+        return nombreUsuario.Trim();
+    }
+
+    private static void Registrar(Action<string> registrar, int codReq, string usuario, string mensaje)
     {
         if (registrar == null)
         {
@@ -126,7 +139,7 @@ public static class ReqVentaFlujoService
 
         try
         {
-            registrar("Anulación de requerimiento | Req: " + codReq + " | Usuario: " + codUser + " | " + mensaje);
+            registrar("Anulación de requerimiento | Req: " + codReq + " | Usuario: " + usuario + " | " + mensaje);
         }
         catch
         {

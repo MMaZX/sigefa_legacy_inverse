@@ -365,7 +365,8 @@ public class FrmTPenPedido : Office2007Form
 		{
 			return;
 		}
-		ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(codReqAlm, frmLogin.iCodUser);
+		string nombreUsuario = (frmLogin.sNombreUser + " " + frmLogin.sApellidoUSer).Trim();
+		ResultadoAnulacion resultado = ReqVentaFlujoService.Anular(codReqAlm, frmLogin.iCodUser, nombreUsuario);
 		if (!resultado.Ok)
 		{
 			MessageBox.Show(resultado.Mensaje, "Requerimiento No Anulado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
