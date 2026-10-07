@@ -132,7 +132,17 @@ Informe completo: [`docs/anulacion-requerimiento-procedures.md`](../../docs/anul
   - Historia: sobre `129af53` la integración pasaba solo porque la prueba agregaba la opción a la cadena; la normalización no cubría `Db.Transaccion`. Corregido en `f6b0ba7` (`Db.ObtenerCadena` normaliza para todas las rutas).
   - Límites: la integración solo cubre el camino feliz del 8416 con rollback; el fallo real a mitad del flujo se cubre con consultor falso. Un fallo único del 8416 en la primera corrida del día (sobre `129af53`) no se reprodujo en 5 corridas posteriores y quedó sin causa conocida. No se probó la UI ni el flujo de negocio completo.
 
+  - Corrección posterior (2026-10-07, claude, `d95a7e1`): prueba de integración con stock en cero del producto 5004 en el almacén 4 **dentro** de la transacción; deniega con "Stock insuficiente" y el rollback restaura el stock (1015/1015).
+  - Corrección al límite anterior: ya existía una prueba real de fallo tras escribir (`FalloTrasEscribir_...`, agy, `6fbf2c1`); el "consultor falso" solo se usa en los casos unitarios.
+
 ### T2e — `ReqVentaFlujoService.Anular(codReq, codUser)` con guard clauses y `Resultado`.
+- [x] Ruta: **inline por pedido explícito del usuario** ("si correcto empieza", 2026-10-07), pese al disparador de escritor (2+ archivos no triviales). Un solo escritor; sin SDD.
+- [x] RED `d89cbd9` (observado en la VM: `CS0103` por `ReqVentaFlujoService` inexistente), feat `d0247ec`, corrección de pruebas `f9ac25f`.
+- Diseño: `Anular(codReq, codUser)` usa `Db.Transaccion<ResultadoAnulacion>`; una sobrecarga recibe el ejecutor de la transacción y el registrador para probar sin BD. **Hallazgo de diseño:** `Db.Transaccion` confirma toda acción que termina sin lanzar y T2c/T2d devuelven el fallo como resultado; por eso el servicio lanza una excepción interna cuando `Ok` es falso, para forzar el rollback, y la captura afuera. `AnularEn(consultor, ...)` decide el camino con `ReqVentaReglas.Evaluar` (FOR UPDATE) y delega: 7 -> pendiente, 13 -> extorno, resto -> rechazo con el motivo de la regla. Los fallos y excepciones inesperadas se registran en `%LOCALAPPDATA%\SIGEFA\req_venta_errores.log` (`ReqVentaRegistroErrores`, credenciales enmascaradas, propia y sin depender de `VentaCierre`); el mensaje al usuario incluye la cadena de causas.
+- Archivos: `SIGEFA.Administradores/ReqVenta/ReqVentaFlujoService.cs`, `ReqVentaRegistroErrores.cs`; pruebas `SIGEFA.Tests/ReqVenta/ReqVentaFlujoServiceTests.cs` (unitarias con ejecutor falso con la misma semántica commit/rollback + 3 de integración con rollback: pendiente 5273, aprobado 8416 y 8416 con stock en cero).
+- **Deadlock entre pruebas (hallado y corregido):** con la clase nueva, 2 pruebas de "stock en cero" fallaban siempre con `Deadlock found when trying to get lock` (verificado en la VM): ponían el stock en cero antes de bloquear el requerimiento mientras otra prueba bloquea en el orden contrario, y xUnit corre clases distintas en paralelo. El código de producción respeta el orden requerimiento -> transferencia -> stock. Corregido con `[Collection("BdReqVentaFilasCompartidas")]` en las clases que tocan esas filas. Explica con probabilidad el fallo intermitente del 8416 visto antes (sin demostrarlo).
+- **Verificado en la VM (2026-10-07, `sigefa_build`, `f9ac25f`, autorización explícita del usuario):** build principal `Debug|x86` `exit=0`; con `SIGEFA_TEST_CONN` sin `AllowUserVariables` y la BD dev del host: **129 de 129 correctas en 3 corridas consecutivas**. BD dev intacta (5273 en 7, 8416 en 13, stock 1015/1015, sin extorno, sin tablas `zz_test_db_*`).
+- Límites: no se probó la UI; T2c con transferencia pendiente real sigue sin prueba de integración (en dev ningún pendiente tiene transferencias); no se verificó concurrencia real de dos usuarios anulando a la vez.
 
 ### T2f — Conectar `FrmTPenPedido.btnEliminar_Click` detrás de `VentaCierreRuta=nueva`; luego migrar uno a uno los otros 6 puntos de entrada.
 
@@ -173,4 +183,4 @@ Líneas = adiciones sin contar el documento ODD; estimadas por archivo. Cada PR 
 
 ## Siguiente paso
 
-opencode implementa T2a y T2b; claude las verifica en la VM (con autorización explícita) y reverifica el `HintPath`. Ids anulables 7 y 13 confirmados por el usuario. Estrategia de entrega confirmada: stacked-to-main.
+T2a-T2e escritas y verificadas en la VM. Siguiente: prueba de integración de T2c con transferencia pendiente creada dentro de la transacción (opencode) y T2f (conectar `FrmTPenPedido.btnEliminar_Click` detrás de `VentaCierreRuta=nueva`; el usuario prueba a mano un caso que funcione y uno que falle a propósito). Ids anulables 7 y 13 confirmados por el usuario. Estrategia de entrega confirmada: stacked-to-main.
