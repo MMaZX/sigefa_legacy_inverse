@@ -388,26 +388,11 @@ public class ReqVentaAnulacionConExtornoTests
             3);
     }
 
-    // La cadena de BD para integración lleva Allow User Variables sin tocar app.config.
+    // La cadena de BD para integración se toma TAL CUAL viene de SIGEFA_TEST_CONN.
+    // La normalización de AllowUserVariables la debe resolver la biblioteca de datos (Db / ConsultorMySql).
     private static string CadenaBd()
     {
-        string cadena = HechoConBdAttribute.CadenaConexion();
-        if (string.IsNullOrWhiteSpace(cadena))
-        {
-            return cadena;
-        }
-
-        if (cadena.IndexOf("Allow User Variables", StringComparison.OrdinalIgnoreCase) >= 0)
-        {
-            return cadena;
-        }
-
-        if (cadena.IndexOf("AllowUserVariables", StringComparison.OrdinalIgnoreCase) >= 0)
-        {
-            return cadena;
-        }
-
-        return cadena.TrimEnd(' ', ';') + ";Allow User Variables=true;";
+        return HechoConBdAttribute.CadenaConexion();
     }
 
     [Fact]
@@ -492,7 +477,7 @@ public class ReqVentaAnulacionConExtornoTests
 
         Assert.NotNull(resultado);
         Assert.False(resultado.Ok);
-        Assert.Contains("aprobar", resultado.Mensaje, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("aprobación", resultado.Mensaje, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -523,56 +508,64 @@ public class ReqVentaAnulacionConExtornoTests
     public void AnularConExtorno_Req8416_EnTransaccion_AlRevertirSigueEn13YSinExtorno()
     {
         string cadena = CadenaBd();
+        string cadenaPrevia = Db.CadenaConexion;
         Db.CadenaConexion = cadena;
 
-        var lectura = new ConsultorMySql(cadena);
-        Dictionary<string, object> antes = ReqVentaConsultas.ObtenerRequerimiento(lectura, 8416, false);
-        if (antes == null || antes.Valor<int>("tipo_req") != 2 || antes.Valor<int>("estado") != 13)
-        {
-            return;
-        }
-
-        List<Dictionary<string, object>> transAntes = ReqVentaConsultas.ObtenerTransferencias(lectura, 8416, false);
-        if (transAntes.Count != 1 || transAntes[0].Valor<bool>("tiene_extorno"))
-        {
-            return;
-        }
-
-        ResultadoAnulacion resultadoDentro = null;
         try
         {
-            Db.Transaccion(tx =>
+            var lectura = new ConsultorMySql(cadena);
+            Dictionary<string, object> antes = ReqVentaConsultas.ObtenerRequerimiento(lectura, 8416, false);
+            if (antes == null || antes.Valor<int>("tipo_req") != 2 || antes.Valor<int>("estado") != 13)
             {
-                resultadoDentro = ReqVentaAnulacionConExtorno.AnularConExtorno(tx, 8416, 18);
-                Assert.True(resultadoDentro.Ok, resultadoDentro.Mensaje);
+                return;
+            }
 
-                // Durante la transacción: el requerimiento debe figurar en 12
-                Dictionary<string, object> durante = ReqVentaConsultas.ObtenerRequerimiento(tx, 8416, false);
-                Assert.Equal(12, durante.Valor<int>("estado"));
+            List<Dictionary<string, object>> transAntes = ReqVentaConsultas.ObtenerTransferencias(lectura, 8416, false);
+            if (transAntes.Count != 1 || transAntes[0].Valor<bool>("tiene_extorno"))
+            {
+                return;
+            }
 
-                // Debe tener el extorno generado
-                List<Dictionary<string, object>> transDurante = ReqVentaConsultas.ObtenerTransferencias(tx, 8416, false);
-                Assert.Single(transDurante);
-                Assert.True(transDurante[0].Valor<bool>("tiene_extorno"));
+            ResultadoAnulacion resultadoDentro = null;
+            try
+            {
+                Db.Transaccion(tx =>
+                {
+                    resultadoDentro = ReqVentaAnulacionConExtorno.AnularConExtorno(tx, 8416, 18);
+                    Assert.True(resultadoDentro.Ok, resultadoDentro.Mensaje);
 
-                throw new ReversionEsperada();
-            });
+                    // Durante la transacción: el requerimiento debe figurar en 12
+                    Dictionary<string, object> durante = ReqVentaConsultas.ObtenerRequerimiento(tx, 8416, false);
+                    Assert.Equal(12, durante.Valor<int>("estado"));
+
+                    // Debe tener el extorno generado
+                    List<Dictionary<string, object>> transDurante = ReqVentaConsultas.ObtenerTransferencias(tx, 8416, false);
+                    Assert.Single(transDurante);
+                    Assert.True(transDurante[0].Valor<bool>("tiene_extorno"));
+
+                    throw new ReversionEsperada();
+                });
+            }
+            catch (ReversionEsperada)
+            {
+            }
+
+            Assert.NotNull(resultadoDentro);
+            Assert.True(resultadoDentro.Ok, resultadoDentro.Mensaje);
+
+            // Fuera de la transacción: rollback total confirmado
+            Dictionary<string, object> despues = ReqVentaConsultas.ObtenerRequerimiento(new ConsultorMySql(cadena), 8416, false);
+            Assert.NotNull(despues);
+            Assert.Equal(13, despues.Valor<int>("estado"));
+
+            List<Dictionary<string, object>> transDespues = ReqVentaConsultas.ObtenerTransferencias(new ConsultorMySql(cadena), 8416, false);
+            Assert.Single(transDespues);
+            Assert.False(transDespues[0].Valor<bool>("tiene_extorno"));
         }
-        catch (ReversionEsperada)
+        finally
         {
+            Db.CadenaConexion = cadenaPrevia;
         }
-
-        Assert.NotNull(resultadoDentro);
-        Assert.True(resultadoDentro.Ok, resultadoDentro.Mensaje);
-
-        // Fuera de la transacción: rollback total confirmado
-        Dictionary<string, object> despues = ReqVentaConsultas.ObtenerRequerimiento(new ConsultorMySql(cadena), 8416, false);
-        Assert.NotNull(despues);
-        Assert.Equal(13, despues.Valor<int>("estado"));
-
-        List<Dictionary<string, object>> transDespues = ReqVentaConsultas.ObtenerTransferencias(new ConsultorMySql(cadena), 8416, false);
-        Assert.Single(transDespues);
-        Assert.False(transDespues[0].Valor<bool>("tiene_extorno"));
     }
 
     // Integración contra la BD dev: fallo REAL después de haber escrito (el marcado final no afecta filas).
@@ -581,61 +574,69 @@ public class ReqVentaAnulacionConExtornoTests
     public void AnularConExtorno_FalloTrasEscribir_RollbackTotalMantiene13SinExtornoNiNotas()
     {
         string cadena = CadenaBd();
+        string cadenaPrevia = Db.CadenaConexion;
         Db.CadenaConexion = cadena;
 
-        var lectura = new ConsultorMySql(cadena);
-        Dictionary<string, object> antes = ReqVentaConsultas.ObtenerRequerimiento(lectura, 8416, false);
-        if (antes == null || antes.Valor<int>("tipo_req") != 2 || antes.Valor<int>("estado") != 13)
-        {
-            return;
-        }
-
-        List<Dictionary<string, object>> transAntes = ReqVentaConsultas.ObtenerTransferencias(lectura, 8416, false);
-        if (transAntes.Count != 1 || transAntes[0].Valor<bool>("tiene_extorno"))
-        {
-            return;
-        }
-
-        int codOriginal = transAntes[0].Valor<int>("codTransDir");
-        Dictionary<string, object> maxAntes = lectura.Consultar("SELECT IFNULL(MAX(codTransDir), 0) AS maximo FROM transferencia").First();
-        long maximoAntes = Convert.ToInt64(maxAntes["maximo"]);
-
-        ResultadoAnulacion resultadoDentro = null;
         try
         {
-            Db.Transaccion(tx =>
+            var lectura = new ConsultorMySql(cadena);
+            Dictionary<string, object> antes = ReqVentaConsultas.ObtenerRequerimiento(lectura, 8416, false);
+            if (antes == null || antes.Valor<int>("tipo_req") != 2 || antes.Valor<int>("estado") != 13)
             {
-                IConsultor conFallo = new ConsultorQueFallaAlMarcar(tx);
-                resultadoDentro = ReqVentaAnulacionConExtorno.AnularConExtorno(conFallo, 8416, 18);
-                Assert.NotNull(resultadoDentro);
-                Assert.False(resultadoDentro.Ok);
-                Assert.False(string.IsNullOrWhiteSpace(resultadoDentro.Mensaje));
+                return;
+            }
 
-                throw new ReversionEsperada();
-            });
+            List<Dictionary<string, object>> transAntes = ReqVentaConsultas.ObtenerTransferencias(lectura, 8416, false);
+            if (transAntes.Count != 1 || transAntes[0].Valor<bool>("tiene_extorno"))
+            {
+                return;
+            }
+
+            int codOriginal = transAntes[0].Valor<int>("codTransDir");
+            Dictionary<string, object> maxAntes = lectura.Consultar("SELECT IFNULL(MAX(codTransDir), 0) AS maximo FROM transferencia").First();
+            long maximoAntes = Convert.ToInt64(maxAntes["maximo"]);
+
+            ResultadoAnulacion resultadoDentro = null;
+            try
+            {
+                Db.Transaccion(tx =>
+                {
+                    IConsultor conFallo = new ConsultorQueFallaAlMarcar(tx);
+                    resultadoDentro = ReqVentaAnulacionConExtorno.AnularConExtorno(conFallo, 8416, 18);
+                    Assert.NotNull(resultadoDentro);
+                    Assert.False(resultadoDentro.Ok);
+                    Assert.False(string.IsNullOrWhiteSpace(resultadoDentro.Mensaje));
+
+                    throw new ReversionEsperada();
+                });
+            }
+            catch (ReversionEsperada)
+            {
+            }
+
+            Assert.NotNull(resultadoDentro);
+            Assert.False(resultadoDentro.Ok);
+
+            Dictionary<string, object> despues = ReqVentaConsultas.ObtenerRequerimiento(new ConsultorMySql(cadena), 8416, false);
+            Assert.NotNull(despues);
+            Assert.Equal(13, despues.Valor<int>("estado"));
+
+            List<Dictionary<string, object>> transDespues = ReqVentaConsultas.ObtenerTransferencias(new ConsultorMySql(cadena), 8416, false);
+            Assert.Single(transDespues);
+            Assert.False(transDespues[0].Valor<bool>("tiene_extorno"));
+
+            var verificacion = new ConsultorMySql(cadena);
+            List<Dictionary<string, object>> extornos = verificacion.Consultar(
+                "SELECT codTransDir FROM transferencia WHERE codDocExtornacion = @id",
+                new { id = codOriginal }).Get();
+            Assert.Empty(extornos);
+
+            Dictionary<string, object> maxDespues = verificacion.Consultar("SELECT IFNULL(MAX(codTransDir), 0) AS maximo FROM transferencia").First();
+            Assert.Equal(maximoAntes, Convert.ToInt64(maxDespues["maximo"]));
         }
-        catch (ReversionEsperada)
+        finally
         {
+            Db.CadenaConexion = cadenaPrevia;
         }
-
-        Assert.NotNull(resultadoDentro);
-        Assert.False(resultadoDentro.Ok);
-
-        Dictionary<string, object> despues = ReqVentaConsultas.ObtenerRequerimiento(new ConsultorMySql(cadena), 8416, false);
-        Assert.NotNull(despues);
-        Assert.Equal(13, despues.Valor<int>("estado"));
-
-        List<Dictionary<string, object>> transDespues = ReqVentaConsultas.ObtenerTransferencias(new ConsultorMySql(cadena), 8416, false);
-        Assert.Single(transDespues);
-        Assert.False(transDespues[0].Valor<bool>("tiene_extorno"));
-
-        var verificacion = new ConsultorMySql(cadena);
-        List<Dictionary<string, object>> extornos = verificacion.Consultar(
-            "SELECT codTransDir FROM transferencia WHERE codDocExtornacion = @id",
-            new { id = codOriginal }).Get();
-        Assert.Empty(extornos);
-
-        Dictionary<string, object> maxDespues = verificacion.Consultar("SELECT IFNULL(MAX(codTransDir), 0) AS maximo FROM transferencia").First();
-        Assert.Equal(maximoAntes, Convert.ToInt64(maxDespues["maximo"]));
     }
 }
