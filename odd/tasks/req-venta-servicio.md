@@ -128,6 +128,9 @@ Informe completo: [`docs/anulacion-requerimiento-procedures.md`](../../docs/anul
   - Corregido el assert de `AnularConExtorno_AprobacionSinEfecto_DenegaParaRevertir`: busca `"aprobación"` alineado con el mensaje real devuelto por `AprobarConVerificacion`.
   - Determinismo y aislamiento: las pruebas de integración limpian y restauran `Db.CadenaConexion` en bloque `finally`, evitando efectos colaterales entre ejecuciones. Req 8416 verificado en BD dev (estado 13, transf 16098, stock disponible en almacén solicitante 4 = 1015, despacho 3 = 20).
   - Archivos: `SIGEFA.Conexion/Db/Db.cs`, `SIGEFA.Conexion/Db/ConsultorMySql.cs`, `SIGEFA.Tests/ReqVenta/ReqVentaAnulacionConExtornoTests.cs`.
+- **Verificado en la VM (2026-10-07, `sigefa_build`, `0e0d513`, autorización explícita del usuario):** build principal `Debug|x86` `exit=0`. Con `SIGEFA_TEST_CONN` **sin** `AllowUserVariables` (comprobado) y contra la BD dev del host (nunca producción): **104 de 104 correctas en 3 corridas consecutivas**, incluida la integración del req 8416 (que usa `Db.Transaccion`, la ruta real). La BD dev quedó intacta (8416 en 13, sin extorno, sin tablas `zz_test_db_*`).
+  - Historia: sobre `129af53` la integración pasaba solo porque la prueba agregaba la opción a la cadena; la normalización no cubría `Db.Transaccion`. Corregido en `f6b0ba7` (`Db.ObtenerCadena` normaliza para todas las rutas).
+  - Límites: la integración solo cubre el camino feliz del 8416 con rollback; el fallo real a mitad del flujo se cubre con consultor falso. Un fallo único del 8416 en la primera corrida del día (sobre `129af53`) no se reprodujo en 5 corridas posteriores y quedó sin causa conocida. No se probó la UI ni el flujo de negocio completo.
 
 ### T2e — `ReqVentaFlujoService.Anular(codReq, codUser)` con guard clauses y `Resultado`.
 
