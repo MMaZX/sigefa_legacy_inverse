@@ -1,6 +1,12 @@
 # ui-progreso-requerimiento
 
-Estado: T1, T2 y T4 escritas sin verificar en compilador (T1: `408bf10`/`17471c2`; T2: `9e1d3e9`/`a6d3574`; T4: `5e0e805`). T3 (agy) escrita con corrección (`4427e54`/`2c8f71f`). Pendiente de aprobación del usuario y de las decisiones abiertas.
+Estado (2026-10-07): T1, T2, T3, T4 y T6 entregadas, auditadas por claude y **verificadas en la VM** (`d17bed9`). T1: `408bf10`/`17471c2`; T2: `9e1d3e9`/`a6d3574`; T3: `4427e54`/`2c8f71f`; T4: `5e0e805`; T6: `84b4984`/`715712b` y corrección `ead69ed`/`72cfc63`. Pendientes: prueba manual visual del usuario, T5a/T5b (Aprobar, fase 1) y T1b (revisión de textos con la skill `humanizer`).
+
+### Verificación y auditoría (claude, 2026-10-07)
+
+- **Auditoría:** T1 aprobada. T3 tuvo una ronda de corrección (asignaba `DialogResult`, que cierra un diálogo modal al instante; se cerraba a los 0,5 s en éxito con pasos). T2 aprobada. T4 aprobada. **T6 rechazada en la primera entrega:** `ReqVentaGuardado` llamaba a `GuardaDetalleRequerimientoAlmacen` con los argumentos en otro orden que su firma real (el legacy pasa por nombre y no le afecta); demostrado en la BD dev con transacción y rollback: el detalle se guardaba con `id_req_almacen` NULL y los campos corridos, y el servicio habría dicho Ok. Las 10 pruebas de esa entrega usaban simuladores y no podían verlo. Regla nueva: toda CALL posicional nueva se verifica contra `mysql.proc` y lleva una prueba de integración que lea lo guardado.
+- **VM (`sigefa_build`, autorización explícita del usuario para esta ronda, `SIGEFA.exe` cerrado):** build `Debug|x86` de `SIGEFA.csproj` `exit=0` (compila los formularios nuevos y modificados); con `SIGEFA_TEST_CONN` sin `AllowUserVariables` y la BD dev del host: **171 de 171 pruebas en 2 corridas**. BD dev intacta: 5273 en 7, 8416 en 13, stock 1015/1015, sin extornos, sin requerimientos `ZZT%`, sin detalles huérfanos, sin tablas `zz_test_*`.
+- **No cubierto:** nadie ha visto los diálogos en pantalla; el aspecto, el texto y el comportamiento al fallar solo se confirman con la prueba manual. En un fallo de anulación `MarcarAnulado` también se marca en rojo y los pasos posteriores quedan en "Pendiente" (decisión de diseño de T2 a confirmar con la prueba manual). El guardado nuevo ya no muestra "Requerimiento de Almacen Guardado Con Exito": el formulario se cierra y la lista se actualiza.
 Rama de partida: `feat/req-venta-servicio` (depende de `ReqVentaFlujoService`). Mirror Engram: `odd/ui-progreso-requerimiento/tasks`.
 
 ## Objetivo
