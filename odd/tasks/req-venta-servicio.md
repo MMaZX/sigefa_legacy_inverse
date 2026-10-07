@@ -1,6 +1,6 @@
 # req-venta-servicio
 
-Estado: T1 verificada en la VM (2026-10-06); HintPath corregido pendiente de reverificar. T2a y T2b escritas sin verificar en compilador (2026-10-06, commits cca2e76/da1cf8b y 6f7fa04/3f2f6cc); T2c en adelante pendientes.
+Estado: T1 verificada en la VM (2026-10-06); HintPath corregido pendiente de reverificar. T2a y T2b escritas sin verificar en compilador (2026-10-06, commits cca2e76/da1cf8b y 6f7fa04/3f2f6cc); T2c escrita sin verificar en compilador (2026-10-07, commits 6084b06/de55eab); T2d en adelante pendientes.
 Espejo Engram: tópico `odd/req-venta-servicio/tasks` (proyecto `sigefa_legacy_inverse`).
 Rama: `feat/req-venta-servicio` (desde `main`).
 
@@ -106,7 +106,7 @@ Informe completo: [`docs/anulacion-requerimiento-procedures.md`](../../docs/anul
 - Limitación: dev es MySQL 5.7.44 con binlog desactivado; la versión y configuración de producción no se verificaron.
 
 ### T2c — Anular pendiente (estado 7)
-- [ ] Rechazar pendientes, devolver stock y marcar anulado en una transacción. Pendiente de T2a/T2b.
+- [x] Escrito, no verificado en compilador (2026-10-07, opencode). Test RED `6084b06`, feat `de55eab`. Archivos: `SIGEFA.Administradores/ReqVenta/ReqVentaAnulacionPendiente.cs` (`AnularPendiente(IConsultor, codReq, codUser)` sobre la transacción del llamador: FOR UPDATE + `ReqVentaReglas.Evaluar`, rechaza pendientes vía `RechazarTransferencia`, devuelve reservas con factor validado, `UPDATE req_almacen estado=12, fecha_anulo, cod_user_anulo`, fallos como resultado para rollback) + `ResultadoAnulacion.cs` (`Ok`/`Mensaje`); pruebas `SIGEFA.Tests/ReqVenta/ReqVentaAnulacionPendienteTests.cs` (unitarias con consultor falso + integración con transacción y ROLLBACK sobre req 5273, único pendiente estado 7 tipo 2 en dev). `SIGEFA.Tests.csproj` sin cambios (ya enlazaba la carpeta).
 
 ### T2d — Anular aprobado con extorno (estado 13)
 - [ ] Antes de escribir: leer firmas y salidas de `GuardaTransferencia`, `GuardaDetalleTransferencia`, `GuardaNotaSalida`, `GuardaDetalleSalida`, `GuardaNotaIngreso`, `GuardaDetalleIngreso`, `AprobarTransferencia` y los triggers de stock; llamarlos desde la MISMA conexión. Rollback total ante cualquier fallo (decisión pendiente del usuario; recomendado).
