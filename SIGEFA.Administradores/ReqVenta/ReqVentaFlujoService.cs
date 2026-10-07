@@ -24,18 +24,33 @@ public static class ReqVentaFlujoService
     }
 
     // Anula el requerimiento contra la base configurada. Confirma solo si todo salió bien.
-    // codUser se usa para escribir en la BD; nombreUsuario solo para la bitácora de fallos.
-    public static ResultadoAnulacion Anular(int codReq, int codUser, string nombreUsuario)
+    public static ResultadoAnulacion Anular(int codReq, int codUser)
     {
-        return Anular(codReq, codUser, nombreUsuario, Db.Transaccion<ResultadoAnulacion>, ReqVentaRegistroErrores.Registrar);
+        return Anular(codReq, codUser, BuscarUsuario, Db.Transaccion<ResultadoAnulacion>, ReqVentaRegistroErrores.Registrar);
     }
 
-    // Variante con el ejecutor de transacción y el registrador inyectados (pruebas).
-    // El ejecutor debe confirmar si la acción termina y revertir si lanza, igual que Db.Transaccion.
+    // Login del usuario (columna usuario.usuario) por su código real, usuario.codUsuario. No confundir con la columna
+    // usuario.codUser, que es otro dato y devolvería a otra persona. Devuelve null si no existe.
+    internal static string BuscarUsuario(int codUser)
+    {
+        Dictionary<string, object> fila = Db.Consultar(
+            "SELECT usuario FROM usuario WHERE codUsuario = @id",
+            new { id = codUser }).First();
+        if (fila == null)
+        {
+            return null;
+        }
+
+        return fila.Valor<string>("usuario");
+    }
+
+    // Variante con el buscador de usuario, el ejecutor de transacción y el registrador inyectados (pruebas).
+    // El buscador solo se invoca al registrar un fallo. El ejecutor debe confirmar si la acción termina y revertir
+    // si lanza, igual que Db.Transaccion.
     public static ResultadoAnulacion Anular(
         int codReq,
         int codUser,
-        string nombreUsuario,
+        Func<int, string> buscarUsuario,
         Func<Func<IConsultor, ResultadoAnulacion>, ResultadoAnulacion> transaccion,
         Action<string> registrar)
     {
@@ -57,7 +72,7 @@ public static class ReqVentaFlujoService
         ResultadoAnulacion resultado = EjecutarRevirtiendoSiFalla(codReq, codUser, transaccion);
         if (!resultado.Ok)
         {
-            Registrar(registrar, codReq, DescribirUsuario(codUser, nombreUsuario), resultado.Mensaje);
+            Registrar(registrar, codReq, DescribirUsuario(codUser, buscarUsuario), resultado.Mensaje);
         }
 
         return resultado;
@@ -119,15 +134,29 @@ public static class ReqVentaFlujoService
         }
     }
 
-    // Nombre para la bitácora; si no llega, el código evita dejar el usuario en blanco.
-    private static string DescribirUsuario(int codUser, string nombreUsuario)
+    // Usuario para la bitácora. Si no hay buscador, la búsqueda falla (por ejemplo, la base no responde) o no
+    // devuelve nada, se registra el código: la bitácora nunca se pierde ni queda con el usuario en blanco.
+    private static string DescribirUsuario(int codUser, Func<int, string> buscarUsuario)
     {
-        if (string.IsNullOrWhiteSpace(nombreUsuario))
+        string usuario = null;
+        if (buscarUsuario != null)
+        {
+            try
+            {
+                usuario = buscarUsuario(codUser);
+            }
+            catch
+            {
+                // Un fallo al buscar el nombre no debe impedir registrar el fallo de la anulación.
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(usuario))
         {
             return "código " + codUser;
         }
 
-        return nombreUsuario.Trim();
+        return usuario.Trim();
     }
 
     private static void Registrar(Action<string> registrar, int codReq, string usuario, string mensaje)
