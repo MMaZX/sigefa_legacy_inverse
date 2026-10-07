@@ -1,6 +1,6 @@
 # ui-progreso-requerimiento
 
-Estado: PLAN (2026-10-07). Sin código escrito. Pendiente de aprobación del usuario y de las decisiones abiertas.
+Estado: T1 escrita sin verificar en compilador (2026-10-07, opencode; test RED `408bf10`, feat `17471c2`). T3 (agy) en curso en paralelo. Pendiente de aprobación del usuario y de las decisiones abiertas.
 Rama de partida: `feat/req-venta-servicio` (depende de `ReqVentaFlujoService`). Mirror Engram: `odd/ui-progreso-requerimiento/tasks`.
 
 ## Objetivo
@@ -108,6 +108,7 @@ Orden: T0, luego T1; después T2 y T3 en paralelo (archivos distintos); T4; T5a 
 ### Criterios de aceptación por tarea
 
 - **T1:** `PasoOperacion` (texto, estado, detalle opcional); catálogo con los textos de anular pendiente (rechazar transferencias, devolver reservas, marcar anulado) y anular con extorno (comprobar requerimiento, revisar stock, crear la transferencia que revierte, registrar salida, registrar ingreso, aprobar el extorno, marcar anulado). Pruebas: ningún texto vacío ni con nombres de procedimientos; orden estable.
+  - Escrito, no verificado en compilador (2026-10-07, opencode). Test RED `408bf10` (solo `SIGEFA.Tests/ReqVenta/ReqVentaTextosTests.cs`, 14 pruebas), feat `17471c2` (`EstadoPaso.cs`, `PasoOperacion.cs`, `ResultadoOperacion.cs` con `De(ResultadoAnulacion)`, `ReqVentaTextos.cs`; claves públicas compartidas donde corresponde; textos con "revertir/reversión" y "envíos/movimiento" para evitar jerga). `SIGEFA.Tests.csproj` sin cambios (glob ya enlaza la carpeta). `Formularios` intacto (agy en paralelo).
 - **T2:** `Anular(codReq, codUser, IProgress<PasoOperacion> progreso)` con sobrecarga de dos argumentos que sigue funcionando; `progreso` nulo no rompe nada; los pasos se emiten en orden y el fallido se marca con error; el rollback y la bitácora no cambian. Pruebas unitarias con un `IProgress` falso y la integración existente sigue en verde.
 - **T3:** modal, sin cancelar, no se cierra con X, Alt+F4 ni Escape mientras corre; ejecuta el trabajo con `Task.Run` y recibe el progreso con `Progress<T>`; expone `fueExitoso` y el mensaje de error; al fallar muestra el detalle y permite copiarlo; con un solo paso usa barra indeterminada. Sin lógica de negocio.
 - **T4:** el handler `anularRequerimientoRutaNueva` conserva la confirmación existente y reemplaza la llamada directa por el diálogo; recarga la lista al terminar; `git diff -w` sobre el legacy sin borrados.
