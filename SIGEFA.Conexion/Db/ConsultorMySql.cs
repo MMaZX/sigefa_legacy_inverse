@@ -64,7 +64,7 @@ public sealed class ConsultorMySql : IConsultor
 
     // Punto 2 T2d: sin ampliar IConsultor (fuera de archivos permitidos) no caben parámetros OUT;
     // se activa Allow User Variables aquí, sin tocar app.config, para los CALL con @newid.
-    private static string NormalizarCadena(string cadena)
+    internal static string NormalizarCadena(string cadena)
     {
         try
         {

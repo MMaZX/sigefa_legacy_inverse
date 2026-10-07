@@ -90,17 +90,22 @@ public static class Db
 
     private static string ObtenerCadena()
     {
+        string cadena;
         if (!string.IsNullOrWhiteSpace(CadenaConexion))
         {
-            return CadenaConexion;
+            cadena = CadenaConexion;
+        }
+        else
+        {
+            var configurada = ConfigurationManager.ConnectionStrings[NombreCadenaPorDefecto];
+            if (configurada == null)
+            {
+                throw new InvalidOperationException(
+                    "No hay cadena de conexion: asigne Db.CadenaConexion o defina '" + NombreCadenaPorDefecto + "' en app.config.");
+            }
+            cadena = configurada.ConnectionString;
         }
 
-        var configurada = ConfigurationManager.ConnectionStrings[NombreCadenaPorDefecto];
-        if (configurada == null)
-        {
-            throw new InvalidOperationException(
-                "No hay cadena de conexion: asigne Db.CadenaConexion o defina '" + NombreCadenaPorDefecto + "' en app.config.");
-        }
-        return configurada.ConnectionString;
+        return ConsultorMySql.NormalizarCadena(cadena);
     }
 }
