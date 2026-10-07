@@ -639,4 +639,65 @@ public class ReqVentaAnulacionConExtornoTests
             Db.CadenaConexion = cadenaPrevia;
         }
     }
+
+    // Integración contra la BD dev: se pone en cero el stock del producto 5004 en el almacén solicitante (4)
+    // DENTRO de la transacción. La anulación debe denegar con "Stock insuficiente" sin escribir nada, y tras el
+    // rollback el stock original (incluido el cero forzado) debe volver a estar como estaba.
+    [HechoConBd]
+    public void AnularConExtorno_Req8416_ConStockEnCero_DenegaYElRollbackRestauraElStock()
+    {
+        string cadena = CadenaBd();
+        string cadenaPrevia = Db.CadenaConexion;
+        Db.CadenaConexion = cadena;
+
+        try
+        {
+            var lectura = new ConsultorMySql(cadena);
+            Dictionary<string, object> antes = ReqVentaConsultas.ObtenerRequerimiento(lectura, 8416, false);
+            if (antes == null || antes.Valor<int>("tipo_req") != 2 || antes.Valor<int>("estado") != 13)
+            {
+                return;
+            }
+
+            const string consultaStock = "SELECT stockactual, stockdisponible FROM productoalmacen WHERE codProducto = 5004 AND codAlmacen = 4";
+            Dictionary<string, object> stockAntes = lectura.Consultar(consultaStock).First();
+            if (stockAntes == null)
+            {
+                return;
+            }
+
+            decimal actualAntes = stockAntes.Valor<decimal>("stockactual");
+            decimal disponibleAntes = stockAntes.Valor<decimal>("stockdisponible");
+            long maximoAntes = Convert.ToInt64(lectura.Consultar("SELECT IFNULL(MAX(codTransDir), 0) AS maximo FROM transferencia").First()["maximo"]);
+
+            ResultadoAnulacion resultadoDentro = null;
+            try
+            {
+                Db.Transaccion(tx =>
+                {
+                    tx.Ejecutar("UPDATE productoalmacen SET stockactual = 0, stockdisponible = 0 WHERE codProducto = 5004 AND codAlmacen = 4");
+                    resultadoDentro = ReqVentaAnulacionConExtorno.AnularConExtorno(tx, 8416, 18);
+                    throw new ReversionEsperada();
+                });
+            }
+            catch (ReversionEsperada)
+            {
+            }
+
+            Assert.NotNull(resultadoDentro);
+            Assert.False(resultadoDentro.Ok);
+            Assert.Contains("Stock insuficiente", resultadoDentro.Mensaje, StringComparison.OrdinalIgnoreCase);
+
+            var verificacion = new ConsultorMySql(cadena);
+            Dictionary<string, object> stockDespues = verificacion.Consultar(consultaStock).First();
+            Assert.Equal(actualAntes, stockDespues.Valor<decimal>("stockactual"));
+            Assert.Equal(disponibleAntes, stockDespues.Valor<decimal>("stockdisponible"));
+            Assert.Equal(13, ReqVentaConsultas.ObtenerRequerimiento(verificacion, 8416, false).Valor<int>("estado"));
+            Assert.Equal(maximoAntes, Convert.ToInt64(verificacion.Consultar("SELECT IFNULL(MAX(codTransDir), 0) AS maximo FROM transferencia").First()["maximo"]));
+        }
+        finally
+        {
+            Db.CadenaConexion = cadenaPrevia;
+        }
+    }
 }
