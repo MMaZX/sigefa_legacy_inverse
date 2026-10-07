@@ -150,7 +150,7 @@ Informe completo: [`docs/anulacion-requerimiento-procedures.md`](../../docs/anul
   - El método nuevo: guard clause si no hay fila, confirmación con el mismo texto del legacy, `ReqVentaFlujoService.Anular(codReq, frmLogin.iCodUser)`; si falla muestra `resultado.Mensaje` como advertencia y recarga la lista; si sale bien informa y recarga. El estado se lee de la BD dentro del servicio, no de la grilla.
   - **Verificado en la VM (`7fc3569`):** build principal `Debug|x86` `exit=0` y 129 de 129 pruebas. El ejecutable queda en `sigefa_build\bin\x86\Debug\net461\SIGEFA.exe` con `VentaCierreRuta=nueva`.
   - **Pendiente (lo cierra el usuario a mano):** prueba visual de un caso que funcione y uno que falle a propósito. La app real SÍ confirma los cambios en la BD (sin rollback). Casos de dev: req 5273 (pendiente, sin transferencias ni reserva; restaurable con `UPDATE req_almacen SET estado=7, fecha_anulo=NULL, cod_user_anulo=NULL WHERE id_req_almacen=5273`) y fallo a propósito con el req 8416 poniendo el stock del producto 5004 en el almacén 4 en cero (valor original 1015/1015). No se verificó que la VM alcance `192.168.1.129:3307`.
-  - Quedan 6 puntos de entrada por migrar (`frmDespacho`, `frmEntrega`, notas de crédito y otros): una tarea aparte tras la prueba manual.
+  - **Alcance decidido por el usuario (2026-10-07):** este task se limita a la anulación desde la venta (`FrmTPenPedido`). Los otros 6 puntos de entrada (`frmDespacho`, `frmEntrega`, notas de crédito y otros) NO se migran aquí. Queda abierto como riesgo conocido, y como decisión de un task aparte, dónde proteger el estado 12 (guardas en procedures o en los puntos de llamada).
 
 #### Reparto por agente
 | Agente | Tareas | Rol |
