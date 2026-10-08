@@ -122,6 +122,161 @@ Orden: T0, luego T1; después T2 y T3 en paralelo (archivos distintos); T4; T5a 
 - **T4:** el handler `anularRequerimientoRutaNueva` conserva la confirmación existente y reemplaza la llamada directa por el diálogo; recarga la lista al terminar; `git diff -w` sobre el legacy sin borrados.
   - Escrito, no verificado en compilador (2026-10-07, agy). Commit `5e0e805` (`SIGEFA.Formularios/FrmTPenPedido.cs`). Guarda y confirmación intactas; lista inicial según `colCodEstado` (7 -> `PasosAnulacionPendiente()`, 13 -> `PasosAnulacionConExtorno()`, otro -> sin pasos); `frmLogin.iCodUser` leído antes de lanzar; diálogo modal `frmProgresoOperacion` con título "Anulando el requerimiento" y texto "Anulando el requerimiento..."; al volver siempre `cargarlista()` y `btnnuevo.Visible = true`; quitados los `MessageBox` de éxito/error de la ruta nueva ya que los gestiona el diálogo; línea en blanco del usuario preservada en `btnEliminar_Click`. Legacy intacto verificado con `git diff -w`.
 - **T5a:** informe con cada `MessageBox`/`MessageBoxEx` de la cadena (archivo y línea), cada lectura de control de la interfaz que ocurra dentro de la lógica, y el número real de procedimientos. Verificar si `apruebaTransferencia` de `frmReqAlmacen` también registra la nota de ingreso (el texto de la confirmación depende de eso).
+  - PASO 0 (informe de solo lectura, 2026-10-07, agy):
+    1. **Orden exacto de llamadas y transacciones en `TipoReq == 2`**:
+       - `admSerie.BuscaSeriexDocumento(14, req_alm.CodAlmacenDespacho)` (`frmReqAlmacen.cs:1660`) -> DAL MySQL, sin transacción.
+       - `obtenerDetalleParaTransferencia()` (`:1699`):
+         - Itera `rgvDetalleRequerimiento.Rows` (líneas con `colCtdadRequerimiento > 0`).
+         - Por cada línea: `AdmPro.UltimoPrecioCompraProducto(prod, und, 0)` (`:1566`) -> DAL MySQL, sin transacción.
+       - Guarda previa: `if (detalle.Count > 0)` (`:1700`).
+       - `admreqalm.aprobar(req_alm.Codigo, frmLogin.iCodUser)` (`:1702`) -> ejecuta SP `AprobarRequerimientoAlmacen` (`MysqlRequerimientoAlmacen.cs:316`). **Sin transacción**.
+       - `admreqalm.asignarAutorizador(req_alm.Codigo, Convert.ToInt32(cmbusuariodesp.SelectedValue))` (`:1703`) -> SP `SetAutorizadorEnRequerimientoAlmacen` (`MysqlRequerimientoAlmacen.cs:655`). **Sin transacción**.
+       - `req_alm = admreqalm.CargaRequerimiento(codRequerimientoAlmacen)` (`:1704`) -> SP `CargaRequerimientoAlmacen` (`MysqlRequerimientoAlmacen.cs:467`). **Sin transacción**.
+       - `convertirRGVaListado()` (`:1707`) -> lee `rgvDetalleRequerimiento.Rows`.
+       - `admreqalm.update(req_alm, req_alm.ListadoDetalle, detalleOld)` (`:1708`):
+         - Envuelto en `using TransactionScope Scope` (`clsAdmRequerimientoAlmacen.cs:90-119`).
+         - Llama SP `ActualizaRequerimientoAlmacen` (`MysqlRequerimientoAlmacen.cs:174`).
+         - Llama SP `EliminaDetalleRequerimientoAlmacen` (`MysqlRequerimientoAlmacen.cs:123`).
+         - Por cada item (N_total): SP `GuardaDetalleRequerimientoAlmacen` (`MysqlRequerimientoAlmacen.cs:881`).
+       - Por cada item en `req_alm.ListadoDetalle` (N_total):
+         - `admreqalm.separarStock(req_alm.CodAlmacenDespacho, item2.CodProducto, item2.CodUnidad, item2.CantidadConfirmada, item2.Codigo)` (`:1711`) -> SP `SeparandoStockAlAprobarReqAlmacen` (`MysqlRequerimientoAlmacen.cs:397`). **Sin transacción**.
+       - `admTransferencia.insert(transfer)` (`:1713`) -> SP `GuardaTransferencia` (`MysqlTransferencia.cs:27`). **Sin transacción**.
+       - Si inserta transfer (`if (admTransferencia.insert(transfer))` en `:1713`):
+         - `admreqalm.registrarTransferencia(req_alm.Codigo, Convert.ToInt32(transfer.CodTransDir), frmLogin.iCodUser)` (`:1715`) -> SP `RegistrarTransferenciaRequerimientoAlmacen` (`MysqlRequerimientoAlmacen.cs:342`). **Sin transacción**.
+         - Por cada fila en `detalle` (N_transfer):
+           - `admTransferencia.insertdetalle(det)` (`:1719`) -> SP `GuardaDetalleTransferencia` (`MysqlTransferencia.cs:639`). **Sin transacción**.
+         - `apruebaTransferencia(transfer)` (`:1721` -> `:1300`):
+           - `AdmTran.MuestraTransaccion(15)` (`:1306`) y `admtd.BuscaTipoDocumento("TD")` (`:1307`). Sin tx.
+           - `using (TransactionScope Scope = new TransactionScope())` (`:1333-1364`):
+             - `admNS.insert(NS)` (`:1335`) -> SP `GuardaNotaSalida` (`MysqlNotaSalida.cs:29`).
+             - `RecorreDetalleNS()` (`:1337` -> `:1480`) y por cada detalleNS (N_transfer): `admNS.insertdetalle(det)` (`:1342`) -> SP `GuardaDetalleSalida` (`MysqlNotaSalida.cs:393`). Si falla alguno: `Transaction.Current.Rollback()`, `bandera = false`, `codproducto_error = det.CodProducto`. Si todos ok: `Scope.Complete()`.
+           - `if (bandera)` (`:1365`):
+             - `using (TransactionScope Scope2 = new TransactionScope())` (`:1387-1418`):
+               - `admNI.insert(NI)` (`:1389`) -> SP `GuardaNotaIngreso` (`MysqlNotaIngreso.cs:33`).
+               - `RecorreDetalleNI()` (`:1391` -> `:1440`) y por cada detalleNI (N_transfer): `admNI.insertdetalle(det2)` (`:1396`) -> SP `GuardaDetalleIngreso` (`MysqlNotaIngreso.cs:850`). Si falla alguno: `Transaction.Current.Rollback()`, `bandera = false`, `codproducto_error = det2.CodProducto`. Si todos ok: `Scope2.Complete()`.
+           - `if (bandera)` (`:1419`):
+             - `admTransferencia.Aprobar(Convert.ToInt32(transfer.CodTransDir))` (`:1421`) -> SP `AprobarTransferencia` (`MysqlTransferencia.cs:1063`). **Sin transacción**.
+         - `admreqalm.actualizaCantidadPendienteReqAlmacen(req_alm.Codigo)` (`:1722`) -> SP `ActualizaCantidadPendienteReqAlmacen` (`MysqlRequerimientoAlmacen.cs:330`). **Sin transacción**.
+         - `admreqalm.actualizaEstadoReqAlmacen(req_alm.Codigo, 13)` (`:1723`) -> SP `ActualizaEstadoReqAlmacen` (`MysqlRequerimientoAlmacen.cs:370`). **Sin transacción**.
+       - **Conclusión de transacciones**: Confirmado R3. NO hay transacción global. Existen 3 scopes aislados (`admreqalm.update`, nota de salida en `apruebaTransferencia`, y nota de ingreso en `apruebaTransferencia`). El resto de pasos (~8 SPs fijos + separación de stock + detalle de transferencias + aprobación de transfer) corren sueltos en autocommit de MySQL.
+    2. **Inventario exhaustivo de MessageBox/MessageBoxEx**:
+       - En `frmReqAlmacen.cs` (hilo UI / llamadas directas):
+         - `:1651`: `MessageBox.Show("Debe definir un usuario autorizador o despachador", "Advertencia", ...)` [Error/validación previa si `cmbusuariodesp.SelectedValue == null`].
+         - `:1657`: `MessageBox.Show(rpta, "Aviso", ...)` [Error/validación de `verificarCtdadRequerimiento()`].
+         - `:1663`: `MessageBox.Show("No existe serie creada para transferencia en el almacen despachador", "Error", ...)` [Error si serie doc 14 es null].
+         - `:1362`: `MessageBox.Show("Hubo un error al guardar la transferencia ", "Transferencia Directa", ...)` [Error en `apruebaTransferencia` si `admNS.insert(NS)` devuelve false].
+         - `:1416`: `MessageBox.Show("Hubo un error al guardar la transferencia ", "Transferencia Directa", ...)` [Error en `apruebaTransferencia` si `admNI.insert(NI)` devuelve false].
+         - `:1425`: `MessageBox.Show("Hubo un error al guardar la transferencia ", "Transferencia Directa", ...)` [Error en `apruebaTransferencia` si `bandera == false` tras el bloque NI].
+         - `:1430`: `MessageBox.Show("No hay stock suficiente del producto codigo: " + codproducto_error, "Transferencia Directa", ...)` [Error en `apruebaTransferencia` si `bandera == false` al salir del bloque NS].
+         - `:1727`: `MessageBox.Show("Requerimiento de Almacen Aprobado Con Exito", "Informacion", ...)` [Éxito final legacy].
+         - `:1757`: `MessageBox.Show(ex.Message, "", ...)` [Catch general de `btnAprobar_Click`].
+       - En `clsAdmRequerimientoAlmacen.cs` (catch bloques de DAL):
+         - `:128`/`:132`: `MessageBoxEx.Show(...)` en catch de `update`.
+         - `:172`: `MessageBoxEx.Show(...)` en catch de `aprobar`.
+         - `:198`: `MessageBoxEx.Show(...)` en catch de `CargaRequerimiento`.
+         - `:263`: `MessageBoxEx.Show(...)` en catch de `registrarTransferencia`.
+         - `:302`: `MessageBoxEx.Show(...)` en catch de `actualizaCantidadPendienteReqAlmacen`.
+         - `:315`: `MessageBoxEx.Show(...)` en catch de `actualizaEstadoReqAlmacen`.
+         - `:341`: `MessageBoxEx.Show(...)` en catch de `separarStock`.
+         - `:406`: `MessageBoxEx.Show(...)` en catch de `asignarAutorizador`.
+         - `:160`: `MessageBoxEx.Show(...)` en catch de `listadoTransferenciasGeneradas`.
+         - `:250`: `MessageBoxEx.Show(...)` en catch de `ListaDetalleRequerimiento`.
+       - En `clsAdmTransferencia.cs` (catch bloques de DAL):
+         - `:23`: `MessageBoxEx.Show(...)` en catch de `insert`.
+         - `:244`: `MessageBoxEx.Show(...)` en catch de `insertdetalle`.
+         - `:387`: `MessageBoxEx.Show(...)` en catch de `Aprobar`.
+       - En `clsAdmNotaSalida.cs`:
+         - `:25`/`:29`: `MessageBoxEx.Show(...)` en catch de `insert`.
+         - `:43`: `MessageBoxEx.Show(...)` en catch de `insertdetalle`.
+       - En `clsAdmNotaIngreso.cs`:
+         - `:25`/`:29`: `MessageBoxEx.Show(...)` en catch de `insert`.
+         - `:129`: `MessageBoxEx.Show(...)` en catch de `insertdetalle`.
+       - En `MysqlNotaIngreso.cs`:
+         - `:889`: `MessageBox.Show(ex.Message ?? "", "")` [Catch en DAL de `insertdetalle`].
+    3. **Lecturas y escrituras de controles UI en la cadena**:
+       - Lecturas previas/en cadena:
+         - `TipoReq` (campo int del form).
+         - `cmbusuariodesp.SelectedValue` (`:1648`, `:1703`) y `cmbusuariodesp.Text` (si se invocara getDatos).
+         - `rgvDetalleRequerimiento.Rows` (`:1874` en `verificarCtdadRequerimiento`, `:1551` en `obtenerDetalleParaTransferencia`, `:1120` en `convertirRGVaListado`): lee `colCtdadRequerimiento`, `colStockAlmacenDespacho`, `colCodDetalle`, `colCodProducto`, `colCodUnidad`, `colCantidad`, `colCtdadPendiente`.
+         - `txtComentarioDespacho.Text` (`:1705`).
+         - `CodPedido` (string del form, `:1690`).
+         - `dtpFecha.Value` (`:1476` en `añadedetalleNI`).
+         - `frmLogin.iCodUser`, `frmLogin.Configuracion.IGV`, `frmLogin.iCodAlmacen`.
+       - Escrituras a UI durante la ejecución de la lógica:
+         - `:1557`: `filaRGV.Cells["colCtdadPendiente"].Value = ...` (modifica celdas de la grilla en el hilo que corre `obtenerDetalleParaTransferencia`).
+         - `:1706`: `vieneDeAprobar = true;` (afecta `convertirRGVaListado`).
+       - Escrituras posteriores de recarga:
+         - `setDatosRequerimientoAlmacen()` (`:1729`): escribe `dtpFecha`, combos, `txtComentario`, `txtComentarioDespacho`, `txtEstado`, `txtNumero`, `txtSerie`, `txtNombreContacto`, `txtTelefonoContacto`, `txtdireccion`, `cmbusuariodesp`, `txtusuariosolic`, `txtusuarioaprob`, `txtFacturaVenta`.
+         - `rgvDetalleRequerimiento.DataSource = ...` (`:1730`).
+         - `recargaStockRGV()` (`:1731`).
+         - Visibilidad de botones: `btnAprobar.Visible = false`, `BtnGenerarTD.Visible = true`, `lblusuarioaprob.Visible = true`, `txtusuarioaprob.Visible = true`, `btnGuarda.Visible = false`, `btnanular.Visible = false`, `btndetalle.Visible = false`.
+         - `dgvTransGeneradas.DataSource = ...` (`:1748`).
+         - `ventanaListaReqVentas.cargarlista()` (`:1740`).
+    4. **Número real de llamadas a BD en función de N**:
+       - Sean:
+         - $N_{req}$ = total de filas del requerimiento en `rgvDetalleRequerimiento`.
+         - $N_{trans}$ = filas con `colCtdadRequerimiento > 0` (las que van a la transferencia directa).
+       - Consultas de preparación:
+         1. `AdmPro.CargaProductoDetalle` x 2 x $N_{req}$ (en `recargaStockRGV` invocada por `verificarCtdadRequerimiento`) + posibles `CargaUnidadEquivalente`.
+         2. `admSerie.BuscaSeriexDocumento` (1 llamada).
+         3. `AdmPro.UltimoPrecioCompraProducto` x $N_{trans}$ (en `obtenerDetalleParaTransferencia`).
+       - Mutaciones de Aprobación:
+         4. `admreqalm.aprobar` (1 llamada: SP `AprobarRequerimientoAlmacen`).
+         5. `admreqalm.asignarAutorizador` (1 llamada: SP `SetAutorizadorEnRequerimientoAlmacen`).
+         6. `admreqalm.CargaRequerimiento` (1 llamada: SP `CargaRequerimientoAlmacen`).
+         7. `admreqalm.update`: 1 SP `ActualizaRequerimientoAlmacen` + 1 SP `EliminaDetalleRequerimientoAlmacen` + $N_{req}$ SP `GuardaDetalleRequerimientoAlmacen`.
+         8. `admreqalm.separarStock` x $N_{req}$ (SP `SeparandoStockAlAprobarReqAlmacen`).
+         9. `admTransferencia.insert` (1 llamada: SP `GuardaTransferencia`).
+         10. `admreqalm.registrarTransferencia` (1 llamada: SP `RegistrarTransferenciaRequerimientoAlmacen`).
+         11. `admTransferencia.insertdetalle` x $N_{trans}$ (SP `GuardaDetalleTransferencia`).
+         12. `apruebaTransferencia`:
+             - 1 SP `MuestraTransaccion` + 1 SP `BuscaTipoDocumento`.
+             - 1 SP `GuardaNotaSalida`.
+             - $N_{trans}$ SP `GuardaDetalleSalida`.
+             - 1 SP `GuardaNotaIngreso`.
+             - $N_{trans}$ SP `GuardaDetalleIngreso`.
+             - 1 SP `AprobarTransferencia`.
+         13. `admreqalm.actualizaCantidadPendienteReqAlmacen` (1 llamada: SP `ActualizaCantidadPendienteReqAlmacen`).
+         14. `admreqalm.actualizaEstadoReqAlmacen` (1 llamada: SP `ActualizaEstadoReqAlmacen`).
+       - Recarga post-aprobación:
+         15. `admreqalm.CargaRequerimiento` (1 llamada).
+         16. `AdmAlm.ListaAlmacen2` (1 llamada).
+         17. `admreqalm.ListaDetalleRequerimiento` (1 llamada).
+         18. `recargaStockRGV`: 2 x $N_{req}$ llamadas.
+         19. `admreqalm.listadoTransferenciasGeneradas` (1 llamada).
+       - **Fórmula total de llamadas en la mutación**: $12 + 2 N_{req} + 3 N_{trans}$. Para un requerimiento típico de 5 líneas donde se transfieren las 5: $12 + 10 + 15 = 37$ llamadas a base de datos.
+    5. **Verificación sobre `apruebaTransferencia`, `bandera` y `codproducto_error`**:
+       - **VERIFICADO**: `apruebaTransferencia` registra **AMBAS** notas: primero la Nota de Salida (origen despacho) con su detalle (`Scope`), y luego (si `bandera == true`) la Nota de Ingreso (destino solicitante) con su detalle (`Scope2`). Finalmente, si `bandera` sigue true, ejecuta `admTransferencia.Aprobar(transfer)`. Por tanto, la confirmación al usuario debe explicar con precisión que se aprueba el requerimiento, se genera la transferencia entre almacenes y se registran tanto la salida como el ingreso respectivo.
+       - **VERIFICADO**: `bandera` inicializa en `true`. Si cualquier `insertdetalle` de NS o NI falla, se pone en `false`, guarda el código del producto en `codproducto_error = det.CodProducto`, hace `Rollback()` del scope respectivo y sale del bucle con `break`.
+       - Si falló en el detalle de NS, no entra al bloque de NI y cae en el `else` (`:1430`): muestra `MessageBox.Show("No hay stock suficiente del producto codigo: " + codproducto_error)`. Si falló en NI o en `admNI.insert`, muestra "Hubo un error al guardar la transferencia ".
+    6. **Lectura y mutación de estado compartido peligroso en fondo**:
+       - Campos de instancia del formulario:
+         - `detalle` (`List<clsDetalleTransferencia>`): limpiada y poblada en `obtenerDetalleParaTransferencia()`, leída en `btnAprobar_Click`, `RecorreDetalleNS()` y `RecorreDetalleNI()`.
+         - `transfer` (`clsTransferencia`): instanciada y modificada acumulando totales y `CodTransDir`.
+         - `NS` (`clsNotaSalida`) y `NI` (`clsNotaIngreso`): campos del formulario mutados en `apruebaTransferencia`.
+         - `detalleNS` y `detalleNI` (`List<...>`): campos públicos del formulario limpiados y llenados en `RecorreDetalleNS` y `RecorreDetalleNI`.
+         - `bandera` (bool) y `codproducto_error` (int): campos del formulario modificados como banderas de control de flujo.
+         - `req_alm` (`clsRequerimientoAlmacen`): reasignado múltiples veces.
+         - `vieneDeAprobar` (bool): modificado a `true` antes de llamar `convertirRGVaListado()`.
+       - Mutación de controles de UI dentro del worker:
+         - `:1557` en `obtenerDetalleParaTransferencia`: `filaRGV.Cells["colCtdadPendiente"].Value = ...` escribe directamente sobre una celda del control Telerik WinForms `rgvDetalleRequerimiento`! Esto lanzaría `InvalidOperationException` o corrompería la UI si se corre en un hilo de `Task.Run`.
+         - `:1476` en `añadedetalleNI`: lee `dtpFecha.Value` (control WinForms `DateTimePicker`).
+         - `:1705`: lee `txtComentarioDespacho.Text`.
+         - `:1703`: lee `cmbusuariodesp.SelectedValue`.
+    7. **Recomendaciones para T5b**:
+       - **Fase de UI (hilo principal antes de `Task.Run` / diálogo)**:
+         - Validaciones previas (`cmbusuariodesp`, `verificarCtdadRequerimiento`, serie 14).
+         - Diálogo explicativo de confirmación: debe informar claramente que aprueba el requerimiento, reserva/separa stock y genera la transferencia directa con sus notas de salida e ingreso correspondientes.
+         - Extracción limpia de DTOs en memoria sin tocar controles dentro del hilo de fondo:
+           - Leer `cmbusuariodesp.SelectedValue`, `txtComentarioDespacho.Text`, `dtpFecha.Value`.
+           - Extraer las filas del detalle necesarias sin mutar `colCtdadPendiente` de `rgvDetalleRequerimiento`.
+           - NO usar los campos de instancia compartidos (`detalle`, `detalleNS`, `detalleNI`, `NS`, `NI`, `bandera`, `codproducto_error`, `transfer`); deben ser variables locales al trabajo o un servicio/objeto de contexto autocontenido.
+       - **Fase de Fondo (`Task.Run` / progreso)**:
+         - Ejecutar toda la secuencia de mutación en un solo bloque continuo (R2).
+         - Erradicar `MessageBox` / `MessageBoxEx`: cualquier excepción o `false` debe abortar y reportar el mensaje como fallo en `ResultadoOperacion`, para que `frmProgresoOperacion` pinte el paso en Rojo y permita ver/copiar el detalle sin congelar la app.
+       - **Fase posterior (al volver el diálogo en hilo UI)**:
+         - Si `Resultado.Ok`: ejecutar el bloque de recarga (`req_alm = CargaRequerimiento`, `setDatosRequerimientoAlmacen`, recargar grillas, ocultar/mostrar botones, `ventanaListaReqVentas.cargarlista()`).
+         - Si falló: la UI no se recarga como aprobada y el usuario ve exactamente qué falló en el diálogo.
 - **T5b:** mensaje de confirmación que explique qué ocurre al aprobar; datos leídos de la interfaz en el hilo de la interfaz y el resto en segundo plano; ningún `MessageBox` desde el hilo de fondo; pasos en español claro; éxito y error igual de visibles que hoy. No se reescribe la lógica (D1 fase 1).
 - **T6:** confirmación "¿está seguro de guardar?" conservando la pregunta previa de "sin comentario" sin duplicar diálogos; el cuadro "Guardando el requerimiento…"; el `insert` corre en segundo plano; mismo comportamiento posterior (recarga, `DialogResult.Yes`, cierre). Atender el `else` faltante cuando `insert` devuelve false: mostrar el error, no seguir como si hubiera guardado.
   - PASO 0 (solo lectura, 2026-10-07, opencode): `clsAdmRequerimientoAlmacen.insert` (`clsAdmRequerimientoAlmacen.cs:16-60`) SÍ muestra `MessageBoxEx` en sus caminos de excepción (`Duplicate entry` → "N°- de Documento Repetido", resto → `ex.Message`) y devuelve `false` sin lanzar; en `false` sin excepción (DAL devolvió `false`) no muestra nada y devuelve `false`. La capa `MysqlRequerimientoAlmacen.insert/insertdetalle` (`:23-89`, `:876-923`) no muestra cuadros, devuelve `bool` y lanza `MySqlException`. `insert` no lee controles (solo DTOs). Quien lee controles es `btnGuarda_Click` (`frmReqAlmacen.cs:830-927`) vía `getDatosRequerimientoAlmacen` (`:980-1028`: `cmbAlmacenesSolicitantes/Despacho`, `dtpFecha`, `txtComentario/NombreContacto/TelefonoContacto/direccion`, `cmbusuariodesp`, `chkDelivery`, `rgvDetalleRequerimiento` por `convertirRGVaListado`, más `ser/doc/frmLogin/pedido`), `verificarCtdadRequerimiento` (`rgv` + `recargaStockRGV`), `validarContacto/Delivery` y `admSerie.CargaSerieEmpresa` con `SelectedValue`. R1 confirmado: no llamar a `admreqalm.insert` desde el fondo. R2: todo el guardado en un solo bloque.
