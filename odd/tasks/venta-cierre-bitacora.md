@@ -24,6 +24,7 @@ Guardar en tablas de la BD el paso a paso de cada intento de cerrar una venta (r
 - Nunca se aplica DDL en producción desde aquí.
 - **Número de orden de pedido = `pedidosventa.codPedido`** (usuario, 2026-10-10): el que se teclea en la pantalla de venta y se arma directamente en la tabla.
 - **Una fila de log por pedido (usuario, 2026-10-10, opción 1):** un cierre con varios pedidos crea un intento por cada `codPedido`. T2 no cambia (un `BitacoraCierre` es de un pedido); T4 crea una instancia por pedido y reparte: los eventos globales (`abrirTransaccion`, `bloquearSerie`, `bloquearStock`, `confirmar`) van a todas, y los de bloque solo a la del pedido de ese bloque; el resultado final y el fallo se aplican a todas (la transacción es una sola, un fallo afecta a todos los pedidos del cierre).
+- **Versión de la app = fecha de escritura del ejecutable** (usuario, 2026-10-10, opción 1): `yyyy-MM-dd HH:mm` de `File.GetLastWriteTime` del `.exe`; T4 la calcula y la pasa en `IntentoBitacora.VersionApp`. `AssemblyVersion` sigue fija en 1.0.0.0 y no se toca. Equipo = `Environment.MachineName`; usuario = `frmLogin.iCodUser` / `sUsuario`.
 - **Seam A aprobado (usuario, 2026-10-10):** `ejecutarOrdenAtomica` pasa a `virtual` y una subclase `VentaCierreServiceConBitacora` registra el paso a paso; `frmVenta2019:3748` cambia su `new`. Es la única edición permitida en código existente (T4).
 
 ## Decisiones abiertas
