@@ -40,6 +40,7 @@ public sealed class DatosAprobacionRequerimiento
     public double Igv { get; }
 
     // Fecha de ingreso de las líneas de la nota de ingreso (dtpFecha del formulario).
+    // Nota: GuardaDetalleIngreso guarda NOW() y no persiste este valor en base, como en el legacy.
     public DateTime FechaIngreso { get; }
 
     // Opcional: cantidad a despachar por código de línea (colCtdadRequerimiento de la grilla) cuando el
@@ -132,6 +133,8 @@ public static class ReqVentaAprobacion
     private sealed class Corredor
     {
         private readonly IProgress<PasoOperacion> _progreso;
+        private string _ultimoPasoConfirmadoClave;
+        private string _ultimoPasoConfirmadoTexto;
 
         public Corredor(IProgress<PasoOperacion> progreso)
         {
@@ -155,13 +158,34 @@ public static class ReqVentaAprobacion
 
             if (error != null)
             {
+                if (_ultimoPasoConfirmadoClave != null &&
+                    _ultimoPasoConfirmadoClave != ReqVentaTextos.ComprobarDatosAprobacion)
+                {
+                    error = error + " (Quedó confirmado hasta el paso: " + _ultimoPasoConfirmadoTexto + ").";
+                }
+
                 Mensaje = error;
                 Informar(clave, EstadoPaso.Error, error);
                 return false;
             }
 
+            _ultimoPasoConfirmadoClave = clave;
+            _ultimoPasoConfirmadoTexto = ObtenerTexto(clave);
             Informar(clave, EstadoPaso.Listo, null);
             return true;
+        }
+
+        private static string ObtenerTexto(string clave)
+        {
+            foreach (PasoOperacion paso in ReqVentaTextos.PasosAprobacion())
+            {
+                if (paso.Clave == clave)
+                {
+                    return paso.Texto;
+                }
+            }
+
+            return clave;
         }
 
         private void Informar(string clave, EstadoPaso estado, string detalle)
@@ -171,16 +195,7 @@ public static class ReqVentaAprobacion
                 return;
             }
 
-            foreach (PasoOperacion paso in ReqVentaTextos.PasosAprobacion())
-            {
-                if (paso.Clave == clave)
-                {
-                    _progreso.Report(new PasoOperacion(clave, paso.Texto, estado, detalle));
-                    return;
-                }
-            }
-
-            _progreso.Report(new PasoOperacion(clave, clave, estado, detalle));
+            _progreso.Report(new PasoOperacion(clave, ObtenerTexto(clave), estado, detalle));
         }
     }
 
@@ -383,14 +398,17 @@ public static class ReqVentaAprobacion
 
     private static string LeerSerie(IConsultor consultor, Contexto contexto)
     {
-        Dictionary<string, object> serie = consultor.Consultar(
+        IList<Dictionary<string, object>> series = consultor.Consultar(
             "CALL BuscaSeriexDocumento(@doc, @alm)",
-            Parametros("doc", TipoDocumentoTransferencia, "alm", contexto.AlmacenDespacho)).First();
-        if (serie == null)
+            Parametros("doc", TipoDocumentoTransferencia, "alm", contexto.AlmacenDespacho)).Get();
+        if (series == null || series.Count == 0)
         {
             return "No existe serie creada para transferencia en el almacén de despacho.";
         }
 
+        // El legacy (MysqlSerie.BuscaSeriexDocumento) recorre las filas con while (dr.Read())
+        // y retorna la última; tomamos la última para coincidir fielmente.
+        Dictionary<string, object> serie = series[series.Count - 1];
         contexto.CodSerie = serie.Valor<int>("codSerie");
         contexto.Serie = serie.Valor<string>("serie");
         contexto.NumeroDocumento = serie.Valor<int>("numeracion").ToString().PadLeft(6, '0');

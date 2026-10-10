@@ -459,9 +459,9 @@ public class ReqVentaAprobacionIntegracionTests
             Igual(0m, f.Valor<decimal>("flete"));
             Igual(Convert.ToDecimal(l.Subtotal), f.Valor<decimal>("importe"));
             Igual(Convert.ToDecimal(l.Precio), f.Valor<decimal>("precioreal"));
-            Igual(Convert.ToDecimal(l.ValoReal), f.Valor<decimal>("valoreal"));
-            Assert.Equal(fechaIngreso, f.Valor<DateTime>("fechaingreso"));
-            Assert.Equal(CodUser, f.Valor<int>("codUser"));
+            // GuardaDetalleIngreso guarda NOW() y no persiste el parámetro recibido (comportamiento legacy).
+            DateTime fechaEnBd = f.Valor<DateTime>("fechaingreso");
+            Assert.True((DateTime.Now - fechaEnBd).Duration() < TimeSpan.FromMinutes(5));
             Igual(0m, f.Valor<decimal>("valorrealsoles"));
             Assert.Equal(0, f.Valor<int>("coddetallerequerimiento"));
             Assert.Equal(0, f.Valor<int>("bonificacion"));

@@ -91,6 +91,14 @@ public static class ReqVentaTextos
             }
         }
 
+        foreach (PasoOperacion paso in PasosAprobacion())
+        {
+            if (paso.Clave == clave)
+            {
+                return new PasoOperacion(clave, paso.Texto, estado, detalle);
+            }
+        }
+
         return new PasoOperacion(clave, clave, estado, detalle);
     }
 }

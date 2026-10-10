@@ -105,6 +105,7 @@ public class ReqVentaAprobacionTests
         public bool EnTramo;
         public bool SinRequerimiento;
         public bool SinSerie;
+        public List<Dictionary<string, object>> SeriesMultiples;
         public int TipoReq = 2;
         public int EstadoAntes = 7;
         public int EstadoDespues = 8;
@@ -238,6 +239,11 @@ public class ReqVentaAprobacionTests
             if (ultimo == "ListadoDetalleRequerimientoAlmacen")
             {
                 return new Consulta(limite => Lineas());
+            }
+
+            if (ultimo == "BuscaSeriexDocumento" && SeriesMultiples != null)
+            {
+                return new Consulta(limite => SeriesMultiples);
             }
 
             return new Consulta(limite =>
@@ -564,6 +570,20 @@ public class ReqVentaAprobacionTests
     }
 
     [Fact]
+    public void AprobarEn_FalloPosteriorAlPasoDos_IndicaHastaQuePasoQuedoConfirmado()
+    {
+        var consultor = new ConsultorFalso();
+        consultor.Excepciones["SeparandoStockAlAprobarReqAlmacen"] = new InvalidOperationException("fallo stock");
+        var progreso = new ProgresoFalso();
+        TransaccionFalsa transaccion;
+
+        ResultadoOperacion resultado = Aprobar(consultor, Datos(), progreso, out transaccion);
+
+        Assert.False(resultado.Ok);
+        Assert.Contains("Quedó confirmado hasta el paso: Aprobar el requerimiento", resultado.Mensaje);
+    }
+
+    [Fact]
     public void AprobarEn_ExcepcionDentroDeUnTramo_RevierteElTramoYDevuelveFallo()
     {
         var consultor = new ConsultorFalso();
@@ -636,6 +656,26 @@ public class ReqVentaAprobacionTests
         Assert.Empty(consultor.De("GuardaTransferencia"));
         Assert.Equal(EstadoPaso.Error, progreso.Ultimo(ClavesDelCatalogo()[0]).Estado);
         Assert.Null(progreso.Ultimo(ClavesDelCatalogo()[1]));
+    }
+
+    [Fact]
+    public void AprobarEn_VariasSeriesParaTransferencia_TomaLaUltimaComoElLegacy()
+    {
+        var consultor = new ConsultorFalso
+        {
+            SeriesMultiples = new List<Dictionary<string, object>>
+            {
+                ConsultorFalso.Fila("codSerie", 10m, "serie", "001", "numeracion", 100m),
+                ConsultorFalso.Fila("codSerie", 20m, "serie", "002", "numeracion", 200m),
+            }
+        };
+        TransaccionFalsa transaccion;
+
+        ResultadoOperacion resultado = Aprobar(consultor, Datos(), new ProgresoFalso(), out transaccion);
+
+        Assert.True(resultado.Ok, resultado.Mensaje);
+        Assert.True(ContieneValor(consultor.De("GuardaTransferencia")[0], "000200"));
+        Assert.True(ContieneValor(consultor.De("GuardaNotaSalida")[0], "002"));
     }
 
     [Fact]
