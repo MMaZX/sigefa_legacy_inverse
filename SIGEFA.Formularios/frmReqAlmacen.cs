@@ -1013,6 +1013,111 @@ public class frmReqAlmacen : Form
 		return destino;
 	}
 
+	// Ruta nueva (VentaCierreRuta=nueva, T5b-3): confirmación explicativa y
+	// aprobación en segundo plano con diálogo de pasos humanos (ReqVentaAprobacion).
+	// Los datos se extraen en el hilo de UI antes de lanzar el diálogo.
+	private void AprobarRequerimientoRutaNueva()
+	{
+		DialogResult confirmacion = MessageBox.Show(
+			"¿Está seguro de aprobar el requerimiento? Se separará el stock, se creará la transferencia directa y se registrarán las notas de salida e ingreso correspondientes.",
+			"Aprobar requerimiento",
+			MessageBoxButtons.YesNo,
+			MessageBoxIcon.Question);
+		if (confirmacion != DialogResult.Yes)
+		{
+			return;
+		}
+
+		int codReq = (req_alm != null && req_alm.Codigo > 0) ? req_alm.Codigo : codRequerimientoAlmacen;
+		int codUser = frmLogin.iCodUser;
+		int codAutorizador = Convert.ToInt32(cmbusuariodesp.SelectedValue);
+		string comentarioDespacho = txtComentarioDespacho.Text != null ? txtComentarioDespacho.Text.Trim() : string.Empty;
+		string codPedido = CodPedido ?? string.Empty;
+		double igv = (frmLogin.Configuracion != null) ? frmLogin.Configuracion.IGV : 18.0;
+		DateTime fechaIngreso = dtpFecha.Value;
+
+		DatosAprobacionRequerimiento datos = new DatosAprobacionRequerimiento(
+			codReq,
+			codUser,
+			codAutorizador,
+			comentarioDespacho,
+			codPedido,
+			igv,
+			fechaIngreso);
+
+		Dictionary<int, decimal> cantidades = ExtraerCantidadesEditadas();
+		if (cantidades.Count > 0)
+		{
+			datos.CantidadesADespachar = cantidades;
+		}
+
+		using (frmProgresoOperacion dialogo = new frmProgresoOperacion(
+			"Aprobando el requerimiento",
+			"Aprobando el requerimiento...",
+			ReqVentaTextos.PasosAprobacion().ToList(),
+			progreso => ReqVentaAprobacion.Aprobar(datos, progreso)))
+		{
+			dialogo.ShowDialog(this);
+			if (dialogo.Resultado == null || !dialogo.Resultado.Ok)
+			{
+				return;
+			}
+		}
+
+		ActualizarUiPostAprobacion();
+	}
+
+	private Dictionary<int, decimal> ExtraerCantidadesEditadas()
+	{
+		Dictionary<int, decimal> cantidades = new Dictionary<int, decimal>();
+		if (rgvDetalleRequerimiento == null || rgvDetalleRequerimiento.Rows == null)
+		{
+			return cantidades;
+		}
+
+		foreach (GridViewRowInfo fila in rgvDetalleRequerimiento.Rows)
+		{
+			if (fila.Cells["colCodDetalle"] == null || fila.Cells["colCodDetalle"].Value == null || fila.Cells["colCodDetalle"].Value == DBNull.Value)
+			{
+				continue;
+			}
+
+			int codDetalle = Convert.ToInt32(fila.Cells["colCodDetalle"].Value);
+			if (codDetalle <= 0)
+			{
+				continue;
+			}
+
+			if (fila.Cells["colCtdadRequerimiento"] != null && fila.Cells["colCtdadRequerimiento"].Value != null && fila.Cells["colCtdadRequerimiento"].Value != DBNull.Value)
+			{
+				cantidades[codDetalle] = Convert.ToDecimal(fila.Cells["colCtdadRequerimiento"].Value);
+			}
+		}
+
+		return cantidades;
+	}
+
+	private void ActualizarUiPostAprobacion()
+	{
+		req_alm = admreqalm.CargaRequerimiento(codRequerimientoAlmacen);
+		setDatosRequerimientoAlmacen();
+		rgvDetalleRequerimiento.DataSource = admreqalm.ListaDetalleRequerimiento(req_alm.Codigo);
+		recargaStockRGV();
+		btnAprobar.Visible = false;
+		BtnGenerarTD.Visible = false;
+		btnGuarda.Visible = false;
+		btnanular.Visible = false;
+		btndetalle.Visible = false;
+		lblusuarioaprob.Visible = true;
+		txtusuarioaprob.Visible = true;
+		txtusuarioaprob.Text = req_alm.UserAprobador;
+		dgvTransGeneradas.DataSource = admreqalm.listadoTransferenciasGeneradas(req_alm.Codigo, frmLogin.iCodAlmacen);
+		if (ventanaListaReqVentas != null)
+		{
+			ventanaListaReqVentas.cargarlista();
+		}
+	}
+
 	private bool validarContacto()
 	{
 		bool band = true;
@@ -1661,6 +1766,11 @@ public class frmReqAlmacen : Form
 			if (TipoReq == 2 && ser2 == null)
 			{
 				MessageBox.Show("No existe serie creada para transferencia en el almacen despachador", "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+				return;
+			}
+			if (TipoReq == 2 && ConfigurationManager.AppSettings["VentaCierreRuta"] == "nueva")
+			{
+				AprobarRequerimientoRutaNueva();
 				return;
 			}
 			if (TipoReq == 1)
