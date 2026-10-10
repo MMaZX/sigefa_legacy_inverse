@@ -57,6 +57,11 @@ Lista y probada en dev, **sin commit en `gruporicardoapi` y sin aplicar a produc
 - **Respaldo en archivo:** `Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "documentos", "SIGEFA_LOGS")`, creada bajo demanda.
 - **Decisiones que faltan:** seam A o B; `cod_pedido` de un cierre con varios pedidos; qué es el "numero de orden de pedido" del jefe (`codPedido` o `numeracion`); fuente de la versión.
 
+## T2 entregada y auditada (2026-10-10)
+
+Escrita, **no verificada en compilador**: RED `a2aab24`, feat `6ce5e85` (carpeta `SIGEFA.Administradores/VentaCierreBitacora/`, ~580 líneas; pruebas ~720 líneas; 3 `Link` en `SIGEFA.Tests.csproj`). Incluye `BitacoraCierre` (nunca lanza, modo respaldo), `ProgresoConBitacora` (decorador con `DesdeExito`/`DesdeFallo`/`DesdeExcepcion` para T4), `RespaldoArchivo`. El formato del archivo de respaldo lo definió el escritor (`RespaldoArchivo.ArmarTexto`); ajustar ahí si el jefe quiere otro.
+**Auditoría independiente: APROBADO CON CORRECCIONES** (a ojo de compilador; nada ejecutado). Verificado: símbolos de las pruebas, `Link`/`LangVersion`, contrato de no lanzar en todas las rutas, orden/hora coherentes bajo lock, idempotencia, patrón de credenciales idéntico al existente. Correcciones (una sola ronda, delegada): (1) media, carrera `File.Exists`/`WriteAllText` en `RespaldoArchivo` → `FileMode.CreateNew` con reintento; (2) quitar BOM; (3) limpiar/topear `almacen`, `paso`, `Usuario`, `Equipo`, `VersionApp`, `ErrorPaso`, `ErrorProcedimiento`, `ErrorSqlState`; (4) pruebas de enmascarado antes del tope y de constructor con nulos; (5) detalles de prueba. **Requisito para T3/T4:** `Iniciar` se llama antes de lanzar el servicio y en el mismo hilo (mantiene el lock durante `CrearIntento`); el repositorio recorta cada campo al ancho de su columna (con `STRICT_TRANS_TABLES` un texto largo falla el INSERT y el intento caería al respaldo).
+
 ## Verificación
 
 Host sin `dotnet`: lo escrito se reporta como "escrito, no verificado en compilador". Runner de pruebas: `dotnet test` en la VM (`sigefa_build`, con autorización explícita). TDD estricto (fuente: configuración del proyecto). Regla de oro heredada: toda sentencia SQL nueva se verifica contra la BD dev real antes de darla por buena.
