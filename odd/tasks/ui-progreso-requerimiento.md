@@ -295,10 +295,10 @@ Orden: T0, luego T1; después T2 y T3 en paralelo (archivos distintos); T4; T5a 
       - Suite completa de pruebas xUnit (`dotnet test SIGEFA.Tests.csproj`) con `SIGEFA_TEST_CONN` contra la BD dev del host: **204 de 204 superadas, 0 con error, 0 omitidas (12 s)**. Incluye la prueba de integración con rollback `AprobarEn_ContraBdReal_GuardaColumnasYRevierte`.
       - Integridad de BD dev verificada: requerimiento 5273 en estado 7, 8416 en estado 13, 0 requerimientos `ZZT%`, 0 tablas temporales residuales.
 
+  - **T5b-3 hecha y verificada en la VM (2026-10-10, commit `e310dd7`):** botón Aprobar en `frmReqAlmacen.cs` conectado detrás de `TipoReq==2` y `VentaCierreRuta=nueva`. Mantiene las validaciones previas (`cmbusuariodesp`, `verificarCtdadRequerimiento` y serie) en el hilo de UI, confirma explicativamente la separación de stock, transferencia y notas, extrae los datos en memoria (`ExtraerCantidadesEditadas`), ejecuta `ReqVentaAprobacion.Aprobar` a través de `frmProgresoOperacion` con `PasosAprobacion()`, y ante éxito ejecuta `ActualizarUiPostAprobacion` recargando datos y grillas sin `MessageBox` duplicado. `git diff -w` en `frmReqAlmacen.cs`: +116 líneas puras de adición, ruta legacy intacta.
+    - **Verificación en la VM Windows (`e310dd7`):** MSBuild `exit=0` (genera `SIGEFA.exe` actualizado); 204 de 204 pruebas en verde con la BD dev del host; BD dev intacta.
+
 ## Siguiente paso
 
-**Estado al 2026-10-10:** T5b-1 y T5b-2 completadas y verificadas en la VM (204/204). Siguiente paso: **T5b-3** (formulario `frmReqAlmacen.cs`: confirmación previa explicativa, extracción de datos en el hilo de UI bajo `TipoReq==2` y flag `VentaCierreRuta=nueva`, invocación a `frmProgresoOperacion` con `ReqVentaTextos.PasosAprobacion()` y recarga de la grilla/formulario al terminar). Luego T1b (revisión de textos con skill `humanizer`) y prueba manual visual.
-
-(Texto anterior, histórico:)
-
-T1 a T4, T5a y T6 hechas. D1 revisada el 2026-10-10 (opción 1: extraer Aprobar a un servicio sin controles). Siguiente: T5b dividida en T5b-1 (mapa de firmas reales de los SP de la cadena contra `mysql.proc` en dev, solo lectura), T5b-2 (servicio `ReqVentaAprobacion` con pruebas RED/GREEN y una de integración con rollback, regla de oro de CALL posicional), T5b-3 (formulario: confirmación explicativa, extracción de datos en el hilo de la interfaz, diálogo con pasos, recarga al volver). Después T1b, build en la VM y prueba manual.
+**Estado al 2026-10-10:** T1 a T6 completadas (T1, T2, T3, T4, T5a, T5b-1, T5b-2, T5b-3, T6) y verificadas con build y suite completa en la VM (204/204).
+Siguiente paso: **T1b** (revisión de textos con skill `humanizer` en pasos, confirmaciones y mensajes) y **prueba manual visual** de los tres diálogos (Anular en `FrmTPenPedido`, Guardar y Aprobar en `frmReqAlmacen`).
