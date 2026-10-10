@@ -513,4 +513,55 @@ public class BitacoraRepositorioMySqlTests
         Assert.Throws<ArgumentNullException>(
             () => new BitacoraRepositorioMySql(consultor).Finalizar(55, null, Eventos(1)));
     }
+
+    // Recorte al ancho de cada columna (STRICT_TRANS_TABLES rechazaría el texto largo)
+
+    [Fact]
+    public void CrearIntento_RecortaUsuarioEquipoYVersionAlAnchoDeLaColumna()
+    {
+        var consultor = new ConsultorFalso();
+        var intento = new IntentoBitacora(
+            7, 1, new string('u', 200), new string('e', 200), new string('v', 200), 1, DateTime.Now);
+        long logId;
+
+        new BitacoraRepositorioMySql(consultor).CrearIntento(intento, out logId);
+
+        var insert = consultor.InsertsDeCabecera().Single();
+        Assert.Equal(80, ((string)insert.Valor("usuario")).Length);
+        Assert.Equal(60, ((string)insert.Valor("equipo")).Length);
+        Assert.Equal(20, ((string)insert.Valor("versionApp")).Length);
+    }
+
+    [Fact]
+    public void Finalizar_RecortaLosCamposDeErrorAlAnchoDeLaColumna()
+    {
+        var consultor = new ConsultorFalso();
+        var resultado = new ResultadoBitacora(
+            EstadoBitacora.Error, 0, DateTime.Now, 1, new string('p', 100), new string('q', 200),
+            1, new string('s', 20), new string('m', 900), null);
+
+        new BitacoraRepositorioMySql(consultor).Finalizar(1, resultado, new List<EventoBitacora>());
+
+        var update = consultor.Updates().Single();
+        Assert.Equal(40, ((string)update.Valor("errorPaso")).Length);
+        Assert.Equal(80, ((string)update.Valor("errorProcedimiento")).Length);
+        Assert.Equal(5, ((string)update.Valor("errorSqlState")).Length);
+        Assert.Equal(500, ((string)update.Valor("errorMensaje")).Length);
+    }
+
+    [Fact]
+    public void Finalizar_RecortaAlmacenPasoYDetalleDelEvento()
+    {
+        var consultor = new ConsultorFalso();
+        var evento = new EventoBitacora(
+            1, DateTime.Now, 1, new string('a', 200), new string('p', 200), null, null,
+            ResultadoEvento.Info, null, new string('d', 900));
+
+        new BitacoraRepositorioMySql(consultor).Finalizar(1, DatosBitacora.Ok(), new List<EventoBitacora> { evento });
+
+        var insert = consultor.InsertsDeEventos().Single();
+        Assert.Equal(80, ((string)insert.Valor("almacen0")).Length);
+        Assert.Equal(40, ((string)insert.Valor("paso0")).Length);
+        Assert.Equal(300, ((string)insert.Valor("detalle0")).Length);
+    }
 }
