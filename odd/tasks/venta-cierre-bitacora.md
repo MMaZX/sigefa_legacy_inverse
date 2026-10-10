@@ -22,6 +22,8 @@ Guardar en tablas de la BD el paso a paso de cada intento de cerrar una venta (r
 - Credenciales enmascaradas con `VentaCierreRegistroErrores.enmascararCredenciales`.
 - Si la BD falla: respaldo en `documentos/SIGEFA_LOGS/<pedido>.<intento>.log` o en el log local de errores (a confirmar en T2); la bitácora nunca interrumpe ni cambia el resultado del cierre.
 - Nunca se aplica DDL en producción desde aquí.
+- **Número de orden de pedido = `pedidosventa.codPedido`** (usuario, 2026-10-10): el que se teclea en la pantalla de venta y se arma directamente en la tabla.
+- **Seam A aprobado (usuario, 2026-10-10):** `ejecutarOrdenAtomica` pasa a `virtual` y una subclase `VentaCierreServiceConBitacora` registra el paso a paso; `frmVenta2019:3748` cambia su `new`. Es la única edición permitida en código existente (T4).
 
 ## Decisiones abiertas
 
