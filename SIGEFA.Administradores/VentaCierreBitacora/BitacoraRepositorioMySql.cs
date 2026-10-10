@@ -14,6 +14,7 @@ namespace SIGEFA.Administradores.VentaCierreBitacora;
 public sealed class BitacoraRepositorioMySql : IBitacoraRepositorio
 {
     private const int ErrorEntradaDuplicada = 1062;
+    private const int ErrorDeadlock = 1213;
     private const int MaximoIntentos = 5;
     private const int EventosPorSentencia = 200;
 
@@ -82,7 +83,9 @@ public sealed class BitacoraRepositorioMySql : IBitacoraRepositorio
     }
 
     // El UNIQUE (cod_pedido, intento) frena la carrera entre cajas; el perdedor repite la misma
-    // sentencia, que recalcula MAX+1. Cualquier otro error sube tal cual.
+    // sentencia, que recalcula MAX+1. En la práctica InnoDB resuelve la carrera casi siempre con
+    // un deadlock (1213) en vez de 1062: la sentencia es un autocommit, así que repetirla es seguro.
+    // Cualquier otro error (por ejemplo 1205, que espera 50 s) sube tal cual.
     private ResultadoEjecucion InsertarConReintento(IDictionary<string, object> parametros)
     {
         for (int numero = 1; ; numero++)
@@ -91,10 +94,16 @@ public sealed class BitacoraRepositorioMySql : IBitacoraRepositorio
             {
                 return _consultor.Ejecutar(SqlCrearIntento, parametros);
             }
-            catch (MySqlException ex) when (ex.Number == ErrorEntradaDuplicada && numero < MaximoIntentos)
+            catch (MySqlException ex) when (EsConflictoDeNumeracion(ex.Number) && numero < MaximoIntentos)
             {
+                // Se repite la misma sentencia con el siguiente número libre.
             }
         }
+    }
+
+    private static bool EsConflictoDeNumeracion(int numeroError)
+    {
+        return numeroError == ErrorEntradaDuplicada || numeroError == ErrorDeadlock;
     }
 
     private int LeerIntento(long logId)

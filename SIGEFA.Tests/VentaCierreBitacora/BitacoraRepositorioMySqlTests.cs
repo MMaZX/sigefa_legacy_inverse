@@ -228,6 +228,36 @@ public class BitacoraRepositorioMySqlTests
     }
 
     [Fact]
+    public void CrearIntento_ReintentaConLaMismaSentenciaAnteElDeadlock1213()
+    {
+        var consultor = new ConsultorFalso();
+        consultor.ErroresAlCrearIntento.Enqueue(ErrorMySql(1213));
+        consultor.ErroresAlCrearIntento.Enqueue(ErrorMySql(1062));
+        long logId;
+
+        new BitacoraRepositorioMySql(consultor).CrearIntento(DatosBitacora.Intento(), out logId);
+
+        var inserts = consultor.InsertsDeCabecera();
+        Assert.Equal(3, inserts.Count);
+        Assert.Equal(inserts[0].Sql, inserts[2].Sql);
+        Assert.Equal(77L, logId);
+    }
+
+    [Fact]
+    public void CrearIntento_ElTimeoutDeBloqueo1205SePropagaSinReintentar()
+    {
+        var consultor = new ConsultorFalso();
+        consultor.ErroresAlCrearIntento.Enqueue(ErrorMySql(1205));
+        long logId;
+
+        var ex = Assert.Throws<MySqlException>(
+            () => new BitacoraRepositorioMySql(consultor).CrearIntento(DatosBitacora.Intento(), out logId));
+
+        Assert.Equal(1205, ex.Number);
+        Assert.Single(consultor.InsertsDeCabecera());
+    }
+
+    [Fact]
     public void CrearIntento_TieneCincoIntentosEnTotalYLuegoPropagaElError1062()
     {
         var consultor = new ConsultorFalso();
