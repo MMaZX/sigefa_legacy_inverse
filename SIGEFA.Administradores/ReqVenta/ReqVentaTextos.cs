@@ -45,6 +45,32 @@ public static class ReqVentaTextos
         };
     }
 
+    // Claves de los pasos de la aprobación (T5b-2). Distintas de las de anulación para no chocar en Paso().
+    public const string ComprobarDatosAprobacion = "ComprobarDatosAprobacion";
+    public const string AprobarRequerimiento = "AprobarRequerimiento";
+    public const string SepararStock = "SepararStock";
+    public const string CrearTransferencia = "CrearTransferencia";
+    public const string RegistrarSalidaDespacho = "RegistrarSalidaDespacho";
+    public const string RegistrarIngresoSolicitante = "RegistrarIngresoSolicitante";
+    public const string AprobarTransferencia = "AprobarTransferencia";
+    public const string ActualizarRequerimiento = "ActualizarRequerimiento";
+
+    // Pasos de la aprobación de un requerimiento de venta, en orden.
+    public static IReadOnlyList<PasoOperacion> PasosAprobacion()
+    {
+        return new List<PasoOperacion>
+        {
+            new PasoOperacion(ComprobarDatosAprobacion, "Comprobar los datos y la serie de la transferencia", EstadoPaso.Pendiente),
+            new PasoOperacion(AprobarRequerimiento, "Aprobar el requerimiento", EstadoPaso.Pendiente),
+            new PasoOperacion(SepararStock, "Separar el stock del almacén de despacho", EstadoPaso.Pendiente),
+            new PasoOperacion(CrearTransferencia, "Crear la transferencia entre almacenes", EstadoPaso.Pendiente),
+            new PasoOperacion(RegistrarSalidaDespacho, "Registrar la nota de salida del almacén de despacho", EstadoPaso.Pendiente),
+            new PasoOperacion(RegistrarIngresoSolicitante, "Registrar la nota de ingreso en el almacén solicitante", EstadoPaso.Pendiente),
+            new PasoOperacion(AprobarTransferencia, "Aprobar la transferencia", EstadoPaso.Pendiente),
+            new PasoOperacion(ActualizarRequerimiento, "Actualizar las cantidades y el estado del requerimiento", EstadoPaso.Pendiente),
+        };
+    }
+
     // Arma el paso para informar el progreso con el texto del catálogo por clave.
     // Si la clave no está en el catálogo, usa la clave como texto para no perderla.
     public static PasoOperacion Paso(string clave, EstadoPaso estado, string detalle = null)
