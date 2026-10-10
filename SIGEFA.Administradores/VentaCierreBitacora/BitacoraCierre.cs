@@ -15,6 +15,15 @@ public sealed class BitacoraCierre
     public const int TopeDetalle = 300;
     public const int TopeMensaje = 500;
 
+    // Topes de las columnas de venta_cierre_log y venta_cierre_log_evento.
+    private const int TopeAlmacen = 80;
+    private const int TopePaso = 40;
+    private const int TopeUsuario = 80;
+    private const int TopeEquipo = 60;
+    private const int TopeVersion = 20;
+    private const int TopeErrorProcedimiento = 80;
+    private const int TopeSqlState = 5;
+
     // Copia del patrón de VentaCierreRegistroErrores (aquel arrastra MySql y no se puede probar).
     private const string PatronCredenciales = @"(?i)\b(pwd|password|uid|user\s*id)\s*=\s*[^;,\s]+";
 
@@ -49,8 +58,8 @@ public sealed class BitacoraCierre
                     return;
                 }
 
-                _intento = intento;
-                CrearIntentoOPasarARespaldo(intento);
+                _intento = SanearIntento(intento);
+                CrearIntentoOPasarARespaldo(_intento);
             }
         }
         catch (Exception)
@@ -66,6 +75,8 @@ public sealed class BitacoraCierre
         try
         {
             string detalleLimpio = Limpiar(detalle, TopeDetalle);
+            string almacenLimpio = Limpiar(almacen, TopeAlmacen);
+            string pasoLimpio = Limpiar(paso, TopePaso);
             lock (_candado)
             {
                 if (_intento == null || _finalizado)
@@ -74,7 +85,7 @@ public sealed class BitacoraCierre
                 }
 
                 _eventos.Add(new EventoBitacora(
-                    _eventos.Count + 1, _reloj(), bloque, almacen, paso,
+                    _eventos.Count + 1, _reloj(), bloque, almacenLimpio, pasoLimpio,
                     item, codProducto, resultado, duracionMs, detalleLimpio));
             }
         }
@@ -150,13 +161,23 @@ public sealed class BitacoraCierre
         }
     }
 
+    // Copia el intento con usuario, equipo y versión sin saltos de línea y con tope.
+    private static IntentoBitacora SanearIntento(IntentoBitacora intento)
+    {
+        return new IntentoBitacora(
+            intento.CodPedido, intento.CodUsuario, Limpiar(intento.Usuario, TopeUsuario),
+            Limpiar(intento.Equipo, TopeEquipo), Limpiar(intento.VersionApp, TopeVersion),
+            intento.TotalBloques, intento.Inicio);
+    }
+
     // Copia el resultado con el mensaje de error enmascarado y recortado.
     private static ResultadoBitacora Sanear(ResultadoBitacora resultado)
     {
         return new ResultadoBitacora(
             resultado.Estado, resultado.BloquesOk, resultado.Fin, resultado.DuracionMs,
-            resultado.ErrorPaso, resultado.ErrorProcedimiento, resultado.ErrorMysqlNum,
-            resultado.ErrorSqlState, Limpiar(resultado.ErrorMensaje, TopeMensaje),
+            Limpiar(resultado.ErrorPaso, TopePaso),
+            Limpiar(resultado.ErrorProcedimiento, TopeErrorProcedimiento), resultado.ErrorMysqlNum,
+            Limpiar(resultado.ErrorSqlState, TopeSqlState), Limpiar(resultado.ErrorMensaje, TopeMensaje),
             resultado.CodFacturaVenta);
     }
 

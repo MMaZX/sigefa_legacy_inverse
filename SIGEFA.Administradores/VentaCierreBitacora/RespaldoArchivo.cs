@@ -7,7 +7,8 @@ using System.Text;
 namespace SIGEFA.Administradores.VentaCierreBitacora;
 
 // Respaldo en archivo de la bitácora: <carpeta>/<codPedido>.<intento>.log.
-// Un solo WriteAllText por intento. La carpeta la inyecta el llamador y se crea
+// Un solo Write por intento, abriendo con CreateNew para no pisar nunca el archivo
+// de otra instancia. UTF-8 sin BOM. La carpeta la inyecta el llamador y se crea
 // bajo demanda. Si no se puede escribir, devuelve null y no lanza.
 public sealed class RespaldoArchivo : IRespaldoArchivo
 {
@@ -15,11 +16,23 @@ public sealed class RespaldoArchivo : IRespaldoArchivo
     private const string FormatoHora = "HH:mm:ss.fff";
     private const string Linea = "------------------------------------------------------------";
 
+    private const int MaximoIntentos = 3;
+
+    private static readonly Encoding Codificacion = new UTF8Encoding(false);
+
     private readonly string _carpeta;
+    private readonly Action<string> _alElegirRuta;
 
     public RespaldoArchivo(string carpeta)
+        : this(carpeta, null)
+    {
+    }
+
+    // alElegirRuta se invoca con la ruta elegida justo antes de abrirla (gancho de prueba).
+    public RespaldoArchivo(string carpeta, Action<string> alElegirRuta)
     {
         _carpeta = carpeta;
+        _alElegirRuta = alElegirRuta;
     }
 
     public string Escribir(
@@ -29,13 +42,48 @@ public sealed class RespaldoArchivo : IRespaldoArchivo
         try
         {
             Directory.CreateDirectory(_carpeta);
-            string ruta = ElegirRuta(intento.CodPedido, numeroIntento);
-            File.WriteAllText(ruta, ArmarTexto(intento, ObtenerNumero(ruta), resultado, eventos), Encoding.UTF8);
-            return ruta;
+            int? preferido = numeroIntento;
+            for (int vez = 0; vez < MaximoIntentos; vez++)
+            {
+                string ruta = ElegirRuta(intento.CodPedido, preferido);
+                if (_alElegirRuta != null)
+                {
+                    _alElegirRuta(ruta);
+                }
+
+                byte[] bytes = Codificacion.GetBytes(ArmarTexto(intento, ObtenerNumero(ruta), resultado, eventos));
+                if (TryCrear(ruta, bytes))
+                {
+                    return ruta;
+                }
+
+                preferido = null;
+            }
+
+            return null;
         }
         catch (Exception)
         {
             return null;
+        }
+    }
+
+    // Crea el archivo en exclusiva y escribe todo de una vez. False si otra
+    // instancia lo creó antes (el llamador recalcula); cualquier otro fallo propaga.
+    private static bool TryCrear(string ruta, byte[] bytes)
+    {
+        try
+        {
+            using (var archivo = new FileStream(ruta, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                archivo.Write(bytes, 0, bytes.Length);
+            }
+
+            return true;
+        }
+        catch (IOException) when (File.Exists(ruta))
+        {
+            return false;
         }
     }
 
