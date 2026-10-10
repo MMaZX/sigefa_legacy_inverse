@@ -3745,7 +3745,7 @@ public class frmVenta2019 : Office2007Form
 							}
 						}
 
-						VentaCierreService servicioCierre = new VentaCierreService();
+						VentaCierreService servicioCierre = new VentaCierreServiceConBitacora(frmLogin.iCodUser, frmLogin.sUsuario, Environment.MachineName, calcularVersionApp());
 						frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre, todasAccionesPostCierre);
 						dialogoCierre.ShowDialog(this);
 
@@ -4261,6 +4261,19 @@ public class frmVenta2019 : Office2007Form
 			{
 				MessageBox.Show("Error: " + ex3.Message.ToString(), "Error Respecto a Despacho", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 			}
+		}
+	}
+
+	// Bitacora del cierre: version de la app = fecha de escritura del .exe (AssemblyVersion es fija).
+	private static string calcularVersionApp()
+	{
+		try
+		{
+			return System.IO.File.GetLastWriteTime(Application.ExecutablePath).ToString("yyyy-MM-dd HH:mm");
+		}
+		catch (Exception)
+		{
+			return "desconocida";
 		}
 	}
 

@@ -472,7 +472,7 @@ namespace SIGEFA.Administradores.VentaCierre
         // detalle y pagos). Si dos bloques comparten serie, la numeración avanza correlativa dentro de
         // la misma transacción. Un solo Commit al final. Ante cualquier fallo ejecuta Rollback completo
         // y restaura las entidades sin compensación posterior.
-        public IList<VentaCierreResultado> ejecutarOrdenAtomica(
+        public virtual IList<VentaCierreResultado> ejecutarOrdenAtomica(
             IList<VentaCierreDatosBloque> bloques,
             IProgress<VentaCierreProgreso> progreso = null)
         {
