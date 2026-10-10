@@ -39,6 +39,10 @@ Guardar en tablas de la BD el paso a paso de cada intento de cerrar una venta (r
 | T5 | Auditoría, build y suite en la VM, consultas de revisión | claude | cada tarea |
 | M | Migración de las dos tablas | `gr-backend` | pedido enviado 2026-10-10 |
 
+## Migración (respuesta de `gr-backend`, 2026-10-10)
+
+Lista y probada en dev, **sin commit en `gruporicardoapi` y sin aplicar a producción**: `~/www/gruporicardoapi/database/migrations/2026_10_10_130000_create_venta_cierre_log_tables.php` (up y down). DDL final = el borrador, con InnoDB y `utf8mb4_unicode_ci`; `id` y `log_id` son `BIGINT UNSIGNED`; los demás enteros `INT` firmados; `DATETIME(3)` en `inicio`, `fin` y `hora`. Índices: `uq_venta_cierre_log_pedido_intento` (UNIQUE `cod_pedido, intento`), `idx_venta_cierre_log_inicio`, `idx_venta_cierre_log_estado_inicio`, `idx_venta_cierre_log_evento_log_orden`; FK `fk_venta_cierre_log_evento_log` con `ON DELETE CASCADE`, sin FK en `cod_pedido`, sin triggers. Probada con `migrate` y `migrate:rollback` en el contenedor `manager_php_dev`: **dev quedó sin las tablas** (revertida). Para las pruebas de integración de T3 hay que aplicarla en dev: `php artisan migrate --path=<archivo>` y revertirla igual al terminar. Retención: sin particiones (la FK con cascade lo impide); purga `DELETE FROM venta_cierre_log WHERE inicio < NOW() - INTERVAL 90 DAY` (en lotes con `LIMIT` si crece), por comando o evento programado, **no creado**. Aviso: reintentar el mismo `(cod_pedido, intento)` da error 1062; calcular `MAX+1` y reintentar ante 1062.
+
 ## Verificación
 
 Host sin `dotnet`: lo escrito se reporta como "escrito, no verificado en compilador". Runner de pruebas: `dotnet test` en la VM (`sigefa_build`, con autorización explícita). TDD estricto (fuente: configuración del proyecto). Regla de oro heredada: toda sentencia SQL nueva se verifica contra la BD dev real antes de darla por buena.
