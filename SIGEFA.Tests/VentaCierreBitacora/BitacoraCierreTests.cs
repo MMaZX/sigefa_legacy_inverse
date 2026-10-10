@@ -283,6 +283,82 @@ public class BitacoraCierreTests : IDisposable
         Assert.Equal(50, Max(ordenes));
     }
 
+    [Fact]
+    public void RegistrarEvento_RecortaAlmacenYPasoASusTopes()
+    {
+        BitacoraCierre bitacora = Crear();
+        bitacora.Iniciar(DatosBitacora.Intento());
+
+        bitacora.RegistrarEvento(1, new string('a', 200), new string('p', 100), null, null, ResultadoEvento.Info, null, "d");
+        bitacora.Finalizar(DatosBitacora.Ok());
+
+        EventoBitacora evento = _repositorio.EventosFinalizados[0][0];
+        Assert.Equal(80, evento.Almacen.Length);
+        Assert.Equal(40, evento.Paso.Length);
+    }
+
+    [Fact]
+    public void Iniciar_RecortaUsuarioEquipoYVersionASusTopes()
+    {
+        BitacoraCierre bitacora = Crear();
+        var intento = new IntentoBitacora(
+            7, 15, new string('u', 200) + "\n", new string('e', 200), new string('v', 200), 2,
+            new DateTime(2026, 10, 10, 14, 3, 22, 123));
+
+        bitacora.Iniciar(intento);
+
+        IntentoBitacora guardado = _repositorio.Intentos[0];
+        Assert.Equal(80, guardado.Usuario.Length);
+        Assert.Equal(60, guardado.Equipo.Length);
+        Assert.Equal(20, guardado.VersionApp.Length);
+    }
+
+    [Fact]
+    public void Finalizar_RecortaLosCamposDeErrorASusTopes()
+    {
+        BitacoraCierre bitacora = Crear();
+        bitacora.Iniciar(DatosBitacora.Intento());
+        var resultado = new ResultadoBitacora(
+            EstadoBitacora.Error, 1, new DateTime(2026, 10, 10, 14, 3, 25, 789), 10,
+            new string('p', 100), new string('q', 200), 1062, "230000", "boom", null);
+
+        bitacora.Finalizar(resultado);
+
+        ResultadoBitacora guardado = _repositorio.Resultados[0];
+        Assert.Equal(40, guardado.ErrorPaso.Length);
+        Assert.Equal(80, guardado.ErrorProcedimiento.Length);
+        Assert.Equal(5, guardado.ErrorSqlState.Length);
+    }
+
+    [Fact]
+    public void RegistrarEvento_EnmascaraLaCredencialAntesDelTope()
+    {
+        BitacoraCierre bitacora = Crear();
+        bitacora.Iniciar(DatosBitacora.Intento());
+
+        Registrar(bitacora, "paso", new string('a', 295) + " Pwd=secreto");
+        bitacora.Finalizar(DatosBitacora.Ok());
+
+        string detalle = _repositorio.EventosFinalizados[0][0].Detalle;
+        Assert.DoesNotContain("secreto", detalle);
+        Assert.True(detalle.Length <= BitacoraCierre.TopeDetalle);
+    }
+
+    [Fact]
+    public void ConDependenciasNulas_IniciarRegistrarYFinalizarNoLanzan()
+    {
+        var bitacora = new BitacoraCierre(null, null, null);
+
+        Exception falla = Record.Exception(() =>
+        {
+            bitacora.Iniciar(DatosBitacora.Intento());
+            bitacora.RegistrarEvento(1, "A", "p", null, null, ResultadoEvento.Info, null, "d");
+            bitacora.Finalizar(DatosBitacora.Error());
+        });
+
+        Assert.Null(falla);
+    }
+
     private static int Min(HashSet<int> valores)
     {
         int minimo = int.MaxValue;

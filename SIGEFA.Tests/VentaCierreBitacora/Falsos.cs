@@ -100,6 +100,9 @@ internal sealed class CarpetaTemporal : IDisposable
         catch (IOException)
         {
         }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 }
 

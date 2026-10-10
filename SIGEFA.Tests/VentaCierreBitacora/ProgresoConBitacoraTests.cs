@@ -20,7 +20,7 @@ public class ProgresoConBitacoraTests : IDisposable
         _carpeta.Dispose();
     }
 
-    // Progreso interno falso: guarda lo reportado y puede lanzar.
+    // Progreso interno falso: guarda lo reportado.
     private sealed class ProgresoFalso : IProgress<VentaCierreProgreso>
     {
         public readonly List<VentaCierreProgreso> Informados = new List<VentaCierreProgreso>();

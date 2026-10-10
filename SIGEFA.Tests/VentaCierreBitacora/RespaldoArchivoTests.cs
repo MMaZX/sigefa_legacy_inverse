@@ -123,4 +123,52 @@ public class RespaldoArchivoTests : IDisposable
         Assert.Null(falla);
         Assert.Null(ruta);
     }
+
+    [Fact]
+    public void Escribir_SiElArchivoApareceEntreLaEleccionYLaEscritura_NoLoPisaYUsaElSiguiente()
+    {
+        bool aparecio = false;
+        var respaldo = new RespaldoArchivo(_carpeta.Ruta, ruta =>
+        {
+            if (aparecio)
+            {
+                return;
+            }
+
+            aparecio = true;
+            File.WriteAllText(ruta, "de otra instancia");
+        });
+
+        string ruta = respaldo.Escribir(DatosBitacora.Intento(7), 3, DatosBitacora.Ok(), DosEventos());
+
+        Assert.Equal("de otra instancia", File.ReadAllText(_carpeta.Archivo("7.3.log")));
+        Assert.Equal(_carpeta.Archivo("7.4.log"), ruta);
+        Assert.Contains("Intento: 4", File.ReadAllText(ruta));
+    }
+
+    [Fact]
+    public void Escribir_NoAgregaBomAlArchivo()
+    {
+        var respaldo = new RespaldoArchivo(_carpeta.Ruta);
+
+        string ruta = respaldo.Escribir(DatosBitacora.Intento(7), 1, DatosBitacora.Ok(), DosEventos());
+
+        byte[] bytes = File.ReadAllBytes(ruta);
+        bool empiezaConBom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+        Assert.False(empiezaConBom);
+        Assert.Equal((byte)'P', bytes[0]);
+    }
+
+    [Fact]
+    public void Escribir_ConSaltosDeLineaEnAlmacenOPaso_MantieneUnaLineaPorEvento()
+    {
+        var bitacora = new BitacoraCierre(new RepositorioFalso { LanzarEnCrear = true }, new RespaldoArchivo(_carpeta.Ruta), new RelojFalso().Ahora);
+        bitacora.Iniciar(DatosBitacora.Intento(7));
+        bitacora.RegistrarEvento(1, "ALMA\nCEN\r\nX", "pa\nso", null, null, ResultadoEvento.Info, null, "d");
+        bitacora.Finalizar(DatosBitacora.Ok());
+
+        string texto = File.ReadAllText(_carpeta.Archivo("7.1.log"));
+
+        Assert.Contains("almacen=ALMA CEN  X paso=pa so ", texto);
+    }
 }
