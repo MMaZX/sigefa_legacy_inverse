@@ -289,43 +289,15 @@ Orden: T0, luego T1; después T2 y T3 en paralelo (archivos distintos); T4; T5a 
   - **Decisión del usuario (2026-10-10) sobre los defectos de T5b-1:** (a) el servicio corta y reporta si falla la nota de salida (no sigue con ingreso ni `AprobarTransferencia`); (b) `bandera` y `codproducto_error` son locales; (c) `NI.MontoBruto` se replica como hoy (queda por defecto) con un comentario, porque corregirlo cambia montos contables y se decide aparte. **Ruta de T5b-2:** delegada (writer, regla de 2+ archivos no triviales), un solo escritor, TDD estricto: runner `dotnet test` en la VM (el host no tiene dotnet; "escrito, no verificado en compilador").
 
   - **Auditoría independiente de T5b-2 (2026-10-10, solo lectura, firmas ejecutadas en dev con ROLLBACK): APROBADO CON CORRECCIONES.** Verificado: los 22 SP del servicio coinciden con `mysql.proc` y cada valor cae en su columna (7 SP ejecutados con valores distintos por columna); fidelidad a `frmReqAlmacen` en procedimientos, orden y cálculos; sin `MessageBox`, controles ni estáticos de UI; solo 4 archivos tocados. No verificado: compilador y xUnit (sin dotnet), producción. `CantidadesADespachar` no hace falta: `colCtdadRequerimiento` es de solo lectura en `TipoReq==2`. Las validaciones nuevas del paso 1 no rompen casos legítimos (Aprobar solo se ve con estado 7 y `Proceso==1`); rechazar "todas las cantidades en cero" cambia el legacy, que mostraba éxito sin hacer nada.
-    - **Correcciones pendientes (una sola ronda):** (1) **grave, prueba:** `ReqVentaAprobacionIntegracionTests.cs:463` afirma `detallenotaingreso.fechaingreso == fechaIngreso`, pero `GuardaDetalleIngreso` guarda `NOW()` y no usa el parámetro; la prueba fallará en la VM. Quitar la aserción o compararla con una ventana de `NOW()`, y corregir el comentario de `FechaIngreso` (`ReqVentaAprobacion.cs:42`: no se persiste, como en el legacy). (2) falta el equivalente de `verificarCtdadRequerimiento`: sin stock suficiente el servicio lo descubre recién en `GuardaDetalleSalida`, con el requerimiento ya aprobado y el stock separado; requisito explícito para T5b-3 (verificar en el hilo de la interfaz antes del diálogo) o paso 1 del servicio. (3) `LeerSerie` (`ReqVentaAprobacion.cs:386-388`) toma la primera fila; el legacy se queda con la última (`MysqlSerie.cs:158-167`); usar la última y probar con dos filas. (4) si falla un paso posterior al 2, el mensaje debe decir hasta qué paso quedó confirmado. (5) si cabe: la integración no falla si faltan datos base (`return` silencioso), no cubre `Aprobar` ni el corte por stock, no lee `cantidadpendiente`, serie `"001"` fija. **Deuda anotada:** aserciones unitarias débiles (`ContieneValor`), RED solo por compilación, carrera entre dos aprobadores, `catch` vacío en `LeerNewId`.
-  - **Aviso:** `main` ya contiene T5b-2 con la aserción del hallazgo 1; en la VM esa prueba de integración fallará hasta corregirla. No es un fallo del servicio.
-
-## Protocolo común para los agentes (pegar al inicio de cada prompt)
-
-1. `mem_search "ui-progreso-requerimiento"` y `mem_search "req-venta-servicio"`; leer este documento, `odd/tasks/req-venta-servicio.md` y `AGENTS.md`.
-2. Trabajar SOLO en los archivos de la tarea. TDD estricto cuando haya lógica: prueba en rojo (commit), luego implementación (commit).
-3. Reglas: `net461`, sin `ValueTuple`, SQL parametrizado, sin ifs anidados de tercer nivel (guard clauses o `switch`), sin `MessageBox` nuevo para errores de lógica (devolver el error y mostrarlo desde el diálogo), ruta legacy intacta y nuevo comportamiento detrás de `VentaCierreRuta=nueva`.
-4. El host no tiene `dotnet`: no afirmar "compila" ni "pasan". Reportar "escrito, no verificado en compilador".
-5. Textos de interfaz en español claro; identificadores y comentarios siguiendo el estilo del archivo vecino.
-6. Conventional Commits en español, sin `Co-Authored-By` ni atribución de IA; `git add` solo de los archivos propios; sin push.
-7. Al terminar: hashes y evidencia en la tarea de este documento, actualizar Engram `odd/ui-progreso-requerimiento/tasks`, listar qué quedó sin verificar.
-
-## Auditoría de claude (T7), por cada tarea entregada
-
-1. `git show --stat` y lectura completa del diff; comprobar que solo se tocaron los archivos permitidos.
-2. `git diff -w` sobre los archivos legacy: solo adiciones y la guarda del flag.
-3. Revisión de textos con la skill `humanizer` (T1b): cada mensaje debe decir qué pasa, en pocas palabras, sin relleno, sin jerga técnica y sin tono de anuncio. Los cambios de redacción los hace claude en una sola pasada y quedan en un commit aparte.
-4. Revisión contra los criterios de aceptación y los hallazgos típicos: pruebas que pasan por un camino distinto al declarado, pruebas que ocultan el defecto (como el truco de `AllowUserVariables`), mensajes con jerga, `MessageBox` desde el hilo de fondo, deadlocks entre pruebas en paralelo.
-5. Build `Debug|x86` y suite completa en la VM, con autorización explícita del usuario; la BD dev debe quedar intacta. No compilar si la app está abierta en la VM.
-6. Guion de prueba manual para el usuario (casos que funcionan y que fallan a propósito) y la bitácora real en `%LOCALAPPDATA%\SIGEFA\req_venta_errores.log`.
-7. Una sola ronda de corrección por tarea; lo que siga mal vuelve al usuario como decisión, no a un bucle.
-
-## Riesgos conocidos
-
-- R1: la capa de administración muestra `MessageBoxEx` en errores. Hasta que T5a lo mida, no se sabe cuántos hay en la cadena de aprobar.
-- R2: `TransactionScope` es sensible al hilo; la lógica legacy debe correr entera dentro de un solo `Task.Run`, sin partirla en varios.
-- R3: el defecto de aprobar sin transacción global sigue existiendo en la fase 1: el cuadro de progreso lo hace visible pero no lo corrige.
-- R4: `frmReqAlmacen` es compartido con `TipoReq==1`; cualquier cambio fuera de la rama `TipoReq==2` y del flag es un defecto de alcance.
-
-## Evidencia y entrega
-
-Pendiente. Cuando empiece el trabajo: una rama nueva apilada sobre `feat/req-venta-servicio` y PR según `chained-pr`/`work-unit-commits`. Pronóstico de líneas: T1 ~150, T2 ~150, T3 ~300, T4 ~40, T5b ~200, T6 ~120.
+    - **Correcciones de auditoría aplicadas (2026-10-10, commit `dc9017b`):** (1) `ReqVentaAprobacionIntegracionTests.cs` compara `fechaingreso` contra ventana de `NOW()` documentando comportamiento legacy, y comentario de `FechaIngreso` en `ReqVentaAprobacion.cs` actualizado; (2) `LeerSerie` usa `Get()` y toma la última fila como `MysqlSerie.cs`, con prueba unitaria de 2 series; (3) `Corredor` rastrea pasos confirmados y ante fallos posteriores al paso 2 añade `(Quedó confirmado hasta el paso: ...)`; (4) `ReqVentaTextos.Paso` incluye `PasosAprobacion()`.
+    - **Verificación en la VM Windows (`dc9017b`, 2026-10-10):**
+      - MSBuild de `SIGEFA.csproj` (`Debug|x86`): `exit=0`, 0 errores.
+      - Suite completa de pruebas xUnit (`dotnet test SIGEFA.Tests.csproj`) con `SIGEFA_TEST_CONN` contra la BD dev del host: **204 de 204 superadas, 0 con error, 0 omitidas (12 s)**. Incluye la prueba de integración con rollback `AprobarEn_ContraBdReal_GuardaColumnasYRevierte`.
+      - Integridad de BD dev verificada: requerimiento 5273 en estado 7, 8416 en estado 13, 0 requerimientos `ZZT%`, 0 tablas temporales residuales.
 
 ## Siguiente paso
 
-**Estado al 2026-10-10 (cierre de sesión):** T5b-1 hecha; T5b-2 entregada (`027065b` RED, `4c18f2c` feat), escrita y **no verificada en compilador**; auditoría independiente lanzada y sin veredicto registrado (si la sesión se cortó, repetirla leyendo esos dos commits). Siguiente: leer el veredicto, una sola ronda de corrección si hace falta, luego T5b-3 (formulario: confirmación explicativa, datos leídos en el hilo de la interfaz incluyendo `CantidadesADespachar` si la grilla se editó, diálogo con `PasosAprobacion()`, recarga al volver), T1b, build y suite en la VM y prueba manual. Decisión a confirmar en la auditoría: las validaciones nuevas del paso 1 (estado distinto de 7, `tipo_req != 2`, cantidades en cero).
+**Estado al 2026-10-10:** T5b-1 y T5b-2 completadas y verificadas en la VM (204/204). Siguiente paso: **T5b-3** (formulario `frmReqAlmacen.cs`: confirmación previa explicativa, extracción de datos en el hilo de UI bajo `TipoReq==2` y flag `VentaCierreRuta=nueva`, invocación a `frmProgresoOperacion` con `ReqVentaTextos.PasosAprobacion()` y recarga de la grilla/formulario al terminar). Luego T1b (revisión de textos con skill `humanizer`) y prueba manual visual.
 
 (Texto anterior, histórico:)
 
