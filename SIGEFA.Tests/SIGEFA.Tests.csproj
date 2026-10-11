@@ -25,4 +25,10 @@
   <ItemGroup>
     <Compile Include="..\SIGEFA.Administradores\ReqVenta\*.cs" Link="ReqVenta\%(Filename)%(Extension)" />
   </ItemGroup>
+  <!-- Bitacora del cierre de venta: solo lo puro. Se enlazan los dos DTO del progreso, nunca VentaCierreService (arrastra MySql y WinForms) -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\VentaCierreBitacora\*.cs" Link="VentaCierreBitacora\%(Filename)%(Extension)" />
+    <Compile Include="..\SIGEFA.Administradores\VentaCierre\VentaCierrePaso.cs" Link="VentaCierre\VentaCierrePaso.cs" />
+    <Compile Include="..\SIGEFA.Administradores\VentaCierre\VentaCierreProgreso.cs" Link="VentaCierre\VentaCierreProgreso.cs" />
+  </ItemGroup>
 </Project>
