@@ -81,6 +81,68 @@ public class ProgresoPorPedidoTests : IDisposable
         Assert.Equal(new[] { "abrirTransaccion" }, EventosDe(20).Select(e => e.Paso).ToArray());
     }
 
+    [Theory]
+    [InlineData(VentaCierrePaso.abrirTransaccion)]
+    [InlineData(VentaCierrePaso.bloquearSerie)]
+    [InlineData(VentaCierrePaso.bloquearStock)]
+    [InlineData(VentaCierrePaso.confirmar)]
+    public void Report_PasoGlobal_ConAlmacenNoGlobal_VaATodosLosPedidos(VentaCierrePaso paso)
+    {
+        CrearBitacoras(10, 20, 30);
+        var progreso = new ProgresoPorPedido(new[] { 10, 20, 30 }, _bitacoras, null);
+
+        // Un índice válido evita que el fallback de bloque fuera de rango oculte el defecto.
+        progreso.Report(DeBloque(paso, 2, "ALMACEN B"));
+
+        foreach (int pedido in new[] { 10, 20, 30 })
+        {
+            EventoBitacora evento = EventosDe(pedido).Single();
+            Assert.Equal(paso.ToString(), evento.Paso);
+            Assert.Equal(2, evento.Bloque);
+            Assert.Equal("ALMACEN B", evento.Almacen);
+        }
+    }
+
+    [Theory]
+    [InlineData(VentaCierrePaso.guardarCabecera)]
+    [InlineData(VentaCierrePaso.guardarDetalle)]
+    [InlineData(VentaCierrePaso.reservarNotaCredito)]
+    [InlineData(VentaCierrePaso.guardarPago)]
+    public void Report_PasoDeBloque_ConAlmacenGlobal_VaSoloAlPedidoCorrespondiente(VentaCierrePaso paso)
+    {
+        CrearBitacoras(10, 20, 30);
+        var progreso = new ProgresoPorPedido(new[] { 10, 20, 30 }, _bitacoras, null);
+
+        progreso.Report(DeBloque(paso, 2, "Global", 1));
+
+        Assert.Empty(EventosDe(10));
+        EventoBitacora evento = EventosDe(20).Single();
+        Assert.Equal(paso.ToString(), evento.Paso);
+        Assert.Equal(2, evento.Bloque);
+        Assert.Equal("Global", evento.Almacen);
+        Assert.Empty(EventosDe(30));
+    }
+
+    [Theory]
+    [InlineData(VentaCierrePaso.guardarCabecera)]
+    [InlineData(VentaCierrePaso.guardarDetalle)]
+    [InlineData(VentaCierrePaso.reservarNotaCredito)]
+    [InlineData(VentaCierrePaso.guardarPago)]
+    public void Report_PasoDeBloque_ConAlmacenGlobalYPedidoRepetido_NoTocaOtroPedido(VentaCierrePaso paso)
+    {
+        CrearBitacoras(10, 20);
+        var progreso = new ProgresoPorPedido(new[] { 10, 10, 20 }, _bitacoras, null);
+
+        progreso.Report(DeBloque(paso, 1, "Global", 1));
+        progreso.Report(DeBloque(paso, 2, "Global", 2));
+
+        IReadOnlyList<EventoBitacora> propios = EventosDe(10);
+        Assert.Equal(new[] { paso.ToString(), paso.ToString() }, propios.Select(e => e.Paso).ToArray());
+        Assert.Equal(new int?[] { 1, 2 }, propios.Select(e => e.Bloque).ToArray());
+        Assert.All(propios, evento => Assert.Equal("Global", evento.Almacen));
+        Assert.Empty(EventosDe(20));
+    }
+
     [Fact]
     public void Report_EventoDeBloque_VaSoloAlPedidoDeEseBloque()
     {

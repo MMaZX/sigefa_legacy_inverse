@@ -3745,7 +3745,7 @@ public class frmVenta2019 : Office2007Form
 							}
 						}
 
-						VentaCierreService servicioCierre = new VentaCierreServiceConBitacora(frmLogin.iCodUser, frmLogin.sUsuario, Environment.MachineName, calcularVersionApp());
+						VentaCierreService servicioCierre = new VentaCierreServiceConBitacora(frmLogin.iCodUser, frmLogin.sUsuario, SIGEFA.Administradores.VentaCierreBitacora.MetadataBitacora.ObtenerEquipo(() => Environment.MachineName), calcularVersionApp());
 						frmVentaCierreProgreso dialogoCierre = new frmVentaCierreProgreso(servicioCierre, bloquesCierre, todasAccionesPostCierre);
 						dialogoCierre.ShowDialog(this);
 
