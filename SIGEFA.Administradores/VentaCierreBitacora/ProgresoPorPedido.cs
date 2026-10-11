@@ -74,7 +74,7 @@ public sealed class ProgresoPorPedido : IProgress<VentaCierreProgreso>
 
     private IEnumerable<ProgresoConBitacora> Destinatarios(VentaCierreProgreso progreso)
     {
-        if (progreso.almacenNombre == AlmacenGlobal)
+        if (EsPasoGlobal(progreso.paso))
         {
             return _registradorPorPedido.Values;
         }
@@ -89,5 +89,19 @@ public sealed class ProgresoPorPedido : IProgress<VentaCierreProgreso>
         return _registradorPorPedido.TryGetValue(_pedidoPorBloque[indice], out propio)
             ? new[] { propio }
             : new ProgresoConBitacora[0];
+    }
+
+    private static bool EsPasoGlobal(VentaCierrePaso paso)
+    {
+        switch (paso)
+        {
+            case VentaCierrePaso.abrirTransaccion:
+            case VentaCierrePaso.bloquearSerie:
+            case VentaCierrePaso.bloquearStock:
+            case VentaCierrePaso.confirmar:
+                return true;
+            default:
+                return false;
+        }
     }
 }
