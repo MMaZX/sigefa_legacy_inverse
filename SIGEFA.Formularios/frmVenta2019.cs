@@ -269,6 +269,10 @@ public class frmVenta2019 : Office2007Form
 
 	public bool bandNuevo = false;
 
+	// Se activa al terminar un cierre en la ruta nueva: la pantalla queda lista como "Iniciar OV"
+	// y ni el final de realizaProcesos ni el de toolStripGuardar_Click deben deshacerlo.
+	private bool ovNuevaTrasCierre;
+
 	public bool bandEditar = false;
 
 	internal int CodClienteGeneradoGRC;
@@ -2054,9 +2058,15 @@ public class frmVenta2019 : Office2007Form
 
 	public void btnInicioOV_Click(object sender, EventArgs e)
 	{
-		bandNuevo = true;
 		btnvercombos.Enabled = true;
 		btnreq.Visible = false;
+		prepararOVNueva();
+	}
+
+	// Deja la pantalla como una OV nueva: limpia, en modo nuevo y con cantidad/descuento editables.
+	private void prepararOVNueva()
+	{
+		bandNuevo = true;
 		limpiarVentana();
 		dgvdetalleEditable(editable: true);
 	}
@@ -2833,6 +2843,7 @@ public class frmVenta2019 : Office2007Form
 
 	private void toolStripGuardar_Click(object sender, EventArgs e)
 	{
+		ovNuevaTrasCierre = false;
 		Cursor = Cursors.WaitCursor;
 		try
 		{
@@ -2862,7 +2873,10 @@ public class frmVenta2019 : Office2007Form
 			{
 				realizaProcesos();
 			}
-			dgvdetalleEditable(editable: false);
+			if (!ovNuevaTrasCierre)
+			{
+				dgvdetalleEditable(editable: false);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -3066,7 +3080,7 @@ public class frmVenta2019 : Office2007Form
 			btnreq.Visible = false;
 		}
 		bandEditar = false;
-		bandNuevo = false;
+		bandNuevo = ovNuevaTrasCierre;
 	}
 
 	private bool validarZonaYTecnico()
@@ -3948,8 +3962,9 @@ public class frmVenta2019 : Office2007Form
 			if (postCierreEnDialogo)
 			{
 				// T13b: el dialogo ya ejecuto despacho, codigo de barras, comprobante e
-				// impresion; se limpia la vista y se reinicia el estado para "Iniciar OV".
-				limpiarVentana();
+				// impresion; la vista queda como "Iniciar OV" (limpia y con cantidad editable).
+				prepararOVNueva();
+				ovNuevaTrasCierre = true;
 				this.venta = new clsFacturaVenta();
 				lista_facturas = new List<clsFacturaVenta>();
 				CodVenta = null;
