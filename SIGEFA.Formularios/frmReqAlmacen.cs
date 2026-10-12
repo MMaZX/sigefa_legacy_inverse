@@ -938,7 +938,7 @@ public class frmReqAlmacen : Form
 	// req_alm antes del diálogo; el trabajo corre en un solo bloque.
 	private void GuardarRequerimientoRutaNueva()
 	{
-		DialogResult confirmacion = MessageBox.Show("¿Está seguro de guardar el requerimiento? Quedará en estado pendiente.", "Guardar requerimiento", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+		DialogResult confirmacion = MessageBox.Show("¿Desea guardar el requerimiento? Quedará en estado pendiente.", "Guardar requerimiento", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 		if (confirmacion == DialogResult.No)
 		{
 			return;
@@ -1019,7 +1019,7 @@ public class frmReqAlmacen : Form
 	private void AprobarRequerimientoRutaNueva()
 	{
 		DialogResult confirmacion = MessageBox.Show(
-			"¿Está seguro de aprobar el requerimiento? Se separará el stock, se creará la transferencia directa y se registrarán las notas de salida e ingreso correspondientes.",
+			"¿Desea aprobar el requerimiento? Se reservará stock del almacén de despacho, se creará una transferencia al almacén solicitante y se registrarán las notas de salida e ingreso.",
 			"Aprobar requerimiento",
 			MessageBoxButtons.YesNo,
 			MessageBoxIcon.Question);

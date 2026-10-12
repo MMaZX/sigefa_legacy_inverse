@@ -356,14 +356,25 @@ public class FrmTPenPedido : Office2007Form
 	{
 		if (dgvTransferenciasPendientes.Rows.Count == 0 || dgvTransferenciasPendientes.CurrentRow == null)
 		{
-			MessageBox.Show("No se puede anular el Requerimiento", "Requerimiento Transferencia", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			MessageBox.Show("No hay un requerimiento seleccionado para anular.", "Requerimiento Transferencia", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 			return;
 		}
 
 		int codEstado = Convert.ToInt32(dgvTransferenciasPendientes.CurrentRow.Cells[colCodEstado.Name].Value);
 		int codReqAlm = Convert.ToInt32(dgvTransferenciasPendientes.CurrentRow.Cells[codigo.Name].Value);
 
-		DialogResult confirmacion = MessageBox.Show("Esta seguro que desea anular el Requerimiento para Venta seleccionada", "Requerimiento para Venta", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+		string textoConfirmacion = "¿Desea anular el requerimiento de venta seleccionado?";
+		switch (codEstado)
+		{
+			case 7:
+				textoConfirmacion += "\n\nSe rechazarán las transferencias pendientes y se liberará el stock reservado en el almacén de despacho.";
+				break;
+			case 13:
+				textoConfirmacion += "\n\nSe creará una transferencia de devolución, con una nota de salida del almacén solicitante y una nota de ingreso al almacén de despacho.";
+				break;
+		}
+
+		DialogResult confirmacion = MessageBox.Show(textoConfirmacion, "Requerimiento para Venta", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 		if (confirmacion == DialogResult.No)
 		{
 			return;

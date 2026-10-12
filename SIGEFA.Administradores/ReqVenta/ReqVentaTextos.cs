@@ -23,9 +23,9 @@ public static class ReqVentaTextos
     {
         return new List<PasoOperacion>
         {
-            new PasoOperacion(ComprobarRequerimiento, "Comprobar el requerimiento", EstadoPaso.Pendiente),
+            new PasoOperacion(ComprobarRequerimiento, "Revisar el requerimiento", EstadoPaso.Pendiente),
             new PasoOperacion(RechazarTransferencias, "Rechazar las transferencias pendientes", EstadoPaso.Pendiente),
-            new PasoOperacion(DevolverReservas, "Devolver el stock reservado al almacén de despacho", EstadoPaso.Pendiente),
+            new PasoOperacion(DevolverReservas, "Liberar el stock reservado en el almacén de despacho", EstadoPaso.Pendiente),
             new PasoOperacion(MarcarAnulado, "Marcar el requerimiento como anulado", EstadoPaso.Pendiente),
         };
     }
@@ -35,12 +35,12 @@ public static class ReqVentaTextos
     {
         return new List<PasoOperacion>
         {
-            new PasoOperacion(ComprobarRequerimiento, "Comprobar el requerimiento", EstadoPaso.Pendiente),
-            new PasoOperacion(RevisarStock, "Revisar que haya stock para devolver", EstadoPaso.Pendiente),
-            new PasoOperacion(CrearExtorno, "Crear el extorno de la transferencia", EstadoPaso.Pendiente),
-            new PasoOperacion(RegistrarSalida, "Registrar la nota de salida", EstadoPaso.Pendiente),
+            new PasoOperacion(ComprobarRequerimiento, "Revisar el requerimiento", EstadoPaso.Pendiente),
+            new PasoOperacion(RevisarStock, "Comprobar que haya stock para la devolución", EstadoPaso.Pendiente),
+            new PasoOperacion(CrearExtorno, "Crear la transferencia de devolución", EstadoPaso.Pendiente),
+            new PasoOperacion(RegistrarSalida, "Registrar la nota de salida del almacén solicitante", EstadoPaso.Pendiente),
             new PasoOperacion(RegistrarIngreso, "Registrar la nota de ingreso en el almacén de despacho", EstadoPaso.Pendiente),
-            new PasoOperacion(AprobarExtorno, "Aprobar el extorno", EstadoPaso.Pendiente),
+            new PasoOperacion(AprobarExtorno, "Aprobar la transferencia de devolución", EstadoPaso.Pendiente),
             new PasoOperacion(MarcarAnulado, "Marcar el requerimiento como anulado", EstadoPaso.Pendiente),
         };
     }
@@ -60,10 +60,10 @@ public static class ReqVentaTextos
     {
         return new List<PasoOperacion>
         {
-            new PasoOperacion(ComprobarDatosAprobacion, "Comprobar los datos y la serie de la transferencia", EstadoPaso.Pendiente),
+            new PasoOperacion(ComprobarDatosAprobacion, "Revisar los datos y la serie de la transferencia", EstadoPaso.Pendiente),
             new PasoOperacion(AprobarRequerimiento, "Aprobar el requerimiento", EstadoPaso.Pendiente),
-            new PasoOperacion(SepararStock, "Separar el stock del almacén de despacho", EstadoPaso.Pendiente),
-            new PasoOperacion(CrearTransferencia, "Crear la transferencia entre almacenes", EstadoPaso.Pendiente),
+            new PasoOperacion(SepararStock, "Reservar stock en el almacén de despacho", EstadoPaso.Pendiente),
+            new PasoOperacion(CrearTransferencia, "Crear la transferencia al almacén solicitante", EstadoPaso.Pendiente),
             new PasoOperacion(RegistrarSalidaDespacho, "Registrar la nota de salida del almacén de despacho", EstadoPaso.Pendiente),
             new PasoOperacion(RegistrarIngresoSolicitante, "Registrar la nota de ingreso en el almacén solicitante", EstadoPaso.Pendiente),
             new PasoOperacion(AprobarTransferencia, "Aprobar la transferencia", EstadoPaso.Pendiente),

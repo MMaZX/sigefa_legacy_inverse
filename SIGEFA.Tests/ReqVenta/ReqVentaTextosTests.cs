@@ -105,8 +105,8 @@ public class ReqVentaTextosTests
         }
     }
 
-    // Los textos usan el vocabulario de las pantallas (transferencia, extorno, nota de salida y de ingreso)
-    // y no rodeos vagos: el usuario ve esas mismas palabras en el resto del programa.
+    // Los textos describen las transferencias de devolución y sus notas de salida e ingreso,
+    // indicando el almacén solicitante como origen y el almacén de despacho como destino.
     [Fact]
     public void Textos_UsanElVocabularioDeLasPantallas()
     {
@@ -114,10 +114,12 @@ public class ReqVentaTextosTests
         Assert.Contains("transferencias", pendiente, StringComparison.OrdinalIgnoreCase);
 
         IReadOnlyList<PasoOperacion> extorno = ReqVentaTextos.PasosAnulacionConExtorno();
-        Assert.Contains("extorno", TextoDe(extorno, ReqVentaTextos.CrearExtorno), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("transferencia de devolución", TextoDe(extorno, ReqVentaTextos.CrearExtorno), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("nota de salida", TextoDe(extorno, ReqVentaTextos.RegistrarSalida), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("almacén solicitante", TextoDe(extorno, ReqVentaTextos.RegistrarSalida), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("nota de ingreso", TextoDe(extorno, ReqVentaTextos.RegistrarIngreso), StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("extorno", TextoDe(extorno, ReqVentaTextos.AprobarExtorno), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("almacén de despacho", TextoDe(extorno, ReqVentaTextos.RegistrarIngreso), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("transferencia de devolución", TextoDe(extorno, ReqVentaTextos.AprobarExtorno), StringComparison.OrdinalIgnoreCase);
     }
 
     private static string TextoDe(IReadOnlyList<PasoOperacion> pasos, string clave)
