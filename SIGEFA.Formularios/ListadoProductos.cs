@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using DocumentFormat.OpenXml.Spreadsheet;
 using SIGEFA.Administradores;
@@ -874,7 +875,7 @@ public class ListadoProductos : Form
 
 	private DataRow filaDetallePorProducto(int codigoProducto)
 	{
-		return dtDGgvDetalle1.AsEnumerable().FirstOrDefault((DataRow x) => Convert.ToInt32(x.Field<object>("CodigoProducto")) == codigoProducto);
+		return dtDGgvDetalle1.AsEnumerable().FirstOrDefault((DataRow x) => x.RowState != DataRowState.Deleted && Convert.ToInt32(x.Field<object>("CodigoProducto")) == codigoProducto);
 	}
 
 	private void avisaPlantillaDesincronizada()
@@ -1012,14 +1013,18 @@ public class ListadoProductos : Form
 
 	private void AccionNecesariaAntesDeEliminarEnModoEdicion(int ifila)
 	{
+		registraEliminacionEnModoEdicion(Convert.ToInt32(dgvdetalle1.Rows[ifila].Cells[CodigoProducto.Name].Value));
+	}
+
+	private void registraEliminacionEnModoEdicion(int codigoProducto)
+	{
 		if (proceso != 1)
 		{
 			return;
 		}
 		try
 		{
-			DataGridViewRow filadgv1 = dgvdetalle1.Rows[ifila];
-			DataRow fila = filaDetallePorProducto(Convert.ToInt32(filadgv1.Cells[CodigoProducto.Name].Value));
+			DataRow fila = filaDetallePorProducto(codigoProducto);
 			if (fila == null)
 			{
 				avisaPlantillaDesincronizada();
@@ -1272,7 +1277,7 @@ public class ListadoProductos : Form
 		}
 	}
 
-	private void button2_Click(object sender, EventArgs e)
+	private async void button2_Click(object sender, EventArgs e)
 	{
 		try
 		{
@@ -1288,7 +1293,8 @@ public class ListadoProductos : Form
 				{
 					recorredetalle();
 					int codigo_plantilla_creado = -1;
-					if (int.TryParse(AdmPlantillaProductos.insertproductosagrupados(clsplantillaprod).ToString(), out codigo_plantilla_creado))
+					int codigoDevuelto = await frmProgresoIndeterminado.EjecutarAsync(this, "Guardando plantilla...", () => AdmPlantillaProductos.insertproductosagrupados(clsplantillaprod));
+					if (int.TryParse(codigoDevuelto.ToString(), out codigo_plantilla_creado))
 					{
 						if (codigo_plantilla_creado == -1)
 						{
@@ -1306,7 +1312,7 @@ public class ListadoProductos : Form
 						btnExcel.Visible = true;
 					}
 				}
-				else if (AdmPlantillaProductos.actualizaPlantilla(clsplantillaprod, cambiosDetalle.Insertar.ToList(), cambiosDetalle.Actualizar.ToList(), cambiosDetalle.Eliminar.ToList()))
+				else if (await guardaCambiosDePlantillaAsync())
 				{
 					MessageBox.Show("Los datos se actualizaron correctamente", Text + "dice: ", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 					AccionNecesariaParaSeguirEditandoDespuesdeGuardar(clsplantillaprod.Codigo);
@@ -1329,6 +1335,14 @@ public class ListadoProductos : Form
 		{
 			MessageBox.Show(ex.Message, "Listado de Productos dice:", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 		}
+	}
+
+	private Task<bool> guardaCambiosDePlantillaAsync()
+	{
+		List<clsDetallePlantillaDeProductos> insertar = cambiosDetalle.Insertar.ToList();
+		List<clsDetallePlantillaDeProductos> actualizar = cambiosDetalle.Actualizar.ToList();
+		List<clsDetallePlantillaDeProductos> eliminar = cambiosDetalle.Eliminar.ToList();
+		return frmProgresoIndeterminado.EjecutarAsync(this, "Guardando plantilla...", () => AdmPlantillaProductos.actualizaPlantilla(clsplantillaprod, insertar, actualizar, eliminar));
 	}
 
 	private void AccionNecesariaParaSeguirEditandoDespuesdeGuardar(int codigo_plantilla_creado)
@@ -1774,6 +1788,39 @@ public class ListadoProductos : Form
 		if (e.ColumnIndex == dgvdetalle1.Columns[colTxtStockMinimo.Name].Index || e.ColumnIndex == dgvdetalle1.Columns[colTxtStockMaximo.Name].Index || e.ColumnIndex == dgvdetalle1.Columns[colUndXPaquete.Name].Index)
 		{
 			dgvdetalle1.Rows[e.RowIndex].Cells[e.ColumnIndex].Style.SelectionBackColor = System.Drawing.Color.FromArgb(0, 192, 0);
+		}
+	}
+
+	// Suprimir en la grilla visible (Telerik). El borrado lo hace este handler sobre la
+	// tabla para que cambiosDetalle se entere: si Telerik borrara solo, el item volvia al guardar.
+	private void rgvdetalle1_UserDeletingRow(object sender, GridViewRowCancelEventArgs e)
+	{
+		e.Cancel = true;
+		if (proceso == 2 || e.Rows.Length == 0)
+		{
+			return;
+		}
+		try
+		{
+			List<int> codigos = e.Rows.Select((GridViewRowInfo x) => Convert.ToInt32(x.Cells["CodigoProducto"].Value)).ToList();
+			string listaReferencias = string.Join("", codigos.Select((int c) => "\n> " + Convert.ToString(filaDetallePorProducto(c)?.Field<object>("referencias"))));
+			DialogResult rspta = MessageBox.Show("Esta seguro de elminar: " + listaReferencias + "\n¿los items eliminados no se podrán recuperar?", Text + " dice:", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
+			if (rspta != DialogResult.Yes)
+			{
+				return;
+			}
+			foreach (int codigo in codigos)
+			{
+				registraEliminacionEnModoEdicion(codigo);
+				filaDetallePorProducto(codigo)?.Delete();
+			}
+			dtDGgvDetalle1.AcceptChanges();
+			lblCantidadFiltradaDos.Text = dtDGgvDetalle1.Rows.Count.ToString();
+			lbltotalproductos.Text = dtDGgvDetalle1.Rows.Count.ToString();
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show(ex.Message, "Error Al Eliminar Items", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 		}
 	}
 
@@ -3340,6 +3387,7 @@ public class ListadoProductos : Form
 		this.rgvdetalle1.MasterTemplate.ShowRowHeaderColumn = false;
 		this.rgvdetalle1.MasterTemplate.ViewDefinition = tableViewDefinition1;
 		this.rgvdetalle1.Name = "rgvdetalle1";
+		this.rgvdetalle1.UserDeletingRow += new Telerik.WinControls.UI.GridViewRowCancelEventHandler(rgvdetalle1_UserDeletingRow);
 		this.rgvdetalle1.ShowGroupPanel = false;
 		this.rgvdetalle1.Size = new System.Drawing.Size(1370, 419);
 		this.rgvdetalle1.TabIndex = 10;
