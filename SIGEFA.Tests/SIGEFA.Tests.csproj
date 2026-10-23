@@ -31,4 +31,9 @@
     <Compile Include="..\SIGEFA.Administradores\VentaCierre\VentaCierrePaso.cs" Link="VentaCierre\VentaCierrePaso.cs" />
     <Compile Include="..\SIGEFA.Administradores\VentaCierre\VentaCierreProgreso.cs" Link="VentaCierre\VentaCierreProgreso.cs" />
   </ItemGroup>
+  <!-- Tracker puro de cambios del detalle de plantilla; la entidad se enlaza porque no depende de nada -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\PlantillaCambios\*.cs" Link="PlantillaCambios\%(Filename)%(Extension)" />
+    <Compile Include="..\SIGEFA.Entidades\clsDetallePlantillaDeProductos.cs" Link="PlantillaCambios\clsDetallePlantillaDeProductos.cs" />
+  </ItemGroup>
 </Project>
