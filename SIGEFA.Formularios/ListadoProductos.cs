@@ -840,9 +840,12 @@ public class ListadoProductos : Form
 			if (pos == -1)
 			{
 				dtDGgvDetalle1.Rows.Add(aux2);
-				lblCantidadFiltradaDos.Text = dgvdetalle1.Rows.Count.ToString();
-				pos = dgvdetalle1.Rows.Count - 1;
-				MessageBox.Show("Item: " + dtDGgvDetalle1.Rows[pos].Field<string>(referencias.DataPropertyName) + " se añadio correctamente.", "Plantilla de Productos: ", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+				lblCantidadFiltradaDos.Text = dtDGgvDetalle1.Rows.Count.ToString();
+				pos = dtDGgvDetalle1.Rows.Count - 1;
+				if (pos >= 0 && pos < dtDGgvDetalle1.Rows.Count)
+				{
+					MessageBox.Show("Item: " + dtDGgvDetalle1.Rows[pos].Field<string>(referencias.DataPropertyName) + " se añadio correctamente.", "Plantilla de Productos: ", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+				}
 			}
 			else
 			{
