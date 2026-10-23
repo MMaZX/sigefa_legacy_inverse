@@ -2645,12 +2645,15 @@ public class ListadoProductos : Form
 		}
 		int codigoProducto = Convert.ToInt32(e.Row.Cells["CodigoProducto"].Value);
 		cantidadUnidadesPorProducto.TryGetValue(codigoProducto, out int cantidad);
+		// El texto se fija siempre: la celda puede traer "Cargando..." de un formateo anterior.
+		string unidad = Convert.ToString(e.Row.Cells["unidadd"].Value);
 		if (cantidad < 2 || proceso == 2)
 		{
+			e.CellElement.Text = unidad;
 			e.CellElement.ToolTipText = string.Empty;
 			return;
 		}
-		e.CellElement.Text = Convert.ToString(e.Row.Cells["unidadd"].Value) + " \u25BC";
+		e.CellElement.Text = unidad + " \u25BC";
 		e.CellElement.ToolTipText = "Este producto tiene " + cantidad + " unidades. Haga clic en la celda para cambiarla.";
 	}
 
