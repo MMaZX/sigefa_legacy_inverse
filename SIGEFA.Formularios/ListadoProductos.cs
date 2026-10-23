@@ -2695,20 +2695,31 @@ public class ListadoProductos : Form
 			aplicaUnidadElegida(e.Row, e.RowIndex);
 			return;
 		}
-		string valorStockMax = "";
 		if (e.Column.Name == "colTxtStockMaximo")
 		{
-			valorStockMax = Convert.ToString(rgvdetalle1.Rows[e.RowIndex].Cells[colTxtStockMaximo.Name].Value?.ToString());
-			if (valorStockMax == "")
-			{
-				rgvdetalle1.Rows[e.RowIndex].Cells[colTxtStockMinimo.Name].Value = "0";
-				rgvdetalle1.Rows[e.RowIndex].Cells[colTxtStockMaximo.Name].Value = "0";
-			}
-			else
-			{
-				rgvdetalle1.Rows[e.RowIndex].Cells[colTxtStockMinimo.Name].Value = Convert.ToDouble(valorStockMax) / 2.0;
-			}
+			completaMinimoTrasEditarMaximo(e.RowIndex);
+		}
+		if (PlantillaEdicionReglas.RegistraCambio(e.Column.Name))
+		{
 			AccionNecesariaDeActualizarEnModoEdicion(e.RowIndex);
+		}
+	}
+
+	// Maximo vacio deja ambos en 0; si no, el minimo solo se completa cuando estaba vacio.
+	private void completaMinimoTrasEditarMaximo(int indiceFila)
+	{
+		GridViewRowInfo fila = rgvdetalle1.Rows[indiceFila];
+		string valorStockMax = Convert.ToString(fila.Cells[colTxtStockMaximo.Name].Value);
+		if (valorStockMax == "")
+		{
+			fila.Cells[colTxtStockMinimo.Name].Value = "0";
+			fila.Cells[colTxtStockMaximo.Name].Value = "0";
+			return;
+		}
+		double? minimoPorDefecto = PlantillaEdicionReglas.MinimoPorDefecto(valorStockMax, Convert.ToString(fila.Cells[colTxtStockMinimo.Name].Value));
+		if (minimoPorDefecto.HasValue)
+		{
+			fila.Cells[colTxtStockMinimo.Name].Value = minimoPorDefecto.Value;
 		}
 	}
 
