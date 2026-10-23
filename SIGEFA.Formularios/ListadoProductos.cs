@@ -10,6 +10,7 @@ using System.Linq;
 using System.Windows.Forms;
 using DocumentFormat.OpenXml.Spreadsheet;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.PlantillaCambios;
 using SIGEFA.Data;
 using SIGEFA.Entidades;
 using SIGEFA.Properties;
@@ -60,11 +61,7 @@ public class ListadoProductos : Form
 
 	public List<clsDetallePlantillaDeProductos> detalleproductosagrupados = new List<clsDetallePlantillaDeProductos>();
 
-	private List<clsDetallePlantillaDeProductos> listainsertar = new List<clsDetallePlantillaDeProductos>();
-
-	private List<clsDetallePlantillaDeProductos> listaactualizar = new List<clsDetallePlantillaDeProductos>();
-
-	private List<clsDetallePlantillaDeProductos> listaeliminar = new List<clsDetallePlantillaDeProductos>();
+	private readonly PlantillaDetalleCambios cambiosDetalle = new PlantillaDetalleCambios();
 
 	public int cuenta = 0;
 
@@ -840,6 +837,7 @@ public class ListadoProductos : Form
 			if (pos == -1)
 			{
 				dtDGgvDetalle1.Rows.Add(aux2);
+				AccionNecesariaDeInsertarEnModoEdicion(aux2);
 				lblCantidadFiltradaDos.Text = dtDGgvDetalle1.Rows.Count.ToString();
 				pos = dtDGgvDetalle1.Rows.Count - 1;
 				if (pos >= 0 && pos < dtDGgvDetalle1.Rows.Count)
@@ -860,32 +858,28 @@ public class ListadoProductos : Form
 
 	private void AccionNecesariaDeInsertarEnModoEdicion(DataRow fila)
 	{
+		if (proceso != 1)
+		{
+			return;
+		}
 		try
 		{
-			if (proceso == 1)
-			{
-				List<clsDetallePlantillaDeProductos> lista_aux = Enumerable.Select<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>(Enumerable.Where<clsDetallePlantillaDeProductos>(listaeliminar.AsEnumerable(), (Func<clsDetallePlantillaDeProductos, bool>)((clsDetallePlantillaDeProductos x) => x.Codigo_Producto == fila.Field<int>("CodigoProducto"))), (Func<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>)((clsDetallePlantillaDeProductos x) => x)).ToList();
-				if (lista_aux.Count > 0)
-				{
-					clsDetallePlantillaDeProductos obj = lista_aux[0];
-					clsDetallePlantillaDeProductos obj_eli_ins = añadedetalle(fila);
-					int ind = listaeliminar.IndexOf(obj);
-					obj_eli_ins.Codigo = obj.Codigo;
-					listaeliminar.RemoveAt(ind);
-					listaactualizar.Add(obj_eli_ins);
-				}
-				else
-				{
-					clsDetallePlantillaDeProductos auxdpp = new clsDetallePlantillaDeProductos();
-					auxdpp = añadedetalle(fila);
-					listainsertar.Add(auxdpp);
-				}
-			}
+			cambiosDetalle.Agregar(añadedetalle(fila));
 		}
 		catch (Exception ex)
 		{
 			MessageBox.Show(ex.Message, Text + " dice:", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 		}
+	}
+
+	private DataRow filaDetallePorProducto(int codigoProducto)
+	{
+		return dtDGgvDetalle1.AsEnumerable().FirstOrDefault((DataRow x) => Convert.ToInt32(x.Field<object>("CodigoProducto")) == codigoProducto);
+	}
+
+	private void avisaPlantillaDesincronizada()
+	{
+		MessageBox.Show("Error Catastrofico.\nNo se puede actualizar esta plantilla.\nCierre la plantilla y vuelva abrir", Text + " dice: ", MessageBoxButtons.OK, MessageBoxIcon.Hand);
 	}
 
 	private void dgvDetalle_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
@@ -978,74 +972,20 @@ public class ListadoProductos : Form
 
 	private void AccionNecesariaDeActualizarEnModoEdicion(int ifilaDgv1)
 	{
+		if (proceso != 1)
+		{
+			return;
+		}
 		try
 		{
-			if (proceso != 1)
-			{
-				return;
-			}
 			GridViewRowInfo row = rgvdetalle1.ChildRows[ifilaDgv1];
-			List<clsDetallePlantillaDeProductos> lista = Enumerable.Select<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>(Enumerable.Where<clsDetallePlantillaDeProductos>(listainsertar.AsEnumerable(), (Func<clsDetallePlantillaDeProductos, bool>)((clsDetallePlantillaDeProductos x) => x.Codigo_Producto == Convert.ToInt32(row.Cells["CodigoProducto"].Value))), (Func<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>)((clsDetallePlantillaDeProductos x) => x)).ToList();
-			if (lista.Count > 0)
+			DataRow fila = filaDetallePorProducto(Convert.ToInt32(row.Cells["CodigoProducto"].Value));
+			if (fila == null)
 			{
-				clsDetallePlantillaDeProductos obj = lista[0];
-				List<DataRow> lista2 = (from x in dtDGgvDetalle1.AsEnumerable()
-					where x.Field<int>("CodigoProducto") == Convert.ToInt32(row.Cells["CodigoProducto"].Value)
-					select (x)).ToList();
-				if (lista2.Count > 0)
-				{
-					DataRow fila = lista2[0];
-					clsDetallePlantillaDeProductos obj2 = new clsDetallePlantillaDeProductos();
-					obj2 = añadedetalle(fila);
-					int ind = listainsertar.IndexOf(obj);
-					listainsertar.RemoveAt(ind);
-					listainsertar.Insert(ind, obj2);
-				}
-				else
-				{
-					MessageBox.Show("Error Catastrofico.\nNo se puede actualizar esta plantilla.\nCierre la plantilla y vuelva abrir", Text + " dice: ", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-				}
+				avisaPlantillaDesincronizada();
 				return;
 			}
-			List<clsDetallePlantillaDeProductos> lista3 = Enumerable.Select<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>(Enumerable.Where<clsDetallePlantillaDeProductos>(listaactualizar.AsEnumerable(), (Func<clsDetallePlantillaDeProductos, bool>)((clsDetallePlantillaDeProductos x) => x.Codigo_Producto == Convert.ToInt32(row.Cells["CodigoProducto"].Value))), (Func<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>)((clsDetallePlantillaDeProductos x) => x)).ToList();
-			if (lista3.Count > 0)
-			{
-				clsDetallePlantillaDeProductos obj3 = lista3[0];
-				List<DataRow> lista4 = (from x in dtDGgvDetalle1.AsEnumerable()
-					where x.Field<int>("CodigoProducto") == Convert.ToInt32(row.Cells["CodigoProducto"].Value)
-					select (x)).ToList();
-				if (lista4.Count > 0)
-				{
-					DataRow fila2 = lista4[0];
-					clsDetallePlantillaDeProductos obj4 = new clsDetallePlantillaDeProductos();
-					obj4 = añadedetalle(fila2);
-					obj4.Codigo = obj3.Codigo;
-					int ind2 = listaactualizar.IndexOf(obj3);
-					listaactualizar.RemoveAt(ind2);
-					listaactualizar.Insert(ind2, obj4);
-				}
-				else
-				{
-					MessageBox.Show("Error Catastrofico.\nNo se puede actualizar esta plantilla.\nCierre la plantilla y vuelva abrir", Text + " dice: ", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-				}
-			}
-			else
-			{
-				List<DataRow> lista5 = (from x in dtDGgvDetalle1.AsEnumerable()
-					where x.Field<int>("CodigoProducto") == Convert.ToInt32(row.Cells["CodigoProducto"].Value)
-					select (x)).ToList();
-				if (lista5.Count > 0)
-				{
-					DataRow fila3 = lista5[0];
-					clsDetallePlantillaDeProductos auxdpp = new clsDetallePlantillaDeProductos();
-					auxdpp = añadedetalle(fila3);
-					listaactualizar.Add(auxdpp);
-				}
-				else
-				{
-					MessageBox.Show("Error Catastrofico.\nNo se puede actualizar esta plantilla.\nCierre la plantilla y vuelva abrir", Text + " dice: ", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-				}
-			}
+			cambiosDetalle.Modificar(añadedetalle(fila));
 		}
 		catch (Exception ex)
 		{
@@ -1072,41 +1012,20 @@ public class ListadoProductos : Form
 
 	private void AccionNecesariaAntesDeEliminarEnModoEdicion(int ifila)
 	{
+		if (proceso != 1)
+		{
+			return;
+		}
 		try
 		{
 			DataGridViewRow filadgv1 = dgvdetalle1.Rows[ifila];
-			if (proceso != 1)
+			DataRow fila = filaDetallePorProducto(Convert.ToInt32(filadgv1.Cells[CodigoProducto.Name].Value));
+			if (fila == null)
 			{
+				avisaPlantillaDesincronizada();
 				return;
 			}
-			List<clsDetallePlantillaDeProductos> lista_aux = Enumerable.Select<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>(Enumerable.Where<clsDetallePlantillaDeProductos>(listainsertar.AsEnumerable(), (Func<clsDetallePlantillaDeProductos, bool>)((clsDetallePlantillaDeProductos x) => x.Codigo_Producto == Convert.ToInt32(filadgv1.Cells[CodigoProducto.Name].Value))), (Func<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>)((clsDetallePlantillaDeProductos x) => x)).ToList();
-			if (lista_aux.Count > 0)
-			{
-				clsDetallePlantillaDeProductos pp = lista_aux[0];
-				int ind = listainsertar.IndexOf(pp);
-				listainsertar.RemoveAt(ind);
-				return;
-			}
-			List<clsDetallePlantillaDeProductos> lista_aux2 = Enumerable.Select<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>(Enumerable.Where<clsDetallePlantillaDeProductos>(listaactualizar.AsEnumerable(), (Func<clsDetallePlantillaDeProductos, bool>)((clsDetallePlantillaDeProductos x) => x.Codigo_Producto == Convert.ToInt32(filadgv1.Cells[CodigoProducto.Name].Value))), (Func<clsDetallePlantillaDeProductos, clsDetallePlantillaDeProductos>)((clsDetallePlantillaDeProductos x) => x)).ToList();
-			if (lista_aux2.Count > 0)
-			{
-				clsDetallePlantillaDeProductos obj1 = lista_aux2[0];
-				int ind2 = listaactualizar.IndexOf(obj1);
-				listaactualizar.RemoveAt(ind2);
-			}
-			List<DataRow> lista_aux3 = (from x in dtDGgvDetalle1.AsEnumerable()
-				where x.Field<int>(CodigoProducto.DataPropertyName) == Convert.ToInt32(filadgv1.Cells[CodigoProducto.Name].Value)
-				select (x)).ToList();
-			if (lista_aux3.Count > 0)
-			{
-				DataRow fila = lista_aux3[0];
-				clsDetallePlantillaDeProductos obj2 = añadedetalle(fila);
-				listaeliminar.Add(obj2);
-			}
-			else
-			{
-				MessageBox.Show("Error Catastrofico.\nNo se puede actualizar esta plantilla.\nCierre la plantilla y vuelva abrir", Text + " dice: ", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-			}
+			cambiosDetalle.Quitar(añadedetalle(fila));
 		}
 		catch (Exception ex)
 		{
@@ -1387,13 +1306,11 @@ public class ListadoProductos : Form
 						btnExcel.Visible = true;
 					}
 				}
-				else if (AdmPlantillaProductos.actualizaPlantilla(clsplantillaprod, listainsertar, listaactualizar, listaeliminar))
+				else if (AdmPlantillaProductos.actualizaPlantilla(clsplantillaprod, cambiosDetalle.Insertar.ToList(), cambiosDetalle.Actualizar.ToList(), cambiosDetalle.Eliminar.ToList()))
 				{
 					MessageBox.Show("Los datos se actualizaron correctamente", Text + "dice: ", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
 					AccionNecesariaParaSeguirEditandoDespuesdeGuardar(clsplantillaprod.Codigo);
-					listainsertar.Clear();
-					listaactualizar.Clear();
-					listaeliminar.Clear();
+					cambiosDetalle.Limpiar();
 					Text = txtnombreplantilla.Text;
 					int permiso2 = ((tipoPlantillaReq == 0) ? admForm.getPermisoGenerarPropuestaDeReqAlmacen() : admForm.getPermisoGenerarPropuestaDeCompra());
 					btnGenerar.Visible = frmLogin.AcesosUsuario.Contains(permiso2) || frmLogin.iNivelUser == 1;
@@ -1923,7 +1840,7 @@ public class ListadoProductos : Form
 	private void btnSalir_Click_1(object sender, EventArgs e)
 	{
 		bool band_salir = false;
-		if (codpla != 0 && listainsertar.Count == 0 && listaactualizar.Count == 0 && listaeliminar.Count == 0)
+		if (codpla != 0 && !cambiosDetalle.HayCambios)
 		{
 			band_salir = true;
 		}
@@ -1939,10 +1856,6 @@ public class ListadoProductos : Form
 				Close();
 			}
 		}
-		int aux1 = listainsertar.Count;
-		int aux2 = listaactualizar.Count;
-		int aux3 = listaeliminar.Count;
-		aux3++;
 	}
 
 	private void btnGenerar_Click(object sender, EventArgs e)
@@ -1952,7 +1865,7 @@ public class ListadoProductos : Form
 			bool band_guardado = false;
 			pbCargando.Visible = true;
 			Cursor = Cursors.WaitCursor;
-			if (codpla != 0 && listainsertar.Count == 0 && listaactualizar.Count == 0 && listaeliminar.Count == 0)
+			if (codpla != 0 && !cambiosDetalle.HayCambios)
 			{
 				band_guardado = true;
 			}
