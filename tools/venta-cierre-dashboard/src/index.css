@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+}
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* DataTables -> shadcn neutral theme */
+.dt-wrapper .dataTables_wrapper { @apply text-sm; }
+.dt-wrapper table.dataTable { @apply border border-border rounded-md; }
+.dt-wrapper table.dataTable thead th {
+  @apply bg-muted text-muted-foreground font-medium border-b border-border;
+}
+.dt-wrapper table.dataTable tbody td { @apply border-b border-border/60; }
+.dt-wrapper table.dataTable tbody tr:hover { @apply bg-muted/40; }
+.dt-wrapper .dataTables_filter input,
+.dt-wrapper .dataTables_length select {
+  @apply h-9 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring;
+}
+.dt-wrapper .dataTables_paginate .paginate_button {
+  @apply rounded-md border border-border bg-background px-2 py-1 text-sm;
+}
+.dt-wrapper .dataTables_paginate .paginate_button.current {
+  @apply bg-primary text-primary-foreground border-primary;
+}
+.dt-wrapper .dataTables_paginate .paginate_button.disabled { @apply opacity-50; }
+.dt-wrapper .dataTables_info { @apply text-muted-foreground text-xs; }
