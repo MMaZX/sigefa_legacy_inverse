@@ -23,6 +23,7 @@ using FinalXML.Librerias;
 using Microsoft.VisualBasic;
 using SIGEFA.Administradores;
 using SIGEFA.Administradores.VentaCierre;
+using SIGEFA.Conexion;
 using SIGEFA.Data;
 using SIGEFA.Entidades;
 using SIGEFA.Librerias;
@@ -212,6 +213,13 @@ public class frmVenta2019 : Office2007Form
 	private clsTipoCambio tc = new clsTipoCambio();
 
 	private int mon = 1;
+	// Moneda base de la venta: la venta siempre es en soles, por eso se lee de la tabla moneda
+	// (is_moneda_default = 1 y codsunat = 'PEN') en lugar de fijar el codigo 1 en el codigo.
+	// Solo aplica a frmVenta2019; compras y demas modulos no usan estos campos.
+	private int monedaBaseId = 1;
+	private string descripcionMoneda = "SOLES";
+	private string simboloMoneda = "S/";
+	private bool monedaBaseCargada;
 
 	private clsAdmUnidadEquivalente clsuniequ = new clsAdmUnidadEquivalente();
 
@@ -773,7 +781,33 @@ public class frmVenta2019 : Office2007Form
 		cmbMoneda.DataSource = AdmMoned.ListaMonedas();
 		cmbMoneda.DisplayMember = "descripcion";
 		cmbMoneda.ValueMember = "codMoneda";
-		cmbMoneda.SelectedValue = 1;
+		CargaMonedaBase();
+		cmbMoneda.SelectedValue = monedaBaseId;
+	}
+
+	// Lee la moneda base (soles) de la base de datos con el helper Db. Si no hay fila o la lectura
+	// falla, deja monedaBaseCargada en false y avisa; guardaVenta bloquea el guardado en ese caso
+	// en lugar de asumir en silencio el codigo 1.
+	private void CargaMonedaBase()
+	{
+		monedaBaseCargada = false;
+		try
+		{
+			Dictionary<string, object> fila = Db.Consultar("SELECT codMoneda AS monedaId, descripcion AS descripcionMoneda, simbolo_moneda AS simboloMoneda FROM moneda WHERE is_moneda_default = 1 AND codsunat = 'PEN' LIMIT 1").First();
+			if (fila == null)
+			{
+				MessageBox.Show("No se encontro la moneda base (PEN) en la tabla moneda. No se podra guardar la venta.", "Venta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				return;
+			}
+			monedaBaseId = fila.Valor<int>("monedaId");
+			descripcionMoneda = fila.Valor<string>("descripcionMoneda", "SOLES");
+			simboloMoneda = fila.Valor<string>("simboloMoneda", "S/");
+			monedaBaseCargada = true;
+		}
+		catch (Exception ex)
+		{
+			MessageBox.Show("No se pudo leer la moneda base: " + ex.Message + Environment.NewLine + "No se podra guardar la venta.", "Venta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+		}
 	}
 
 	private void cargaVendedor()
@@ -1719,112 +1753,52 @@ public class frmVenta2019 : Office2007Form
 		}
 	}
 
+	// Carga la informacion de credito del cliente. Siempre limpia primero los campos para que nunca
+	// quede el monto del cliente anterior. El parametro cli tapa al campo cli del formulario, asi que
+	// se asigna siempre a this.cli (antes, al consultar por codigo, el campo quedaba con el cliente viejo).
 	public void CargaCreditoCliente(clsCliente cli)
 	{
-		if (cli != null)
-		{
-			this.cli = cli;
-			if (cli.Moneda == 1)
-			{
-				txtLineaCredito.Text = $"{cli.LineaCredito:#,##0.00}";
-				txtLineaCreditoDisponible.Text = $"{cli.LineaCreditoDisponible:#,##0.00}";
-				txtLineaCreditoUso.Text = $"{cli.LineaCreditoUsado:#,##0.00}";
-				txttasa.Text = $"{cli.Tasa:#,##0.00}";
-				lbLineaCredito.Text = "Línea de Crédito (S/.):";
-				label23.Text = "Línea Disponible (S/.):";
-				label25.Text = "Línea C. en Uso (S/.):";
-				if (cli.LineaCredito > 0m)
-				{
-					cmbFormaPago.Enabled = true;
-				}
-				else
-				{
-					cmbFormaPago.Enabled = false;
-				}
-			}
-			else
-			{
-				txtLineaCredito.Text = $"{cli.LineaCredito / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}";
-				txtLineaCreditoDisponible.Text = $"{cli.LineaCreditoDisponible / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}";
-				TextBox textBox = txtLineaCreditoUso;
-				string text = (Text = $"{cli.LineaCreditoUsado / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}");
-				textBox.Text = text;
-				lbLineaCredito.Text = "Línea de Crédito ($.):";
-				label23.Text = "Línea Disponible ($.):";
-				label25.Text = "Línea C. en Uso ($.):";
-				if (cli.LineaCredito > 0m)
-				{
-					cmbFormaPago.Enabled = true;
-				}
-				else
-				{
-					cmbFormaPago.Enabled = false;
-				}
-			}
-			if (cli.FormaPago != 0)
-			{
-				cmbFormaPago.SelectedValue = cli.FormaPago;
-				EventArgs ee = new EventArgs();
-				cmbFormaPago_SelectionChangeCommitted(cmbFormaPago, ee);
-			}
-			else
-			{
-				dtpFechaPago.Value = DateTime.Today;
-			}
-			return;
-		}
-		cli = AdmCli.ConsultaCliente(txtCodCliente.Text);
-		if (cli == null)
+		LimpiaLineaCredito();
+		// Se lee el cliente una sola vez en una variable local: el resto del metodo no depende del
+		// campo this.cli, que podria reasignarse si un evento de la UI se dispara mientras se actualizan los controles.
+		clsCliente actual = cli ?? AdmCli.ConsultaCliente(txtCodCliente.Text);
+		this.cli = actual;
+		if (actual == null)
 		{
 			return;
 		}
-		if (cli.Moneda == 1)
+		MuestraLineaCredito(actual);
+		if (actual.FormaPago != 0)
 		{
-			txtLineaCredito.Text = $"{cli.LineaCredito:#,##0.00}";
-			txtLineaCreditoDisponible.Text = $"{cli.LineaCreditoDisponible:#,##0.00}";
-			txtLineaCreditoUso.Text = $"{cli.LineaCreditoUsado:#,##0.00}";
-			txttasa.Text = $"{cli.Tasa:#,##0.00}";
-			lbLineaCredito.Text = "Línea de Crédito (S/.):";
-			label23.Text = "Línea Disponible (S/.):";
-			label25.Text = "Línea C. en Uso (S/.):";
-			if (cli.LineaCredito > 0m)
-			{
-				cmbFormaPago.Enabled = true;
-			}
-			else
-			{
-				cmbFormaPago.Enabled = false;
-			}
+			cmbFormaPago.SelectedValue = actual.FormaPago;
+			EventArgs ee = new EventArgs();
+			cmbFormaPago_SelectionChangeCommitted(cmbFormaPago, ee);
+			return;
 		}
-		else
-		{
-			txtLineaCredito.Text = $"{cli.LineaCredito / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}";
-			txtLineaCreditoDisponible.Text = $"{cli.LineaCreditoDisponible / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}";
-			TextBox textBox2 = txtLineaCreditoUso;
-			string text = (Text = $"{cli.LineaCreditoUsado / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}");
-			textBox2.Text = text;
-			lbLineaCredito.Text = "Línea de Crédito ($.):";
-			label23.Text = "Línea Disponible ($.):";
-			label25.Text = "Línea C. en Uso ($.):";
-			if (cli.LineaCredito > 0m)
-			{
-				cmbFormaPago.Enabled = true;
-			}
-			else
-			{
-				cmbFormaPago.Enabled = false;
-			}
-		}
-		if (cli.FormaPago != 0)
-		{
-			cmbFormaPago.SelectedValue = cli.FormaPago;
-			EventArgs ee2 = new EventArgs();
-			cmbFormaPago_SelectionChangeCommitted(cmbFormaPago, ee2);
-		}
-		else
-		{
-			dtpFechaPago.Value = DateTime.Today;
-		}
+		dtpFechaPago.Value = DateTime.Today;
+	}
+
+	// Vacia los datos de linea de credito de la pantalla.
+	private void LimpiaLineaCredito()
+	{
+		txtLineaCredito.Text = "";
+		txtLineaCreditoDisponible.Text = "";
+		txtLineaCreditoUso.Text = "";
+		txttasa.Text = "";
+	}
+
+	// Muestra la linea de credito tal como esta guardada (en soles). No se divide entre el tipo de
+	// cambio: los clientes a credito no manejan dolares y la venta siempre es en soles.
+	private void MuestraLineaCredito(clsCliente c)
+	{
+		txtLineaCredito.Text = $"{c.LineaCredito:#,##0.00}";
+		txtLineaCreditoDisponible.Text = $"{c.LineaCreditoDisponible:#,##0.00}";
+		txtLineaCreditoUso.Text = $"{c.LineaCreditoUsado:#,##0.00}";
+		txttasa.Text = $"{c.Tasa:#,##0.00}";
+		lbLineaCredito.Text = $"Línea de Crédito ({simboloMoneda}):";
+		label23.Text = $"Línea Disponible ({simboloMoneda}):";
+		label25.Text = $"Línea C. en Uso ({simboloMoneda}):";
+		cmbFormaPago.Enabled = c.LineaCredito > 0m;
 	}
 
 	private void LeerDatos()
@@ -2157,9 +2131,7 @@ public class frmVenta2019 : Office2007Form
 		txtCodCliente.Text = "";
 		txtNombreCliente.Text = "";
 		txtDireccion.Text = "";
-		txtLineaCredito.Text = "";
-		txtLineaCreditoDisponible.Text = "";
-		txtLineaCreditoUso.Text = "";
+		LimpiaLineaCredito();
 		txtgravadas.Text = "";
 		txtgratuitas.Text = "";
 		txtinafectas.Text = "";
@@ -2176,7 +2148,7 @@ public class frmVenta2019 : Office2007Form
 		KeyPressEventArgs ee = new KeyPressEventArgs('\r');
 		txtDocRef_KeyPress(txtDocRef, ee);
 		BuscaCliente();
-		cmbMoneda.SelectedValue = 1;
+		cmbMoneda.SelectedValue = monedaBaseId;
 		mon = 1;
 		cargaVendedor();
 		textBoxX2.Text = "000";
@@ -2280,43 +2252,8 @@ public class frmVenta2019 : Office2007Form
 			txtDireccion.Text = cli.DireccionLegal;
 			txtCodCliente.Text = cli.RucDni;
 			cli = AdmCli.ConsultaCliente(cli.RucDni);
-			if (cli.Moneda == 1)
-			{
-				txtLineaCredito.Text = $"{cli.LineaCredito:#,##0.00}";
-				txtLineaCreditoDisponible.Text = $"{cli.LineaCreditoDisponible:#,##0.00}";
-				txtLineaCreditoUso.Text = $"{cli.LineaCreditoUsado:#,##0.00}";
-				txttasa.Text = $"{cli.Tasa:#,##0.00}";
-				lbLineaCredito.Text = "Línea de Crédito (S/.):";
-				label23.Text = "Línea Disponible (S/.):";
-				label25.Text = "Línea C. en Uso (S/.):";
-				if (cli.LineaCredito > 0m)
-				{
-					cmbFormaPago.Enabled = true;
-				}
-				else
-				{
-					cmbFormaPago.Enabled = false;
-				}
-			}
-			else
-			{
-				txtLineaCredito.Text = $"{cli.LineaCredito / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}";
-				txtLineaCreditoDisponible.Text = $"{cli.LineaCreditoDisponible / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}";
-				TextBox textBox = txtLineaCreditoUso;
-				string text = (Text = $"{cli.LineaCreditoUsado / Convert.ToDecimal(mdi_Menu.tc_hoy):#,##0.00}");
-				textBox.Text = text;
-				lbLineaCredito.Text = "Línea de Crédito ($.):";
-				label23.Text = "Línea Disponible ($.):";
-				label25.Text = "Línea C. en Uso ($.):";
-				if (cli.LineaCredito > 0m)
-				{
-					cmbFormaPago.Enabled = true;
-				}
-				else
-				{
-					cmbFormaPago.Enabled = false;
-				}
-			}
+			LimpiaLineaCredito();
+			MuestraLineaCredito(cli);
 			if (cli.FormaPago != 0)
 			{
 				cmbFormaPago.SelectedValue = 6;
@@ -3529,6 +3466,11 @@ public class frmVenta2019 : Office2007Form
 
 	private async void guardaVenta()
 	{
+		if (!monedaBaseCargada)
+		{
+			MessageBox.Show("No se pudo determinar la moneda base de la venta (soles). Cierre y vuelva a abrir el formulario.", "Venta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			return;
+		}
 		Cursor = Cursors.WaitCursor;
 		bool bandTerminoGuardadoVenta = false;
 		// Alcance de metodo: se escribe dentro del try (ruta nueva) y se lee despues del finally.
@@ -3541,8 +3483,11 @@ public class frmVenta2019 : Office2007Form
 			anulados = 0;
 			if (superValidator1.Validate())
 			{
-				decimal totalsoles = ((Convert.ToInt32(cli.Moneda) != 1) ? (Convert.ToDecimal(txtPrecioVenta.Text) * Convert.ToDecimal(mdi_Menu.tc_hoy)) : Convert.ToDecimal(txtPrecioVenta.Text));
-				if (totalsoles > Convert.ToDecimal(txtLineaCreditoDisponible.Text) && Convert.ToInt32(cmbFormaPago.SelectedValue) != 6)
+				// La venta siempre es en soles y la linea de credito se guarda en soles: se compara el total
+				// contra el valor del cliente sin convertir. Antes se multiplicaba por tc_hoy segun cli.Moneda
+				// y se comparaba contra un texto en otra moneda, lo que disparaba el aviso sin que hubiera exceso.
+				decimal totalsoles = Convert.ToDecimal(txtPrecioVenta.Text);
+				if (totalsoles > cli.LineaCreditoDisponible && Convert.ToInt32(cmbFormaPago.SelectedValue) != 6)
 				{
 					MessageBox.Show("El Monto Excede a la Línea de Crédito");
 				}
