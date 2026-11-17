@@ -1,7 +1,7 @@
 # venta-servicios-sin-stock
 Objetivo: permitir agregar SERVICIOS (codTipoArticulo=2) a una venta en frmVenta2019, con cantidad libre y sin bloqueo por stock.
 Rama: feat/venta-servicios-sin-stock. Entrega: ask-on-risk. Runner: SIGEFA.Tests (xunit, net48; se compila y corre en la VM Windows) para la regla pura; verificación manual en BD dev para la UI. Mirror Engram: odd/venta-servicios-sin-stock/tasks (PENDIENTE: el guardado fue bloqueado por auto mode el 2026-11-17).
-Estado: T6 implementado (L13), escrito y SIN compilar. Pendiente: build y suite en la VM, y T5 (UI en Windows).
+Estado: T6 compilado y suite verde en la VM (L15). Pendiente: T5 manual (UI en Windows) y el despliegue en el orden de L14.
 
 ## Specs
 - S1. "permitir agregar SERVICIOS (codTipoArticulo=2) a una venta en frmVenta2019, con cantidad libre y sin bloqueo por stock."
@@ -175,3 +175,9 @@ Estado: T6 implementado (L13), escrito y SIN compilar. Pendiente: build y suite 
     1. migraciones de la API (185000, 190000, 200000, 210000, 220000);
     2. build del legacy.
   - Se corrigió la sección "Diseño T2" (nombres `StockCubreCantidad`/`TextoSinStock` y P4 con +∞).
+- L15 (2026-11-17, usuario): "Sí, en la VM". Build y suite sobre el commit exacto 82a27d4 en la VM win10 (192.168.122.44, usuario qemu).
+  - Snapshot: `git archive` con 1841 archivos, extraídos 1841, en C:\Users\qemu\Documents\sigefa_verify_82a27d4_20261117T211741Z. SIGEFA.exe estaba cerrado (0 procesos).
+  - Build: MSBuild SIGEFA.csproj `/restore /t:Rebuild /p:Configuration=Debug /p:Platform=x86`, con restore solo desde el caché local de NuGet: rc=0, sin errores.
+  - Suite: `dotnet test SIGEFA.Tests`: rc=0. 333 en total, 297 correctas, 36 omitidas (integración), 0 fallidas. Las 8 de StockLineaReglaTests pasan.
+  - No se observó el RED: las pruebas y la regla se compilaron juntas por primera vez.
+  - T6 queda compilado y verificado. Pendiente: T5 manual en Windows contra dev, y el orden de despliegue de L14.
