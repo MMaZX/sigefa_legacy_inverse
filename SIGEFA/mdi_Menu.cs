@@ -872,11 +872,25 @@ public class mdi_Menu : Office2007RibbonForm
 		VersionSistema.MostrarDialogo(this);
 	}
 
+	private static Form LoginVisible()
+	{
+		foreach (Form abierto in Application.OpenForms)
+		{
+			if (abierto is frmLogin && abierto.Visible)
+			{
+				return abierto;
+			}
+		}
+		return null;
+	}
+
 	private void mdi_Menu_Load(object sender, EventArgs e)
 	{
 		tabStrip1.Hide();
 		frmSeleccionarAlmacen frm = new frmSeleccionarAlmacen();
-		frm.ShowDialog();
+		// El login sigue visible mientras carga el menu: el dialogo se abre con el login como dueno
+		// para quedar delante de el (sin dueno se abria detras).
+		frm.ShowDialog(LoginVisible());
 		Configuracion = frmLogin.Configuracion;
 		frmLogin.AcesosUsuario = AdmAcce.MuestraAccesos(frmLogin.iCodUser, frmLogin.iCodAlmacen);
 		sUsuario.Text = "Usuario : " + frmLogin.sNombreUser + " " + frmLogin.sApellidoUSer;
