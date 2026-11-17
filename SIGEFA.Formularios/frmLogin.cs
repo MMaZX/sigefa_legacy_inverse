@@ -9,7 +9,6 @@ using System.Windows.Forms;
 using DevComponents.DotNetBar;
 using DevComponents.DotNetBar.Validator;
 using SIGEFA.Administradores;
-using SIGEFA.Administradores.VersionApp;
 using SIGEFA.Conexion;
 using SIGEFA.Entidades;
 using SIGEFA.Properties;
@@ -216,8 +215,7 @@ public class frmLogin : Office2007Form
 	// Muestra con que codigo se compilo este ejecutable (commit, rama y fecha).
 	private void MostrarVersion()
 	{
-		string version = typeof(frmLogin).Assembly.GetName().Version.ToString();
-		lblVersion.Text = VersionTexto.Formatear(version, VersionCompilacion.Commit, VersionCompilacion.Rama, VersionCompilacion.ConCambiosLocales, VersionCompilacion.Fecha);
+		lblVersion.Text = VersionSistema.TextoCorto();
 	}
 
 	private void CargaNiveles()
@@ -486,11 +484,11 @@ public class frmLogin : Office2007Form
 		this.lblMensaje.TabIndex = 21;
 		this.lblMensaje.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 		this.lblVersion.BackColor = System.Drawing.Color.Transparent;
-		this.lblVersion.Font = new System.Drawing.Font("Verdana", 6.75f, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+		this.lblVersion.Font = new System.Drawing.Font("Verdana", 9f, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
 		this.lblVersion.ForeColor = System.Drawing.Color.DimGray;
-		this.lblVersion.Location = new System.Drawing.Point(12, 213);
+		this.lblVersion.Location = new System.Drawing.Point(12, 222);
 		this.lblVersion.Name = "lblVersion";
-		this.lblVersion.Size = new System.Drawing.Size(538, 14);
+		this.lblVersion.Size = new System.Drawing.Size(551, 24);
 		this.lblVersion.TabIndex = 22;
 		this.lblVersion.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 		this.panel1.BackColor = System.Drawing.SystemColors.Control;
@@ -519,7 +517,7 @@ public class frmLogin : Office2007Form
 		this.pictureBox1.TabIndex = 20;
 		this.pictureBox1.TabStop = false;
 		base.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-		base.ClientSize = new System.Drawing.Size(575, 230);
+		base.ClientSize = new System.Drawing.Size(575, 256);
 		base.Controls.Add(this.panel1);
 		this.DoubleBuffered = true;
 		base.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;

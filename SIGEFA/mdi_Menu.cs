@@ -171,6 +171,8 @@ public class mdi_Menu : Office2007RibbonForm
 
 	private ToolStripStatusLabel sIP;
 
+	private ToolStripButton sVersion;
+
 	private ButtonItem biDocumentos;
 
 	private RibbonTabItem rtVentas;
@@ -862,6 +864,11 @@ public class mdi_Menu : Office2007RibbonForm
 		frmUsuarios form = new frmUsuarios();
 		form.MdiParent = this;
 		form.Show();
+	}
+
+	private void sVersion_Click(object sender, EventArgs e)
+	{
+		VersionSistema.MostrarDialogo(this);
 	}
 
 	private void mdi_Menu_Load(object sender, EventArgs e)
@@ -4868,6 +4875,7 @@ public class mdi_Menu : Office2007RibbonForm
 		this.sEmpresa = new System.Windows.Forms.ToolStripStatusLabel();
 		this.sAlmacen = new System.Windows.Forms.ToolStripStatusLabel();
 		this.sIP = new System.Windows.Forms.ToolStripStatusLabel();
+		this.sVersion = new System.Windows.Forms.ToolStripButton();
 		this.sCaja = new System.Windows.Forms.ToolStripStatusLabel();
 		this.tabStrip1 = new DevComponents.DotNetBar.TabStrip();
 		this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
@@ -6837,7 +6845,7 @@ public class mdi_Menu : Office2007RibbonForm
 		this.liTipodeCambio.Text = "Tipo de Cambio";
 		this.comboItem1.ForeColor = System.Drawing.Color.White;
 		this.comboItem1.Text = "comboItem1";
-		this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[5] { this.sUsuario, this.sEmpresa, this.sAlmacen, this.sIP, this.sCaja });
+		this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[6] { this.sUsuario, this.sEmpresa, this.sAlmacen, this.sIP, this.sVersion, this.sCaja });
 		this.statusStrip1.Location = new System.Drawing.Point(5, 422);
 		this.statusStrip1.Name = "statusStrip1";
 		this.statusStrip1.Size = new System.Drawing.Size(855, 24);
@@ -6867,6 +6875,11 @@ public class mdi_Menu : Office2007RibbonForm
 		this.sIP.Size = new System.Drawing.Size(168, 19);
 		this.sIP.Spring = true;
 		this.sIP.Text = "IP";
+		this.sVersion.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+		this.sVersion.Name = "sVersion";
+		this.sVersion.Text = "Versión";
+		this.sVersion.ToolTipText = "Ver la versión y la fecha del build";
+		this.sVersion.Click += new System.EventHandler(sVersion_Click);
 		this.sCaja.BorderStyle = System.Windows.Forms.Border3DStyle.SunkenOuter;
 		this.sCaja.Name = "sCaja";
 		this.sCaja.Size = new System.Drawing.Size(168, 19);

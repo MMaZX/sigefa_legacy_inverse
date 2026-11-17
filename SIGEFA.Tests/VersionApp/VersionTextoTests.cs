@@ -31,4 +31,26 @@ public class VersionTextoTests
 
         Assert.Equal("Versión 1.0.0 · " + VersionTexto.Desconocido, texto);
     }
+
+    [Fact]
+    public void Detalle_IncluyeFechaCommitRamaYCambios()
+    {
+        string texto = VersionTexto.Detalle("1.0.0.0", "4fbd707", "main", true, "2026-11-17 16:40");
+
+        Assert.Contains("Fecha y hora del build: 2026-11-17 16:40", texto);
+        Assert.Contains("Commit: 4fbd707", texto);
+        Assert.Contains("Rama: main", texto);
+        Assert.Contains("Cambios sin commitear: Sí", texto);
+        Assert.Contains("Versión del ensamblado: 1.0.0", texto);
+    }
+
+    [Fact]
+    public void Detalle_SinGit_NoFallaYLoDice()
+    {
+        string texto = VersionTexto.Detalle("1.0.0.0", "", "", false, "");
+
+        Assert.Contains("Fecha y hora del build: desconocida", texto);
+        Assert.Contains("Commit: " + VersionTexto.Desconocido, texto);
+        Assert.Contains("Cambios sin commitear: No", texto);
+    }
 }
