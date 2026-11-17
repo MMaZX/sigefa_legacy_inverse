@@ -1546,6 +1546,12 @@ internal class clsAdmProducto
 		}
 	}
 
+	// Sin captura: el formulario decide como mostrar el error.
+	public bool LlevaStock(int codProducto)
+	{
+		return Mpro.LlevaStock(codProducto);
+	}
+
 	public int GetProductoFacturado(int codProducto)
 	{
 		try

@@ -3665,6 +3665,26 @@ internal class MysqlProducto : IProducto
 		}
 	}
 
+	// Lee tipoarticulo.is_enabled_stock del producto con la funcion producto_lleva_stock.
+	public bool LlevaStock(int codProducto)
+	{
+		try
+		{
+			con.conectarBD();
+			cmd = new MySqlCommand("SELECT producto_lleva_stock(@codProducto)", con.conector);
+			cmd.CommandType = CommandType.Text;
+			cmd.Parameters.AddWithValue("@codProducto", codProducto);
+			object valor = cmd.ExecuteScalar();
+			return valor == null || valor is DBNull || Convert.ToInt32(valor) != 0;
+		}
+		finally
+		{
+			con.conector.Dispose();
+			cmd.Dispose();
+			con.desconectarBD();
+		}
+	}
+
 	public int GetProductoFacturado(int codprod)
 	{
 		try

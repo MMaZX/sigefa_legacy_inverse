@@ -229,6 +229,8 @@ internal interface IProducto
 
 	int GetProductoFacturado(int codProducto);
 
+	bool LlevaStock(int codProducto);
+
 	DataTable CargaProductoSunat();
 
 	bool UpdateMasivo(DataTable prods);
