@@ -499,4 +499,43 @@
       <HintPath>..\Debug_gr\System.Net.Http.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <!-- Version del build para el login: commit, rama y fecha de compilacion (AssemblyVersion esta fija en 1.0.0.0).
+       Sin git (por ejemplo, compilado desde un zip) queda vacio y el login muestra "sin-git". -->
+  <Target Name="GenerarVersionCompilacion" BeforeTargets="BeforeCompile">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="SigefaCommit" />
+      <Output TaskParameter="ExitCode" PropertyName="SigefaCommitRc" />
+    </Exec>
+    <Exec Command="git rev-parse --abbrev-ref HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="SigefaRama" />
+      <Output TaskParameter="ExitCode" PropertyName="SigefaRamaRc" />
+    </Exec>
+    <Exec Command="git status --porcelain --untracked-files=no" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="SigefaCambios" />
+    </Exec>
+    <PropertyGroup>
+      <SigefaCommit Condition="'$(SigefaCommitRc)' != '0'"></SigefaCommit>
+      <SigefaRama Condition="'$(SigefaRamaRc)' != '0'"></SigefaRama>
+      <SigefaConCambios>false</SigefaConCambios>
+      <SigefaConCambios Condition="'$(SigefaCommitRc)' == '0' And '$(SigefaCambios)' != ''">true</SigefaConCambios>
+      <SigefaFecha>$([System.DateTime]::Now.ToString('yyyy-MM-dd HH:mm'))</SigefaFecha>
+      <SigefaVersionArchivo>$(IntermediateOutputPath)VersionCompilacion.g.cs</SigefaVersionArchivo>
+    </PropertyGroup>
+    <ItemGroup>
+      <SigefaVersionLinea Include="// Generado al compilar por el target GenerarVersionCompilacion de SIGEFA.csproj. No editar." />
+      <SigefaVersionLinea Include="namespace SIGEFA.Administradores.VersionApp%3B" />
+      <SigefaVersionLinea Include="internal static class VersionCompilacion" />
+      <SigefaVersionLinea Include="{" />
+      <SigefaVersionLinea Include="    public const string Commit = &quot;$(SigefaCommit)&quot;%3B" />
+      <SigefaVersionLinea Include="    public const string Rama = &quot;$(SigefaRama)&quot;%3B" />
+      <SigefaVersionLinea Include="    public const bool ConCambiosLocales = $(SigefaConCambios)%3B" />
+      <SigefaVersionLinea Include="    public const string Fecha = &quot;$(SigefaFecha)&quot;%3B" />
+      <SigefaVersionLinea Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(SigefaVersionArchivo)" Lines="@(SigefaVersionLinea)" Overwrite="true" />
+    <ItemGroup>
+      <Compile Include="$(SigefaVersionArchivo)" />
+      <FileWrites Include="$(SigefaVersionArchivo)" />
+    </ItemGroup>
+  </Target>
 </Project>

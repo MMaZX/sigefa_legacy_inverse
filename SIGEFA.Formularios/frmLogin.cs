@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using DevComponents.DotNetBar;
 using DevComponents.DotNetBar.Validator;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.VersionApp;
 using SIGEFA.Conexion;
 using SIGEFA.Entidades;
 using SIGEFA.Properties;
@@ -78,6 +79,8 @@ public class frmLogin : Office2007Form
 	private ImageList imageList1;
 
 	private Label lblMensaje;
+
+	private Label lblVersion;
 
 	private Panel panel1;
 
@@ -206,7 +209,15 @@ public class frmLogin : Office2007Form
 
 	private async void frmLogin_Load(object sender, EventArgs e)
 	{
+		MostrarVersion();
 		await CargaEmpresasAsync();
+	}
+
+	// Muestra con que codigo se compilo este ejecutable (commit, rama y fecha).
+	private void MostrarVersion()
+	{
+		string version = typeof(frmLogin).Assembly.GetName().Version.ToString();
+		lblVersion.Text = VersionTexto.Formatear(version, VersionCompilacion.Commit, VersionCompilacion.Rama, VersionCompilacion.ConCambiosLocales, VersionCompilacion.Fecha);
 	}
 
 	private void CargaNiveles()
@@ -371,6 +382,7 @@ public class frmLogin : Office2007Form
 		this.panel1 = new System.Windows.Forms.Panel();
 		this.pictureBox1 = new System.Windows.Forms.PictureBox();
 		this.lblMensaje = new System.Windows.Forms.Label();
+		this.lblVersion = new System.Windows.Forms.Label();
 		this.panel1.SuspendLayout();
 		((System.ComponentModel.ISupportInitialize)this.pictureBox1).BeginInit();
 		base.SuspendLayout();
@@ -473,6 +485,14 @@ public class frmLogin : Office2007Form
 		this.lblMensaje.Size = new System.Drawing.Size(340, 70);
 		this.lblMensaje.TabIndex = 21;
 		this.lblMensaje.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+		this.lblVersion.BackColor = System.Drawing.Color.Transparent;
+		this.lblVersion.Font = new System.Drawing.Font("Verdana", 6.75f, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
+		this.lblVersion.ForeColor = System.Drawing.Color.DimGray;
+		this.lblVersion.Location = new System.Drawing.Point(12, 213);
+		this.lblVersion.Name = "lblVersion";
+		this.lblVersion.Size = new System.Drawing.Size(538, 14);
+		this.lblVersion.TabIndex = 22;
+		this.lblVersion.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 		this.panel1.BackColor = System.Drawing.SystemColors.Control;
 		this.panel1.Controls.Add(this.txtUsuario);
 		this.panel1.Controls.Add(this.label1);
@@ -485,6 +505,7 @@ public class frmLogin : Office2007Form
 		this.panel1.Controls.Add(this.label3);
 		this.panel1.Controls.Add(this.pictureBox1);
 		this.panel1.Controls.Add(this.lblMensaje);
+		this.panel1.Controls.Add(this.lblVersion);
 		this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
 		this.panel1.Name = "panel1";
 		this.panel1.TabIndex = 20;
