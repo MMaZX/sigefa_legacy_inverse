@@ -1845,8 +1845,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmGestionCliente.cs": {
-    "mtime": 1784907484.5509846,
-    "ast_hash": "91440813daa81eb643cb57f5cd1d69f6",
+    "mtime": 1794956497.9941795,
+    "ast_hash": "355e53ab050757b6b6a1e2d98ba13a0f",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmGestionCotizacion.cs": {
@@ -2135,8 +2135,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmLogin.cs": {
-    "mtime": 1791302133.321705,
-    "ast_hash": "ff33f4a901407f37a1e2b97e6d956d18",
+    "mtime": 1794952888.5097106,
+    "ast_hash": "5b4c8133a59dc1c36bac714626dc992f",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmMarcas.cs": {
@@ -2775,8 +2775,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVenta2019.cs": {
-    "mtime": 1794948956.3409,
-    "ast_hash": "f05c24f1a4a545b742080554b666682b",
+    "mtime": 1794957647.4751978,
+    "ast_hash": "23036f002380afb70edf9c2b7e9009fa",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVentaSeparacionAr.cs": {
@@ -6240,13 +6240,13 @@
     "semantic_hash": ""
   },
   "SIGEFA.csproj": {
-    "mtime": 1791669899.926953,
-    "ast_hash": "2d0bfef935a66f9b7ca2358bb6ecd9d7",
+    "mtime": 1794956368.2532933,
+    "ast_hash": "efe99127be1b2d0281d424f2809c2bd1",
     "semantic_hash": ""
   },
   "SIGEFA.sln": {
-    "mtime": 1784907485.0610108,
-    "ast_hash": "1b86432879d05341e576e43ee83a8a43",
+    "mtime": 1794953283.4878297,
+    "ast_hash": "fe0f929172cdb005f75807e8ed30d3ca",
     "semantic_hash": ""
   },
   "SIGEFA/CTriStateTreeView.cs": {
@@ -6255,8 +6255,8 @@
     "semantic_hash": ""
   },
   "SIGEFA/Program.cs": {
-    "mtime": 1791304117.3170588,
-    "ast_hash": "c2c58744421680d5b211e600918284ea",
+    "mtime": 1794952888.5116997,
+    "ast_hash": "d93742d4148b5b2be1519b638ac057d8",
     "semantic_hash": ""
   },
   "SIGEFA/PruebaCombo.cs": {
@@ -6285,8 +6285,8 @@
     "semantic_hash": ""
   },
   "SIGEFA/mdi_Menu.cs": {
-    "mtime": 1784907485.062103,
-    "ast_hash": "83c5d44dee6e02ef202e89fe5f0a7669",
+    "mtime": 1794954096.7412233,
+    "ast_hash": "8eedc0c74e5358d705e7654dfcd4fc9e",
     "semantic_hash": ""
   },
   "SISTEMA_BUNIFU.Alertas/Errors.cs": {
@@ -6650,8 +6650,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Tests/SIGEFA.Tests.csproj": {
-    "mtime": 1794948869.1852045,
-    "ast_hash": "4978210d5aed1e144f68ab11f33d015c",
+    "mtime": 1794957664.5599053,
+    "ast_hash": "0c5a6f09b3d12083a28914a8ebf0636c",
     "semantic_hash": ""
   },
   "docs/venta-cierre/referencia-sql/local_GuardaDetalleFacturaVenta.sql": {
@@ -7070,8 +7070,8 @@
     "semantic_hash": ""
   },
   "odd/tasks/venta-servicios-sin-stock.md": {
-    "mtime": 1794948982.4977224,
-    "ast_hash": "c8d7ef0b8ca8bb78cedb7883368f9b4b",
+    "mtime": 1794950317.9877222,
+    "ast_hash": "13ece5d39cb265579d29900e9f86c0d6",
     "semantic_hash": ""
   },
   "tools/venta-cierre-dashboard/README.md": {
@@ -7087,6 +7087,76 @@
   "tools/venta-cierre-dashboard/pnpm-workspace.yaml": {
     "mtime": 1794257918.5935645,
     "ast_hash": "7bb23c19c0343fac40d375bacca550d0",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/ConsultaDocumento/ConsultaDocumentoException.cs": {
+    "mtime": 1794956306.413075,
+    "ast_hash": "b1c2c642423246ecff0aa2ee5e4d857a",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/ConsultaDocumento/ConsultaSunat.cs": {
+    "mtime": 1794956306.4160752,
+    "ast_hash": "1187964f17ac1ce1df49c6111706a17d",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/ConsultaDocumento/DocumentoConsultado.cs": {
+    "mtime": 1794956306.4020739,
+    "ast_hash": "57335957133c45b008e7e359084a2aca",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/ConsultaDocumento/SunatRespuesta.cs": {
+    "mtime": 1794956306.4090745,
+    "ast_hash": "dc887937a1a574b184af5d6fe91a99dc",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/ConsultaDocumento/TipoDocumentoConsulta.cs": {
+    "mtime": 1794956306.4060743,
+    "ast_hash": "d6fd0daa86135b9fffb2adedfe45505c",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/PedidoPendiente/CargaPedidoDiagnostico.cs": {
+    "mtime": 1794957607.0986993,
+    "ast_hash": "6c826a49c9f5464541f05149ec73e981",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VersionApp/VersionDatos.cs": {
+    "mtime": 1794953283.487938,
+    "ast_hash": "62dde09879247965b1ebf8ec68489e6a",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VersionApp/VersionTexto.cs": {
+    "mtime": 1794953283.4880323,
+    "ast_hash": "563e81eca4d9b5f7cc40ba7fba34acf4",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Formularios/IconoSistema.cs": {
+    "mtime": 1794952888.49137,
+    "ast_hash": "76bf31077e9fca5fad599ae8f4edca7e",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Formularios/VersionSistema.cs": {
+    "mtime": 1794953283.4881213,
+    "ast_hash": "1ae5b2a90780e3379d14300d9c796c23",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/ConsultaDocumento/ConsultaSunatTests.cs": {
+    "mtime": 1794956323.4487493,
+    "ast_hash": "4bcb3fbdb3780d24db0ca54d3eaac2a5",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/PedidoPendiente/CargaPedidoDiagnosticoTests.cs": {
+    "mtime": 1794957664.6009092,
+    "ast_hash": "315e9feec55f4290b0eeefe8442bc296",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VersionApp/VersionTextoTests.cs": {
+    "mtime": 1794953283.4882088,
+    "ast_hash": "17d4c18f684f4cc2131d4c092aee6254",
+    "semantic_hash": ""
+  },
+  "SIGEFA/Recursos/sunat.png": {
+    "mtime": 1794956306.3996806,
+    "ast_hash": "09c3596a514e8954ccaa611c0f0540a7",
     "semantic_hash": ""
   }
 }
