@@ -1,0 +1,170 @@
+# venta-servicios-sin-stock
+Objetivo: permitir agregar SERVICIOS (codTipoArticulo=2) a una venta en frmVenta2019, con cantidad libre y sin bloqueo por stock.
+Rama: feat/venta-servicios-sin-stock. Entrega: ask-on-risk. Runner: SIGEFA.Tests (xunit, net48; se compila y corre en la VM Windows) para la regla pura; verificación manual en BD dev para la UI. Mirror Engram: odd/venta-servicios-sin-stock/tasks (PENDIENTE: el guardado fue bloqueado por auto mode el 2026-11-17).
+Estado: T6 implementado (L13), escrito y SIN compilar. Pendiente: build y suite en la VM, y T5 (UI en Windows).
+
+## Specs
+- S1. "permitir agregar SERVICIOS (codTipoArticulo=2) a una venta en frmVenta2019, con cantidad libre y sin bloqueo por stock."
+- S2. Los SP los cambia la API Laravel con migraciones: "tú NO editas procedimientos ni migraciones". Cambios a pedir a la API (L4):
+  - `RelacionProductosSalidaTodo` y `RelacionProductosSalidaTodoSinStock` listan también los tipos sin stock (`tipoarticulo.is_enabled_stock=0`) y agregan la columna `is_enabled_stock` AL FINAL de su salida, sin cambiar el orden ni los valores de las columnas existentes. No se usa `stockdisponible=999999`.
+  - `GuardaDetallePedido` inserta siempre la línea cuando el artículo es de un tipo sin stock (hoy inserta solo si `stockdisponible >= cantidad`; afecta la rama SinStock==0).
+  - `ListaTotalprod2` no se toca: el C# no lo llama para los servicios.
+- S3. La mercadería "debe comportarse igual que antes".
+- S4. "documentar en el ODD el archivo:línea de cada cambio"; "no hacer commit sin pedido del usuario".
+- S5. Fuera de alcance salvo que este ODD diga lo contrario: frmProductosLista, cotización, guía (listados de productos). frmGuiaFacturacion no se modifica; solo se verifica que la columna nueva no lo rompa.
+- S6. Regla en C# (L4): un solo helper decide si una línea valida stock, con un guard clause sobre `is_enabled_stock`. Si vale 0:
+  - no se valida contra `stockdisponible` (rama SinStock==0) ni se llama a `ListaTotalprod2`/`StockMaximo` (rama SinStock==1);
+  - la cantidad es libre: solo debe ser mayor a 0, con el redondeo a 2 decimales que ya existe;
+  - la columna de stock de la grilla muestra vacío o "—".
+- Dependencia: no iniciar T1/T3 hasta que la API avise que los SP nuevos están en dev.
+
+## Evidencia base (verificada en lectura)
+- Cargas de grilla, todas `tipo=1, codlista=1`: frmVenta2019.cs:852 y 856 (CargaProductos), 5355 y 5360 (chbxstock_Click). Rama por `SinStock` (campo int, frmVenta2019.cs:69).
+- Validaciones de stock en C#: frmVenta2019.cs:1150-1151 (lee `cant` y `stockdisponible`); 1152-1155 (SinStock==1: `AdmPro.ListaTotalprod2` y `product.StockMaximo`, no mira la celda `stockdisponible`); 1236 (`else if (cant <= stock)`, SinStock==0); ~1313 (MessageBox "Cantidad debe ser menor o igual al stock."); 5469 y 5484-5531 (edición de cantidad en detalle, usa `ListaTotalprod2`/`StockMaximo`). Verificado el 2026-11-17: 1150-1155 y 1236.
+- `ListaTotalprod2`: SIGEFA.InterMySql/MysqlProducto.cs:487.
+- Guardado: frmVenta2019.cs:2995-3002 -> MysqlPedido.cs:521 (`insertdetalle` -> `GuardaDetallePedido`, inserta solo si `stockdisponible >= cantidad`) / MysqlPedido.cs:578 (`insertdetalleSinStock` -> `GuardaDetallePedidoSinStock`, inserta sin validar). Sin triggers en `detallepedido`.
+- Otros puntos que asumen stock por línea: frmGuiaFacturacion.cs:1508 (`RelacionSalidaTodoSinStock(1, ...)`), frmGuiaFacturacion.cs:1927 (escribe `stockdisponible` en la grilla); frmVenta2019.cs:3300 (`retornarStock` en requerimientos de almacén).
+
+## Tasks
+- [~] T1 parcial (L8): verificado a nivel SP; falta la prueba de UI en Windows (grilla de frmVenta2019 y frmGuiaFacturacion). (S1,S2,S5) L1: con los SP nuevos en dev, comprobar que el servicio aparece en la grilla con SinStock 0 y 1 y que llega la columna `is_enabled_stock`. Comprobar que frmGuiaFacturacion (frmGuiaFacturacion.cs:1508, 1927) sigue funcionando igual con la columna nueva. Ruta: inline. Depende del aviso de la API.
+- [x] T2 hecho (L12; diseño en la sección "Diseño T2"). (S1,S3,S6) L2,L4: diseñar el helper de S6 y listar archivo:línea de cada punto que debe usarlo (1150-1155, 1236, ~1313, 5469-5531) y de la celda de stock que muestra "—". Ruta: inline.
+- [x] T3 hecho (L8). (S1,S2) L3: guardar un pedido con un servicio por `GuardaDetallePedido` (SinStock==0) y por `GuardaDetallePedidoSinStock` (SinStock==1); confirmar la línea en `detallepedido`. Depende del aviso de la API.
+- [x] T4 hecho (L9); queda abierta una decisión (D1). (S1) L4: diagnóstico obligatorio antes de T6. Seguir aprobación, guía de facturación, factura, kardex e impresión; listar los puntos del C# y de los SP que descuentan o asumen stock por línea (partir de frmGuiaFacturacion.cs:1508 y 1927, frmVenta2019.cs:3300) y cuáles requieren cambio (C# aquí, SP a pedir a la API). Solo diagnóstico. Ruta: explorer si supera 5 búsquedas.
+- [ ] T5 pendiente: requiere Windows. (S3,S6) L6: probar en dev una venta solo con servicio y una venta mezclada mercadería + servicio, con SinStock 0 y 1; la mercadería igual que antes; la cantidad del servicio acepta cualquier valor > 0. Verificación manual contra `database_multi_final` local (127.0.0.1:3307), nunca producción.
+- [x] T6 escrito sin compilar (L13; commits 4c7c56a y el siguiente). (S4,S6) Implementación C# mínima según T2 y T4, con `git diff -w` y la ruta legacy intacta. Bloqueada por T4. Solo con orden del usuario.
+
+## Riesgos y preguntas abiertas
+- Riesgo item 3 (contrato consumido por otros): `RelacionProductosSalidaTodo*` también lo usa frmGuiaFacturacion. La columna nueva va al final y no cambia las existentes (L4, confirmado por la API en L7); se verifica en T1.
+- Riesgo (L7, inevitable): frmGuiaFacturacion.cs:1508 ya lista servicios en dev, con stockdisponible 0. El SP no puede distinguir a sus llamadores porque frmVenta2019 (852, 856, 5355, 5360) y la guía usan los mismos argumentos `(1, codAlmacen, 1)`. T1 debe probar qué pasa en la guía al elegir un servicio.
+- Hallazgo T4 (L7): frmGeneraVenta.cs:1352-1361. Con `ventasinstock==0`, `productofacturado==0` y `CodTipoDocumento==7`, recorre cada línea:
+  - si no existe fila previa, llama a `InsertaProductoSinFacturar` (que ejecuta `GuardaProductoSinFacturar`);
+  - si existe, llama a `ActualizaStockSinFacturar` (+1).
+  - Sin un filtro por `is_enabled_stock`, crearía filas de stock "sin facturar" para los servicios. Probable cambio C#: un guard clause por línea. Falta confirmar qué devuelve `GetProductoFacturado` para un servicio.
+- Abierto hasta cerrar T4: aprobación, factura, kardex e impresión.
+- No aplica (L7): en las ramas codlista=0 el SP devuelve stockdisponible=1 fijo, pero frmVenta2019 siempre usa codlista=1.
+- Errores previos de la API, sin impacto con filtroventa=false (L7): `Unknown column 'a.codAlmacen'` y `ORDER BY a.nombre` sin alias.
+- Resuelto (L4): el supuesto `stockdisponible=999999` se descarta.
+- Resuelto (L4): la posible NullReference en `Convert.ToDecimal(product.StockMaximo)` (1152-1155) se evita porque el C# no llama a `ListaTotalprod2` para servicios.
+
+## Diseño T2 (L12)
+- Regla pura, testeable: `SIGEFA.Administradores/VentaServicios/StockLineaRegla.cs` (sin WinForms ni BD; se enlaza en SIGEFA.Tests.csproj como ReqVenta).
+  - `bool LlevaStock(object isEnabledStock)`: devuelve false solo si el valor es 0; con null, DBNull o sin la columna devuelve true. Falla cerrado, igual que el SP (`IFNULL(is_enabled_stock,1)`).
+  - `bool CantidadValida(bool llevaStock, decimal cantidad, decimal stockMaximo)`: si `!llevaStock`, devuelve `cantidad > 0`; si no, `cantidad <= stockMaximo` (la regla actual).
+  - `string TextoStock(bool llevaStock, decimal stock)`: devuelve "—" si `!llevaStock`; si no, `stock` con formato `0.00`.
+- Lectura del flag:
+  - En dgvproductos, desde `((DataRowView)row.DataBoundItem)["is_enabled_stock"]` si la columna existe. No se agrega una columna al Designer.
+  - En dgvdetalle (pedidos que vienen de la BD), con un método de repositorio nuevo `AdmPro.LlevaStock(codProducto)` que ejecuta `SELECT producto_lleva_stock(@cod)`. El helper no toca la BD.
+- "—" en la grilla: solo por `CellFormatting` sobre la columna `stockdisponible`. El valor de la celda sigue siendo numérico (0), porque `Convert.ToDecimal` lo lee en 1151, 1341 y 1084, y "—" lanzaría FormatException.
+- Puntos de cambio en frmVenta2019.cs (T6):
+  - P1. 1150-1155: con `SinStock==1` y `!llevaStock`, no llamar a `ListaTotalprod2` (MysqlProducto.cs:487, que devuelve null si no hay filas).
+  - P2. 1156-1313: hay dos bloques duplicados de "agregar línea". Con `diff -w` son idénticos salvo los nombres de las variables (precioactual/2, tablacantidades/2, cantidad/max/min 2). Se extraen a un solo método, y el stock pasa a ser un guard clause: si `!CantidadValida(...)`, se muestra el mensaje de su rama ("La cantidad debe ser menor a: " + totalprod con SinStock==1; "Cantidad debe ser menor o igual al stock." con SinStock==0) y se sale. Los mensajes y el orden de la mercadería no cambian.
+  - P3 (nuevo). 1341, `CalcularTotal`: con `SinStock==0` exige `stockdisponible > 0` para calcular el total; si no, `total==""` y la línea no se agrega. Para los servicios se usa la rama de `SinStock==1`, que solo exige `cant > 0`.
+  - P4. 5466-5531, `dgvdetalle_CellEndEdit`: si `!AdmPro.LlevaStock(codProd)`, se sale después de la validación `nuevaCantidad <= 0`, sin `ListaTotalprod2` ni el tope por RA.
+  - P5. `CellFormatting` de dgvproductos, columna `stockdisponible`, con `TextoStock`. Cubre también 1084, el cambio de unidad que reescribe el valor.
+- Tests (RED antes de implementar): una prueba por regla:
+  - `LlevaStock` con 0, 1, null y DBNull;
+  - `CantidadValida` para un servicio con cantidad > 0 sin stock y con 0;
+  - `CantidadValida` para la mercadería, que debe dar el mismo resultado que la regla actual;
+  - `TextoStock` en sus dos casos.
+- La UI (P1-P5) se verifica a mano en Windows (T5). No existe un harness de WinForms.
+- Fuera: frmGuiaFacturacion (S5; tiene la columna de stock oculta) y frmGeneraVenta (cubierto en la BD por la migración 220000).
+
+## Log
+- L1 (2026-11-17, sesión gruporicardoapi-53): "Plan B para armar un ODD en el legacy: permitir agregar SERVICIOS (codTipoArticulo=2) a una venta en frmVenta2019, con cantidad libre y sin bloqueo por stock. ... Por ahora solo arma el ODD (sin implementar C#); el usuario continuará la implementación contigo."
+- L2 (2026-11-17, usuario): "el plan no lo ejecutaremos aun."
+- L3 (2026-11-17, usuario): "solo armalo"
+- L4 (2026-11-17, usuario, respuestas a las preguntas abiertas):
+  - Enfoque: "Flag is_enabled_stock (Recomendado)".
+  - SinStock==1: "Saltear en C# (Recomendado)".
+  - Downstream: "Diagnosticar T4 primero (Recomendado)".
+  - UX grilla: "Vacío o \"—\" (Recomendado)".
+  - Guía: "Solo columna nueva (Recomendado)".
+  - Cantidad: "Libre, solo > 0 (Recomendado)".
+  - Motivo: con SinStock==1 la validación usa `ListaTotalprod2.StockMaximo` y no la celda `stockdisponible`, así que el 999999 del SP no cubría esa rama.
+  - Cambios: se reescribieron S2, S5 y los riesgos, se agregó S6, y se ajustaron T1-T6.
+- L5 (2026-11-17, usuario): "Sí, actualizalo"
+- L6 (2026-11-17): la API informó que las migraciones 200000 (listados con stockdisponible=999999, también con codlista=0) y 210000 (GuardaDetallePedido) están en dev. Se le pidió a api-gr:
+  - (1a) agregar la columna is_enabled_stock al final de la salida;
+  - (1b) devolver el stockdisponible real en lugar de 999999;
+  - (1c) confirmar si se puede evitar que frmGuiaFacturacion.cs:1508 liste servicios;
+  - revisar ActualizaStockSinFacturar y GuardaProductoSinFacturar (T4);
+  - no aplicar 200000 ni 210000 en producción hasta cerrar T1-T5.
+  - Verificado: dgvproductos usa AutoGenerateColumns=false (frmVenta2019.cs:845, frmGuiaFacturacion.cs:1504).
+  - Se espera la respuesta antes de T1 y T3.
+- L7 (2026-11-17, api-gr): "los SP ajustados (200000 y 210000) ya están en dev. 1a SÍ, 1b SÍ, 1c NO (no se puede restringir, es inevitable)."
+  - is_enabled_stock es la última columna, después de codFamilia, en las 4 ramas de cada SP; 1 = lleva stock.
+  - Los servicios devuelven stockdisponible 0, también en la rama de kardex.
+  - ActualizaStockSinFacturar y GuardaProductoSinFacturar no validan stock ni miran el flag; solo escriben en stockproductofacturado.
+  - Ese hallazgo se cruzó con el C# (frmGeneraVenta.cs:1352-1361).
+  - T1 y T3 quedan desbloqueadas; siguen sin ejecutarse porque falta la orden del usuario.
+- L8 (2026-11-17, usuario): "arrncamos bor". Se ejecutaron T1 (a nivel SP) y T3 contra la BD dev 127.0.0.1:3307.
+  - SP en dev: LAST_ALTERED 2026-11-17 15:27. Tipos sin stock en tipoarticulo: 2 SERVICIO DE VENTA, 3, 4 y 5 CAJA CHICA.
+  - T1 (llamadas `(1, alma, 1)` con alma 1 y 2, mismos argumentos que frmVenta2019.cs:852/856 y frmGuiaFacturacion.cs:1508):
+    - `is_enabled_stock` es la columna 17, la última, después de codFamilia.
+    - Los dos SP devuelven 8 filas con flag 0: 4 servicios (7125, 9104, 9833, 11477) por 2 almacenes.
+    - No aparece CAJA CHICA, aunque tiene 277 productos activos con flag 0.
+  - Hallazgo de datos: el servicio 7125 (FLETE DE MERCADERIA AV. G17) tiene stockactual y stockdisponible 13897.20 en almacén 3 (G17-LM). Por eso la regla debe usar el flag y no el valor de stock. Con el flag, la grilla muestra "—".
+  - T3 (dentro de START TRANSACTION ... ROLLBACK, sin COMMIT dentro del SP; verificado que no quedan filas):
+    - `GuardaDetallePedido` con el servicio 11477, que tiene stock 0: inserta con cantidad 5 y con 2500.75.
+    - La mercadería 163, sin stock, sigue rechazada (newid=0).
+    - `GuardaDetallePedidoSinStock` con 11477: inserta con cantidad 3.
+  - Pendiente de T1: probar la UI en Windows. No se puede correr WinForms en esta máquina Linux.
+- L9 (2026-11-17, usuario): "Sí, T4". Diagnóstico aguas abajo:
+  - Ruta: un explorer mapeó el C#. Los SP y triggers se revisaron en la BD dev.
+  - No existe un paso de aprobación del pedido; la única aprobación es la del requerimiento de almacén (RA).
+  - Lado BD, ya preparado para servicios (no requiere cambios):
+    - `GuardaDetalleFacturaVenta` (modificado 2026-11-17 13:46) lee `is_enabled_stock`:
+      - si vale 0, no bloquea ni valida stock y no devuelve -1;
+      - inserta `detallenotasalida` y escribe kardex con stock y saldo 0.
+    - Los triggers de stock de `detallenotasalida` y de `detallenotaingreso` (ActualizaStock*) consultan el flag.
+    - `rollbackfactura` y `SeparandoStockAlAprobarReqAlmacen` consultan el flag.
+    - Los 4 servicios tienen fila en `productoalmacen` en los 4 almacenes, así que `VentaCierreRepositorio.bloquearStock` (VentaCierreRepositorio.cs:102-147, ruta nueva) pasa con stock 0.
+  - Cambios C# (T6):
+    - C1. frmVenta2019.cs:5466-5531 (dgvdetalle_CellEndEdit). Al editar la cantidad llama a `ListaTotalprod2`/`StockMaximo` y bloquea con "Solo se permite la cantidad maxima de…" / "Sin Stock Suficiente". Ya figuraba en T2; usar el helper de S6.
+    - C2. Los puntos de agregar línea de T2: frmVenta2019.cs:1150-1155, 1236 y ~1313.
+  - Decisión abierta:
+    - D1. frmGeneraVenta.cs:1352-1361 (a esta pantalla se llega desde frmPedidosPendientes.cs:150, Proceso=4). Con `ventasinstock==0`, `CodTipoDocumento==7` y `GetProductoFacturado`=`producto.venta_ticket`=0, crea filas en `stockproductofacturado` para cada línea, servicios incluidos. Verificado: los 4 servicios y todas las mercaderías tienen venta_ticket=0. `GuardaProductoSinFacturar` y `ActualizaStockSinFacturar` no consultan el flag. Hay que decidir si el filtro va en el SP (API) o en el C#.
+  - Riesgos menores (sin cambio previsto):
+    - Si un servicio entra en un RA, frmReqAlmacen.cs:1990 lo bloquea por stock, y la extornación (frmVenta2019.cs:3117-3140) también. El usuario elige las líneas del RA.
+    - `CreacionDespacho` (frmVenta2019.cs:4123-4210) crea líneas de despacho también para los servicios, cuando existe un RA. No se rastreó el flujo de entrega posterior.
+    - El trigger de kardex `tr_kardex_after_insert_registrar_o_actualizar_stock_diario` no consulta el flag y registra stock diario en 0 para los servicios. Es inocuo.
+    - MysqlFacturaVenta.cs:279 y frmVenta2019.cs:2985 rechazan las líneas con Igv==0. Si algún servicio es exonerado, no se puede vender (no es tema de stock).
+  - D1 resuelta (L10): el filtro va en el SP.
+  - Sin stock en C#: la impresión (frmVenta2019.cs:4443) y la guía (frmGuiaFacturacion.cs:607-611, 724-731, 1334-1339; la columna de stock está oculta en 3298).
+- L10 (2026-11-17, usuario): "pedile a la API que filtre esos dos SP para que no genere un problema real".
+  - Se le pidió a api-gr que `GuardaProductoSinFacturar` y `ActualizaStockSinFacturar` no hagan nada cuando `producto_lleva_stock=0`, y que la mercadería quede igual.
+  - Contexto: stockproductofacturado tiene una sola fila en dev (producto 1288, de 2018).
+  - Pendiente: que la API confirme y diga el número de migración.
+- L11 (2026-11-17, api-gr): la migración 2026_11_17_220000_guard_stock_sin_facturar_by_tipoarticulo está en dev.
+  - Cambia `GuardaProductoSinFacturar`, `ActualizaStockSinFacturar` y `ExisteProductoSinFacturar` (modificados 15:47).
+  - Verificado en dev, dentro de START TRANSACTION ... ROLLBACK; al final la tabla quedó con 1 fila, igual que antes.
+  - Servicio 11477:
+    - `Existe` devuelve 0;
+    - `Guarda` no inserta;
+    - con una fila previa forzada en stock 7, `Actualiza` la deja en 7 y `Existe` sigue devolviendo 0.
+  - Mercadería 163:
+    - `Guarda` inserta con stock 5;
+    - `Existe` devuelve 1;
+    - `Actualiza` (+2) la lleva a 7.
+  - D1 cerrada.
+  - Migraciones de la API que no van a producción hasta que el legacy cierre T1-T5: 200000, 210000 y 220000.
+- L12 (2026-11-17, usuario): "Sí, T2".
+  - Se leyeron frmVenta2019.cs:1125-1345 y 5450-5535, y MysqlProducto.cs:487.
+  - Hallazgos: P3, la regla de stock en `CalcularTotal`; los bloques duplicados de P2 son idénticos con `diff -w`; dgvdetalle no recibe el flag; existe SIGEFA.Tests (xunit).
+  - El diseño quedó registrado en la sección "Diseño T2".
+- L13 (2026-11-17, usuario): "terminemos con todo". T6 implementado en la rama feat/venta-servicios-sin-stock. El host no tiene compilador, así que nada está compilado ni probado.
+  - Commit 4c7c56a, regla y datos:
+    - SIGEFA.Administradores/VentaServicios/StockLineaRegla.cs: `LlevaStock` y `StockCubreCantidad`.
+    - Pruebas en SIGEFA.Tests/VentaServicios/StockLineaReglaTests.cs, enlazadas en SIGEFA.Tests.csproj. Se escribieron antes que la regla, pero no se observó el RED porque no hay compilador.
+    - `LlevaStock(int)` en IProducto.cs:232, MysqlProducto.cs:3669 (`SELECT producto_lleva_stock(@codProducto)`; verificado en dev: 11477 → 0, 163 → 1, -1 → 1) y clsAdmProducto.cs:1550 (sin captura).
+  - Segundo commit, frmVenta2019.cs:
+    - P1 y P2 en 1152-1167. Los dos bloques duplicados se unificaron en `AgregarLineaProducto` (1198); el stock pasa a ser un solo guard con `StockCubreCantidad`; los mensajes por rama están en `MostrarStockInsuficiente` (1187); el flag se lee con `FilaProductoLlevaStock` (1178).
+    - P3 en 1295 (`CalcularTotal`).
+    - P4 en 5433: el tope es `double.PositiveInfinity` sin llamar a `ListaTotalprod2` cuando el artículo no lleva stock. Se conserva la contabilidad de RA y el recálculo.
+    - P5 en 1275 (`dgvproductos_CellFormatting` muestra "—") y 7192 (cableado del evento).
+    - Se quitó la variable `total`, que quedó sin uso.
+  - Diferencia conocida para la mercadería: antes, varios `return` del bloque de agregar línea dejaban el cursor en espera; ahora el llamador siempre lo restablece al terminar. Es cosmético.
+  - Pendiente:
+    - Build Debug|x86 y `dotnet test SIGEFA.Tests` en la VM `sigefa_build`, con autorización explícita del usuario y SIGEFA.exe cerrado.
+    - T5 manual en Windows contra dev.
+    - Mirror Engram.

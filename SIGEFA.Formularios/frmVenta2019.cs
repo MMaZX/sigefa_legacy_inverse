@@ -24,6 +24,7 @@ using Microsoft.VisualBasic;
 using SIGEFA.Administradores;
 using SIGEFA.Administradores.PedidoPendiente;
 using SIGEFA.Administradores.VentaCierre;
+using SIGEFA.Administradores.VentaServicios;
 using SIGEFA.Conexion;
 using SIGEFA.Data;
 using SIGEFA.Entidades;
@@ -1131,7 +1132,6 @@ public class frmVenta2019 : Office2007Form
 		{
 			dgvCombo.SelectedIndexChanged -= dvgCombo_SelectedIndexChanged;
 		}
-		string total = "";
 		try
 		{
 			if (dgvproductos.RowCount > 0)
@@ -1150,168 +1150,20 @@ public class frmVenta2019 : Office2007Form
 				}
 				decimal cant = Convert.ToDecimal(dgvproductos.Rows[dgvproductos.CurrentCell.RowIndex].Cells["cant"].Value);
 				decimal stock = Convert.ToDecimal(dgvproductos.Rows[dgvproductos.CurrentCell.RowIndex].Cells["stockdisponible"].Value);
-				if (SinStock == 1)
+				bool llevaStock = FilaProductoLlevaStock(dgvproductos.CurrentRow);
+				decimal stockMaximo = stock;
+				if (SinStock == 1 && llevaStock)
 				{
 					product = AdmPro.ListaTotalprod2(Convert.ToInt32(dgvproductos.CurrentRow.Cells[codigo.Name].Value.ToString()), Convert.ToInt32(dgvproductos.CurrentRow.Cells[codalma.Name].Value.ToString()), Convert.ToInt32(dgvproductos.CurrentRow.Cells[codunidadmedida.Name].Value.ToString()));
-					decimal totalprod = Convert.ToDecimal(product.StockMaximo);
-					if (cant <= totalprod)
-					{
-						if (dgvproductos.Rows[dgvproductos.CurrentCell.RowIndex].Cells["unidad"].Value == null)
-						{
-							Cursor = Cursors.Default;
-							return;
-						}
-						if (dgvproductos.CurrentRow.Cells["precio"].Value != null)
-						{
-							decimal precioactual = (from x in unidadesequi.AsEnumerable()
-								where x.Field<int>("codUnidadEquivalente").ToString() == dgvproductos.CurrentRow.Cells["unidad"].Value.ToString()
-								select x.Field<decimal>("Precio")).ToList()[0];
-							if (dgvproductos.CurrentRow.Cells["cant"].Value != null || Convert.ToString(dgvproductos.CurrentRow.Cells["cant"].Value) != "")
-							{
-								DataTable tablacantidades = AdmPro.validaPrecioCantidad(Convert.ToInt32(dgvproductos.CurrentRow.Cells["unidad"].Value), Convert.ToInt32(dgvproductos.CurrentRow.Cells["codigo"].Value), Convert.ToDecimal(dgvproductos.CurrentRow.Cells["cant"].Value));
-								if (tablacantidades.Rows.Count > 0)
-								{
-									decimal cantidad = Convert.ToDecimal(dgvproductos.CurrentRow.Cells["cant"].Value);
-									decimal max = Convert.ToDecimal(tablacantidades.Rows[0].ItemArray[3]);
-									decimal min = Convert.ToDecimal(tablacantidades.Rows[0].ItemArray[2]);
-									if (cantidad > max)
-									{
-										dgvproductos.CurrentRow.Cells["cant"].Value = max;
-										return;
-									}
-									if (cantidad < min)
-									{
-										dgvproductos.CurrentRow.Cells["cant"].Value = min;
-										return;
-									}
-									Cursor = Cursors.Default;
-								}
-							}
-							if (dgvproductos.CurrentRow.Cells["precio"].Value.ToString() == "")
-							{
-								Cursor = Cursors.Default;
-								return;
-							}
-							if (Convert.ToDecimal(dgvproductos.CurrentRow.Cells["precio"].Value) <= 0m)
-							{
-								Cursor = Cursors.Default;
-								return;
-							}
-						}
-						switch (e.ColumnIndex)
-						{
-						case 11:
-							if (total != "" && Convert.ToDecimal(total) <= 0m)
-							{
-								Cursor = Cursors.Default;
-								return;
-							}
-							if (total == "")
-							{
-								Cursor = Cursors.Default;
-								return;
-							}
-							AgregaDetalleaGrilla(e.RowIndex);
-							break;
-						case 9:
-							total = CalcularTotal();
-							if (total != "" && Convert.ToDecimal(total) <= 0m)
-							{
-								Cursor = Cursors.Default;
-								return;
-							}
-							if (total == "")
-							{
-								Cursor = Cursors.Default;
-								return;
-							}
-							AgregaDetalleaGrilla(e.RowIndex);
-							break;
-						}
-					}
-					else
-					{
-						MessageBox.Show("La cantidad debe ser menor a: " + totalprod, "Cantidad Minima Para Requerimiento", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-					}
+					stockMaximo = Convert.ToDecimal(product.StockMaximo);
 				}
-				else if (cant <= stock)
+				if (!StockLineaRegla.StockCubreCantidad(llevaStock, cant, stockMaximo))
 				{
-					if (dgvproductos.Rows[dgvproductos.CurrentCell.RowIndex].Cells["unidad"].Value == null)
-					{
-						Cursor = Cursors.Default;
-						return;
-					}
-					if (dgvproductos.CurrentRow.Cells["precio"].Value != null)
-					{
-						decimal precioactual2 = (from x in unidadesequi.AsEnumerable()
-							where x.Field<int>("codUnidadEquivalente").ToString() == dgvproductos.CurrentRow.Cells["unidad"].Value.ToString()
-							select x.Field<decimal>("Precio")).ToList()[0];
-						if (dgvproductos.CurrentRow.Cells["cant"].Value != null || Convert.ToString(dgvproductos.CurrentRow.Cells["cant"].Value) != "")
-						{
-							DataTable tablacantidades2 = AdmPro.validaPrecioCantidad(Convert.ToInt32(dgvproductos.CurrentRow.Cells["unidad"].Value), Convert.ToInt32(dgvproductos.CurrentRow.Cells["codigo"].Value), Convert.ToDecimal(dgvproductos.CurrentRow.Cells["cant"].Value));
-							if (tablacantidades2.Rows.Count > 0)
-							{
-								decimal cantidad2 = Convert.ToDecimal(dgvproductos.CurrentRow.Cells["cant"].Value);
-								decimal max2 = Convert.ToDecimal(tablacantidades2.Rows[0].ItemArray[3]);
-								decimal min2 = Convert.ToDecimal(tablacantidades2.Rows[0].ItemArray[2]);
-								if (cantidad2 > max2)
-								{
-									dgvproductos.CurrentRow.Cells["cant"].Value = max2;
-									return;
-								}
-								if (cantidad2 < min2)
-								{
-									dgvproductos.CurrentRow.Cells["cant"].Value = min2;
-									return;
-								}
-								Cursor = Cursors.Default;
-							}
-						}
-						if (dgvproductos.CurrentRow.Cells["precio"].Value.ToString() == "")
-						{
-							Cursor = Cursors.Default;
-							return;
-						}
-						if (Convert.ToDecimal(dgvproductos.CurrentRow.Cells["precio"].Value) <= 0m)
-						{
-							Cursor = Cursors.Default;
-							return;
-						}
-					}
-					switch (e.ColumnIndex)
-					{
-					case 11:
-						if (total != "" && Convert.ToDecimal(total) <= 0m)
-						{
-							Cursor = Cursors.Default;
-							return;
-						}
-						if (total == "")
-						{
-							Cursor = Cursors.Default;
-							return;
-						}
-						AgregaDetalleaGrilla(e.RowIndex);
-						break;
-					case 9:
-						total = CalcularTotal();
-						if (total != "" && Convert.ToDecimal(total) <= 0m)
-						{
-							Cursor = Cursors.Default;
-							return;
-						}
-						if (total == "")
-						{
-							Cursor = Cursors.Default;
-							return;
-						}
-						AgregaDetalleaGrilla(e.RowIndex);
-						break;
-					}
+					MostrarStockInsuficiente(stockMaximo);
 				}
 				else
 				{
-					MessageBox.Show("Cantidad debe ser menor o igual al stock.", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+					AgregarLineaProducto(e);
 				}
 			}
 		}
@@ -1323,13 +1175,125 @@ public class frmVenta2019 : Office2007Form
 		Cursor = Cursors.Default;
 	}
 
+	// Un articulo sin stock (servicio) se reconoce por is_enabled_stock en la fila del listado.
+	private bool FilaProductoLlevaStock(DataGridViewRow fila)
+	{
+		if (!(fila?.DataBoundItem is DataRowView vista) || !vista.Row.Table.Columns.Contains("is_enabled_stock"))
+		{
+			return true;
+		}
+		return StockLineaRegla.LlevaStock(vista["is_enabled_stock"]);
+	}
+
+	private void MostrarStockInsuficiente(decimal stockMaximo)
+	{
+		if (SinStock == 1)
+		{
+			MessageBox.Show("La cantidad debe ser menor a: " + stockMaximo, "Cantidad Minima Para Requerimiento", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			return;
+		}
+		MessageBox.Show("Cantidad debe ser menor o igual al stock.", "Mensaje", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+	}
+
+	// Agrega la linea del listado al detalle una vez validado el stock (antes duplicado en las ramas SinStock 0 y 1).
+	private void AgregarLineaProducto(DataGridViewCellEventArgs e)
+	{
+		string total = "";
+		if (dgvproductos.Rows[dgvproductos.CurrentCell.RowIndex].Cells["unidad"].Value == null)
+		{
+			Cursor = Cursors.Default;
+			return;
+		}
+		if (dgvproductos.CurrentRow.Cells["precio"].Value != null)
+		{
+			decimal precioactual = (from x in unidadesequi.AsEnumerable()
+				where x.Field<int>("codUnidadEquivalente").ToString() == dgvproductos.CurrentRow.Cells["unidad"].Value.ToString()
+				select x.Field<decimal>("Precio")).ToList()[0];
+			if (dgvproductos.CurrentRow.Cells["cant"].Value != null || Convert.ToString(dgvproductos.CurrentRow.Cells["cant"].Value) != "")
+			{
+				DataTable tablacantidades = AdmPro.validaPrecioCantidad(Convert.ToInt32(dgvproductos.CurrentRow.Cells["unidad"].Value), Convert.ToInt32(dgvproductos.CurrentRow.Cells["codigo"].Value), Convert.ToDecimal(dgvproductos.CurrentRow.Cells["cant"].Value));
+				if (tablacantidades.Rows.Count > 0)
+				{
+					decimal cantidad = Convert.ToDecimal(dgvproductos.CurrentRow.Cells["cant"].Value);
+					decimal max = Convert.ToDecimal(tablacantidades.Rows[0].ItemArray[3]);
+					decimal min = Convert.ToDecimal(tablacantidades.Rows[0].ItemArray[2]);
+					if (cantidad > max)
+					{
+						dgvproductos.CurrentRow.Cells["cant"].Value = max;
+						return;
+					}
+					if (cantidad < min)
+					{
+						dgvproductos.CurrentRow.Cells["cant"].Value = min;
+						return;
+					}
+					Cursor = Cursors.Default;
+				}
+			}
+			if (dgvproductos.CurrentRow.Cells["precio"].Value.ToString() == "")
+			{
+				Cursor = Cursors.Default;
+				return;
+			}
+			if (Convert.ToDecimal(dgvproductos.CurrentRow.Cells["precio"].Value) <= 0m)
+			{
+				Cursor = Cursors.Default;
+				return;
+			}
+		}
+		switch (e.ColumnIndex)
+		{
+		case 11:
+			if (total != "" && Convert.ToDecimal(total) <= 0m)
+			{
+				Cursor = Cursors.Default;
+				return;
+			}
+			if (total == "")
+			{
+				Cursor = Cursors.Default;
+				return;
+			}
+			AgregaDetalleaGrilla(e.RowIndex);
+			break;
+		case 9:
+			total = CalcularTotal();
+			if (total != "" && Convert.ToDecimal(total) <= 0m)
+			{
+				Cursor = Cursors.Default;
+				return;
+			}
+			if (total == "")
+			{
+				Cursor = Cursors.Default;
+				return;
+			}
+			AgregaDetalleaGrilla(e.RowIndex);
+			break;
+		}
+	}
+
+	private void dgvproductos_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+	{
+		if (e.RowIndex < 0 || dgvproductos.Columns[e.ColumnIndex].Name != stockdisponible.Name)
+		{
+			return;
+		}
+		if (FilaProductoLlevaStock(dgvproductos.Rows[e.RowIndex]))
+		{
+			return;
+		}
+		e.Value = StockLineaRegla.TextoSinStock;
+		e.FormattingApplied = true;
+	}
+
 	public string CalcularTotal()
 	{
 		string cantidad = "0.00";
 		subtotalfila = "0.00";
 		try
 		{
-			if (SinStock == 1)
+			if (SinStock == 1 || !FilaProductoLlevaStock(dgvproductos.CurrentRow))
 			{
 				if (dgvproductos.CurrentRow.Cells["cant"].Value != null && dgvproductos.CurrentRow.Cells["cant"].Value.ToString() != "" && Convert.ToDecimal(dgvproductos.CurrentRow.Cells["cant"].Value) > 0m)
 				{
@@ -5469,8 +5433,13 @@ public class frmVenta2019 : Office2007Form
 				int codAlmacen = Convert.ToInt32(dgvdetalle.Rows[e.RowIndex].Cells[codalmacen.Name].Value);
 				clsRequerimientoAlmacen reqAlm = admreqalm.CargaRequerimientosSegun(Convert.ToInt32(pedido.CodPedido), codAlmacen, -1);
 				bool tieneRequerimientoAprobado = false;
-				clsProducto product = AdmPro.ListaTotalprod2(codProd, codAlmacen, codUnidad);
-				double totalprod = product.StockMaximo;
+				// Un articulo sin stock (servicio) no tiene tope de cantidad.
+				double totalprod = double.PositiveInfinity;
+				if (AdmPro.LlevaStock(codProd))
+				{
+					clsProducto product = AdmPro.ListaTotalprod2(codProd, codAlmacen, codUnidad);
+					totalprod = product.StockMaximo;
+				}
 				if (nuevaCantidad == Convert.ToDouble((valorInicial == null) ? ((object)0) : valorInicial))
 				{
 					return;
@@ -7299,6 +7268,7 @@ public class frmVenta2019 : Office2007Form
 		this.dgvproductos.TabIndex = 1;
 		this.dgvproductos.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(dgvproductos_CellClick);
 		this.dgvproductos.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(dgvproductos_CellEndEdit);
+		this.dgvproductos.CellFormatting += new System.Windows.Forms.DataGridViewCellFormattingEventHandler(dgvproductos_CellFormatting);
 		this.dgvproductos.ColumnHeaderMouseClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(dgvproductos_ColumnHeaderMouseClick);
 		this.dgvproductos.EditingControlShowing += new System.Windows.Forms.DataGridViewEditingControlShowingEventHandler(dgvproductos_EditingControlShowing);
 		this.codigo.DataPropertyName = "codProducto";
