@@ -120,7 +120,7 @@ public class frmGestionCliente : Office2007Form
 
 	private Button btnSunat;
 
-	private ToolTip toolTipSunat;
+	private System.Windows.Forms.ToolTip toolTipSunat;
 
 	// Busqueda automatica: espera una pausa al tipear para no consultar un DNI mientras se escribe un RUC.
 	private readonly System.Windows.Forms.Timer timerSunat = new System.Windows.Forms.Timer { Interval = 700 };
