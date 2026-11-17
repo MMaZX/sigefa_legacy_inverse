@@ -49,8 +49,8 @@ Estado: T6 implementado (L13), escrito y SIN compilar. Pendiente: build y suite 
 ## Diseño T2 (L12)
 - Regla pura, testeable: `SIGEFA.Administradores/VentaServicios/StockLineaRegla.cs` (sin WinForms ni BD; se enlaza en SIGEFA.Tests.csproj como ReqVenta).
   - `bool LlevaStock(object isEnabledStock)`: devuelve false solo si el valor es 0; con null, DBNull o sin la columna devuelve true. Falla cerrado, igual que el SP (`IFNULL(is_enabled_stock,1)`).
-  - `bool CantidadValida(bool llevaStock, decimal cantidad, decimal stockMaximo)`: si `!llevaStock`, devuelve `cantidad > 0`; si no, `cantidad <= stockMaximo` (la regla actual).
-  - `string TextoStock(bool llevaStock, decimal stock)`: devuelve "—" si `!llevaStock`; si no, `stock` con formato `0.00`.
+  - `bool StockCubreCantidad(bool llevaStock, decimal cantidad, decimal stockMaximo)`: devuelve `!llevaStock || cantidad <= stockMaximo` (la regla actual para la mercadería). El "> 0" de los servicios lo exigen `CalcularTotal` y el guard del case 9, no el helper.
+  - Constante `TextoSinStock = "—"` (en lugar de `TextoStock`).
 - Lectura del flag:
   - En dgvproductos, desde `((DataRowView)row.DataBoundItem)["is_enabled_stock"]` si la columna existe. No se agrega una columna al Designer.
   - En dgvdetalle (pedidos que vienen de la BD), con un método de repositorio nuevo `AdmPro.LlevaStock(codProducto)` que ejecuta `SELECT producto_lleva_stock(@cod)`. El helper no toca la BD.
@@ -59,7 +59,7 @@ Estado: T6 implementado (L13), escrito y SIN compilar. Pendiente: build y suite 
   - P1. 1150-1155: con `SinStock==1` y `!llevaStock`, no llamar a `ListaTotalprod2` (MysqlProducto.cs:487, que devuelve null si no hay filas).
   - P2. 1156-1313: hay dos bloques duplicados de "agregar línea". Con `diff -w` son idénticos salvo los nombres de las variables (precioactual/2, tablacantidades/2, cantidad/max/min 2). Se extraen a un solo método, y el stock pasa a ser un guard clause: si `!CantidadValida(...)`, se muestra el mensaje de su rama ("La cantidad debe ser menor a: " + totalprod con SinStock==1; "Cantidad debe ser menor o igual al stock." con SinStock==0) y se sale. Los mensajes y el orden de la mercadería no cambian.
   - P3 (nuevo). 1341, `CalcularTotal`: con `SinStock==0` exige `stockdisponible > 0` para calcular el total; si no, `total==""` y la línea no se agrega. Para los servicios se usa la rama de `SinStock==1`, que solo exige `cant > 0`.
-  - P4. 5466-5531, `dgvdetalle_CellEndEdit`: si `!AdmPro.LlevaStock(codProd)`, se sale después de la validación `nuevaCantidad <= 0`, sin `ListaTotalprod2` ni el tope por RA.
+  - P4. 5466-5531, `dgvdetalle_CellEndEdit`: si `!AdmPro.LlevaStock(codProd)`, `totalprod = double.PositiveInfinity` sin llamar a `ListaTotalprod2`. Así se conservan la contabilidad de RA y el recálculo del importe; una salida temprana los habría saltado.
   - P5. `CellFormatting` de dgvproductos, columna `stockdisponible`, con `TextoStock`. Cubre también 1084, el cambio de unidad que reescribe el valor.
 - Tests (RED antes de implementar): una prueba por regla:
   - `LlevaStock` con 0, 1, null y DBNull;
@@ -168,3 +168,10 @@ Estado: T6 implementado (L13), escrito y SIN compilar. Pendiente: build y suite 
     - Build Debug|x86 y `dotnet test SIGEFA.Tests` en la VM `sigefa_build`, con autorización explícita del usuario y SIGEFA.exe cerrado.
     - T5 manual en Windows contra dev.
     - Mirror Engram.
+- L14 (2026-11-17): verificador independiente (Risk: ítem 6, la UI no tiene tests) sobre 891b9ac..0e01c93, solo lectura estática.
+  - Sin bloqueantes. Veredicto: S1 PASS, S3 PASS, S6 PASS con notas.
+  - Confirmado: `AgregarLineaProducto` es idéntico línea por línea a los dos bloques originales; los mensajes son idénticos; no hay colisiones de nombres; MysqlProducto es el único implementador de IProducto.
+  - Nota de despliegue (BLOQUEANTE PARA PRODUCCIÓN): desde 0e01c93, editar la cantidad de cualquier línea de dgvdetalle (también la mercadería) ejecuta `SELECT producto_lleva_stock(...)`. La función debe existir en la BD de destino ANTES de desplegar este build. Orden de despliegue:
+    1. migraciones de la API (185000, 190000, 200000, 210000, 220000);
+    2. build del legacy.
+  - Se corrigió la sección "Diseño T2" (nombres `StockCubreCantidad`/`TextoSinStock` y P4 con +∞).
