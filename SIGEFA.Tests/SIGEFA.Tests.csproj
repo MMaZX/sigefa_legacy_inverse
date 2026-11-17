@@ -16,6 +16,9 @@
       <HintPath>..\..\Debug_gr\MySql.Data.dll</HintPath>
     </Reference>
     <Reference Include="System.Configuration" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\Debug_gr\Newtonsoft.Json.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <!-- Se enlazan los fuentes del helper: referenciar SIGEFA.exe arrastraria Crystal y WinForms -->
   <ItemGroup>
@@ -30,6 +33,10 @@
     <Compile Include="..\SIGEFA.Administradores\VentaCierreBitacora\*.cs" Link="VentaCierreBitacora\%(Filename)%(Extension)" />
     <Compile Include="..\SIGEFA.Administradores\VentaCierre\VentaCierrePaso.cs" Link="VentaCierre\VentaCierrePaso.cs" />
     <Compile Include="..\SIGEFA.Administradores\VentaCierre\VentaCierreProgreso.cs" Link="VentaCierre\VentaCierreProgreso.cs" />
+  </ItemGroup>
+  <!-- Consulta de DNI/RUC en SUNAT: se enlaza todo (parser puro y cliente HTTP sin BD) -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\ConsultaDocumento\*.cs" Link="ConsultaDocumento\%(Filename)%(Extension)" />
   </ItemGroup>
   <!-- Texto de version del login -->
   <ItemGroup>

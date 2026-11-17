@@ -209,6 +209,7 @@
     <None Remove="SIGEFA.Reportes.CRVentxCliente.rpt" />
     <None Remove="SIGEFA.Reportes.CRVentxVendedor.rpt" />
     <None Remove="SIGEFA.exe.licenses" />
+    <EmbeddedResource Include="SIGEFA\Recursos\sunat.png" LogicalName="SIGEFA.Recursos.sunat.png" />
     <EmbeddedResource Include="SIGEFA.Reportes.clsReportes.CRCuotasPrestamo.rpt" LogicalName="SIGEFA.Reportes.clsReportes.CRCuotasPrestamo.rpt" />
     <EmbeddedResource Include="SIGEFA.Reportes.CRCodigodeBarras.rpt" LogicalName="SIGEFA.Reportes.CRCodigodeBarras.rpt" />
     <EmbeddedResource Include="SIGEFA.Reportes.CRCompras.rpt" LogicalName="SIGEFA.Reportes.CRCompras.rpt" />

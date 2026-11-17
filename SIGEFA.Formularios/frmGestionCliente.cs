@@ -4,6 +4,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using AForge;
 using AForge.Imaging.Filters;
@@ -11,6 +12,7 @@ using DevComponents.DotNetBar;
 using DevComponents.DotNetBar.Validator;
 using FinalXML.Librerias;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.ConsultaDocumento;
 using SIGEFA.Entidades;
 using Tesseract;
 
@@ -116,6 +118,20 @@ public class frmGestionCliente : Office2007Form
 
 	private TextBox txtRUC;
 
+	private Button btnSunat;
+
+	private ToolTip toolTipSunat;
+
+	// Busqueda automatica: espera una pausa al tipear para no consultar un DNI mientras se escribe un RUC.
+	private readonly System.Windows.Forms.Timer timerSunat = new System.Windows.Forms.Timer { Interval = 700 };
+
+	private readonly ConsultaSunat consultaSunat = new ConsultaSunat();
+
+	private bool consultandoSunat;
+
+	// Documento cuyos datos (nombre y direccion legal) vinieron de SUNAT; null si no vinieron de SUNAT.
+	private string documentoSunat;
+
 	private TextBox txtCodigo;
 
 	private Label label1;
@@ -215,6 +231,104 @@ public class frmGestionCliente : Office2007Form
 	public frmGestionCliente()
 	{
 		InitializeComponent();
+		ConfigurarBotonSunat();
+	}
+
+	private void ConfigurarBotonSunat()
+	{
+		using (var stream = typeof(frmGestionCliente).Assembly.GetManifestResourceStream("SIGEFA.Recursos.sunat.png"))
+		{
+			if (stream != null)
+			{
+				using (var original = System.Drawing.Image.FromStream(stream))
+				{
+					btnSunat.Image = new System.Drawing.Bitmap(original, new System.Drawing.Size(18, 18));
+				}
+			}
+		}
+		toolTipSunat.SetToolTip(btnSunat, "Buscar el DNI o RUC en SUNAT");
+		timerSunat.Tick += timerSunat_Tick;
+	}
+
+	private void btnSunat_Click(object sender, EventArgs e)
+	{
+		timerSunat.Stop();
+		_ = BuscarEnSunatAsync(mostrarErrores: true, forzar: true);
+	}
+
+	private void timerSunat_Tick(object sender, EventArgs e)
+	{
+		timerSunat.Stop();
+		_ = BuscarEnSunatAsync(mostrarErrores: false, forzar: false);
+	}
+
+	// Consulta el DNI (8 digitos) o RUC (11 digitos) en SUNAT. Mientras busca y cuando encuentra,
+	// nombre y direccion legal quedan bloqueados con los datos de SUNAT.
+	// Sin resultado no cambia nada; el aviso se muestra solo si mostrarErrores (boton o Enter).
+	private async Task BuscarEnSunatAsync(bool mostrarErrores, bool forzar)
+	{
+		string documento = txtRUC.Text.Trim();
+		if (TipoDocumento.Detectar(documento) == TipoDocumentoConsulta.NoConsultable)
+		{
+			if (mostrarErrores)
+			{
+				MessageBox.Show("Ingrese un DNI de 8 dígitos o un RUC de 11 dígitos.", "Consulta SUNAT", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+			}
+			return;
+		}
+		if (consultandoSunat || (!forzar && documento == documentoSunat))
+		{
+			return;
+		}
+		consultandoSunat = true;
+		btnSunat.Enabled = false;
+		BloquearDatosSunat(true);
+		Cursor = Cursors.WaitCursor;
+		DocumentoConsultado resultado = null;
+		try
+		{
+			resultado = await Task.Run(() => consultaSunat.Consultar(documento));
+		}
+		catch (ConsultaDocumentoException)
+		{
+			resultado = null;
+		}
+		finally
+		{
+			consultandoSunat = false;
+			btnSunat.Enabled = Proceso != 3;
+			Cursor = Cursors.Default;
+		}
+		// El documento cambio mientras se consultaba: el resultado ya no corresponde.
+		if (txtRUC.Text.Trim() != documento)
+		{
+			BloquearDatosSunat(documentoSunat != null);
+			return;
+		}
+		AplicarResultadoSunat(documento, resultado, mostrarErrores);
+	}
+
+	private void AplicarResultadoSunat(string documento, DocumentoConsultado resultado, bool mostrarErrores)
+	{
+		if (resultado == null)
+		{
+			BloquearDatosSunat(documentoSunat != null);
+			if (mostrarErrores)
+			{
+				MessageBox.Show("No se pudo encontrar el documento " + documento + "." + Environment.NewLine + "No existe en SUNAT.", "Consulta SUNAT", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			}
+			return;
+		}
+		txtRazonSocial.Text = resultado.Denominacion;
+		txtDireccionLegal.Text = resultado.Direccion;
+		documentoSunat = documento;
+		BloquearDatosSunat(true);
+	}
+
+	private void BloquearDatosSunat(bool bloquear)
+	{
+		txtRazonSocial.ReadOnly = bloquear;
+		txtDireccionLegal.ReadOnly = bloquear;
 	}
 
 	private void btnAceptar_Click(object sender, EventArgs e)
@@ -397,6 +511,7 @@ public class frmGestionCliente : Office2007Form
 		else if (Proceso == 3)
 		{
 			CargaCliente(cli.CodCliente);
+			btnSunat.Enabled = false;
 			ext.sololectura(tabControl1.Controls);
 			btnAceptar.Visible = false;
 			btnCancelar.Text = "Aceptar";
@@ -646,7 +761,8 @@ public class frmGestionCliente : Office2007Form
 				}
 				else
 				{
-					CargaDNI(txtRUC.Text);
+					timerSunat.Stop();
+					_ = BuscarEnSunatAsync(mostrarErrores: true, forzar: false);
 				}
 				break;
 			case 9:
@@ -664,8 +780,8 @@ public class frmGestionCliente : Office2007Form
 					MessageBox.Show("El Numero de Documento Ingresado" + Environment.NewLine + "Ya se Encuentra Registrado", "Consulta Documento", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
 					break;
 				}
-				CargarImagenSunat();
-				valida_ruc(txtRUC.Text);
+				timerSunat.Stop();
+				_ = BuscarEnSunatAsync(mostrarErrores: true, forzar: false);
 				break;
 			default:
 				ValidaLongitud();
@@ -969,6 +1085,25 @@ public class frmGestionCliente : Office2007Form
 
 	private void txtRUC_TextChanged(object sender, EventArgs e)
 	{
+		timerSunat.Stop();
+		string documento = txtRUC.Text.Trim();
+		// Si cambia el documento, los datos traidos de SUNAT ya no le corresponden: se limpian y se desbloquean.
+		if (documentoSunat != null && documento != documentoSunat)
+		{
+			documentoSunat = null;
+			txtRazonSocial.Text = string.Empty;
+			txtDireccionLegal.Text = string.Empty;
+			BloquearDatosSunat(false);
+		}
+		// Solo cuando el usuario tipea (no al cargar un cliente existente) y nunca en modo consulta.
+		if (!txtRUC.Focused || Proceso == 3)
+		{
+			return;
+		}
+		if (TipoDocumento.Detectar(documento) != TipoDocumentoConsulta.NoConsultable)
+		{
+			timerSunat.Start();
+		}
 	}
 
 	protected override void Dispose(bool disposing)
@@ -985,6 +1120,8 @@ public class frmGestionCliente : Office2007Form
 		this.components = new System.ComponentModel.Container();
 		System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SIGEFA.Formularios.frmGestionCliente));
 		this.imageList1 = new System.Windows.Forms.ImageList(this.components);
+		this.btnSunat = new System.Windows.Forms.Button();
+		this.toolTipSunat = new System.Windows.Forms.ToolTip(this.components);
 		this.tabControl1 = new System.Windows.Forms.TabControl();
 		this.tabPage1 = new System.Windows.Forms.TabPage();
 		this.label2 = new System.Windows.Forms.Label();
@@ -1108,6 +1245,7 @@ public class frmGestionCliente : Office2007Form
 		this.tabPage1.Controls.Add(this.txtRazonSocial);
 		this.tabPage1.Controls.Add(this.label4);
 		this.tabPage1.Controls.Add(this.txtRUC);
+		this.tabPage1.Controls.Add(this.btnSunat);
 		this.tabPage1.Controls.Add(this.txtCodigo);
 		this.tabPage1.Controls.Add(this.label1);
 		this.tabPage1.Location = new System.Drawing.Point(4, 22);
@@ -1292,10 +1430,18 @@ public class frmGestionCliente : Office2007Form
 		this.txtRUC.Location = new System.Drawing.Point(489, 43);
 		this.txtRUC.MaxLength = 11;
 		this.txtRUC.Name = "txtRUC";
-		this.txtRUC.Size = new System.Drawing.Size(121, 20);
+		this.txtRUC.Size = new System.Drawing.Size(95, 20);
 		this.txtRUC.TabIndex = 10;
 		this.txtRUC.Tag = "1";
 		this.txtRUC.TextChanged += new System.EventHandler(txtRUC_TextChanged);
+		this.btnSunat.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+		this.btnSunat.FlatAppearance.BorderSize = 0;
+		this.btnSunat.Location = new System.Drawing.Point(587, 41);
+		this.btnSunat.Name = "btnSunat";
+		this.btnSunat.Size = new System.Drawing.Size(24, 24);
+		this.btnSunat.TabStop = false;
+		this.btnSunat.UseVisualStyleBackColor = true;
+		this.btnSunat.Click += new System.EventHandler(btnSunat_Click);
 		this.txtRUC.KeyPress += new System.Windows.Forms.KeyPressEventHandler(txtRUC_KeyPress);
 		this.txtCodigo.CharacterCasing = System.Windows.Forms.CharacterCasing.Upper;
 		this.txtCodigo.Enabled = false;
