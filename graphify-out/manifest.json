@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Administradores/clsAdmProducto.cs": {
-    "mtime": 1784907484.3729753,
-    "ast_hash": "2975781cc8bf3d8857ab80004d27753e",
+    "mtime": 1794948882.0122612,
+    "ast_hash": "cbf679d23eade18d7e94da3aff6d3016",
     "semantic_hash": ""
   },
   "SIGEFA.Administradores/clsAdmPropuestaDePedido.cs": {
@@ -1350,7 +1350,7 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/FrmTPenPedido.cs": {
-    "mtime": 1791674431.164101,
+    "mtime": 1791677805.4825735,
     "ast_hash": "723575ed6d2d804d83b5e61870f4d5d6",
     "semantic_hash": ""
   },
@@ -1360,8 +1360,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/ListadoProductos.cs": {
-    "mtime": 1784907484.5309834,
-    "ast_hash": "0b790fd2b5439f143fb190be249a9ca3",
+    "mtime": 1792798120.2155693,
+    "ast_hash": "54a31803e367fe72d5c4128d3b051b95",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/ProdTieneDespacho.cs": {
@@ -2580,7 +2580,7 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmReqAlmacen.cs": {
-    "mtime": 1791674435.2001233,
+    "mtime": 1791677805.4835734,
     "ast_hash": "f2f25dc91f90c26a2e2f2e7141878ea8",
     "semantic_hash": ""
   },
@@ -2775,8 +2775,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVenta2019.cs": {
-    "mtime": 1791302133.3229563,
-    "ast_hash": "013eca5dd1b6192a3a9ed34c6c3058f5",
+    "mtime": 1794948956.3409,
+    "ast_hash": "f05c24f1a4a545b742080554b666682b",
     "semantic_hash": ""
   },
   "SIGEFA.Formularios/frmVentaSeparacionAr.cs": {
@@ -3205,8 +3205,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.InterMySql/MysqlProducto.cs": {
-    "mtime": 1784907484.598987,
-    "ast_hash": "e3f83ad34498885fd17ccada908dff00",
+    "mtime": 1794948882.0107472,
+    "ast_hash": "88f1172d6c1add5dc2078dc7f24c7f21",
     "semantic_hash": ""
   },
   "SIGEFA.InterMySql/MysqlPropuestaDePedido.cs": {
@@ -3645,8 +3645,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Interfaces/IProducto.cs": {
-    "mtime": 1784907484.6039872,
-    "ast_hash": "771ce08ab78fda614325c0705cf0324f",
+    "mtime": 1794948882.0092056,
+    "ast_hash": "344667d742a065af8862210d4ba3e9f0",
     "semantic_hash": ""
   },
   "SIGEFA.Interfaces/IProveedor.cs": {
@@ -6430,7 +6430,7 @@
     "semantic_hash": ""
   },
   "SIGEFA.Administradores/ReqVenta/ReqVentaTextos.cs": {
-    "mtime": 1791674417.5371606,
+    "mtime": 1791677805.4825735,
     "ast_hash": "c4fea4a8a9548af836959a4f0135f8c9",
     "semantic_hash": ""
   },
@@ -6495,8 +6495,8 @@
     "semantic_hash": ""
   },
   "SIGEFA.Administradores/VentaCierre/VentaCierreService.cs": {
-    "mtime": 1791302133.3210902,
-    "ast_hash": "5cbaba96a98b265eb15acfc2c1d464f3",
+    "mtime": 1791677797.7425265,
+    "ast_hash": "56180fe7c6b7434fce2fd8829bb7aa1f",
     "semantic_hash": ""
   },
   "SIGEFA.Conexion/Db/Consulta.cs": {
@@ -6645,13 +6645,13 @@
     "semantic_hash": ""
   },
   "SIGEFA.Tests/ReqVenta/ReqVentaTextosTests.cs": {
-    "mtime": 1791674572.2988842,
+    "mtime": 1791677805.4845734,
     "ast_hash": "e5ecc02ff60e4fc54d2be6a8011ae731",
     "semantic_hash": ""
   },
   "SIGEFA.Tests/SIGEFA.Tests.csproj": {
-    "mtime": 1791669899.9267514,
-    "ast_hash": "0c59615440636af4831a475062ca0748",
+    "mtime": 1794948869.1852045,
+    "ast_hash": "4978210d5aed1e144f68ab11f33d015c",
     "semantic_hash": ""
   },
   "docs/venta-cierre/referencia-sql/local_GuardaDetalleFacturaVenta.sql": {
@@ -6710,7 +6710,7 @@
     "semantic_hash": ""
   },
   ".opencode/skills/fewer-permission-prompts/SKILL.md": {
-    "mtime": 1791302610.3834424,
+    "mtime": 1791677805.5565774,
     "ast_hash": "1305c341f32ea8417271d6aa7a4fa8f3",
     "semantic_hash": ""
   },
@@ -6725,8 +6725,8 @@
     "semantic_hash": ""
   },
   "docs/CRUD-PRODUCTOS.md": {
-    "mtime": 1789583888.6523192,
-    "ast_hash": "a60166cca364d329e6bc0b1c99b7a140",
+    "mtime": 1794861583.1877484,
+    "ast_hash": "13f858dbbac47e499bf9d16ffe776ea8",
     "semantic_hash": ""
   },
   "docs/anulacion-requerimiento-investigacion.md": {
@@ -6740,22 +6740,22 @@
     "semantic_hash": ""
   },
   "docs/apertura_caja.md": {
-    "mtime": 1784907690.5285842,
+    "mtime": 1791677805.556992,
     "ast_hash": "4bc5936fc78d4d07bf1b502a499d588f",
     "semantic_hash": ""
   },
   "docs/creacion_usuarios_y_permisos_multiempresa.md": {
-    "mtime": 1785432383.2842233,
+    "mtime": 1791677805.556992,
     "ast_hash": "a46c1899a0a2e1740b9f95516d6fbe55",
     "semantic_hash": ""
   },
   "docs/create-nota-credito.md": {
-    "mtime": 1790623412.480909,
+    "mtime": 1791677805.556992,
     "ast_hash": "27610769df31f6db144db424045c9eb4",
     "semantic_hash": ""
   },
   "docs/formatos_impresion.md": {
-    "mtime": 1785740584.461764,
+    "mtime": 1791677805.556992,
     "ast_hash": "43683082d5b90740c3d9d78755dfb47b",
     "semantic_hash": ""
   },
@@ -6785,8 +6785,8 @@
     "semantic_hash": ""
   },
   "odd/tasks/req-venta-textos-t1b.md": {
-    "mtime": 1791674648.5883074,
-    "ast_hash": "88ae12cf79dc0b0fc94e3af069084064",
+    "mtime": 1791677805.556992,
+    "ast_hash": "43b2ae20f8edb69723df48c1403fe5be",
     "semantic_hash": ""
   },
   "odd/tasks/tema-fluent.md": {
@@ -6812,6 +6812,281 @@
   "trigger_defs.txt": {
     "mtime": 1784907485.1860173,
     "ast_hash": "21e6274742aed9355bfe8023eca64562",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/PlantillaCambios/PlantillaDetalleCambios.cs": {
+    "mtime": 1792792676.1526804,
+    "ast_hash": "f5a190da1a1d6300b9876becb22d3792",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/PlantillaCambios/PlantillaEdicionReglas.cs": {
+    "mtime": 1792798120.2132578,
+    "ast_hash": "f41a4ca37fb0ef05f0c1298bce4bc6f0",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierre/VentaCierreServiceConBitacora.cs": {
+    "mtime": 1791677797.7435267,
+    "ast_hash": "d428d03f72482e02815f4dbd240571d5",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/BitacoraCierre.cs": {
+    "mtime": 1791677797.7435267,
+    "ast_hash": "ffc545a0895bbd2798e6ba4857301bb0",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/BitacoraRepositorioMySql.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "5e5a2dabd9e087b6f73ce971bc7fb61f",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/EventoBitacora.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "1ff4fe0c52d735df390ca9f1201c4e9f",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/IBitacoraRepositorio.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "db94336a808465e9aa87394e71c49d04",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/IRespaldoArchivo.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "1aca0a43773525aefcd706d64c943bd8",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/IntentoBitacora.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "45908e4d169557d9cde633b502a21fd8",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/MetadataBitacora.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "04f108a008767993e8fe64bf67b2f339",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/ProgresoConBitacora.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "269759b13d290ca1c377720205ddf35c",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/ProgresoPorPedido.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "499c65bd6d6ce0a3b06083920b1a5976",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/RespaldoArchivo.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "26e97bfae7d9b8257f859869684e0d84",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaCierreBitacora/ResultadoBitacora.cs": {
+    "mtime": 1791677797.744627,
+    "ast_hash": "84271991aa094b2060b4a96e456b420e",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Administradores/VentaServicios/StockLineaRegla.cs": {
+    "mtime": 1794948869.2142043,
+    "ast_hash": "45154e07c26726bd9f7d69d028b1339d",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Formularios/frmProgresoIndeterminado.cs": {
+    "mtime": 1792792676.1549268,
+    "ast_hash": "d99c83bda58bd4bf94c483dcc7d1257c",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/PlantillaCambios/PlantillaDetalleCambiosTests.cs": {
+    "mtime": 1792792676.1554902,
+    "ast_hash": "ac69e19ec4a67ce91dfc22ccb4567323",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/PlantillaCambios/PlantillaEdicionReglasTests.cs": {
+    "mtime": 1792798120.2157803,
+    "ast_hash": "5b921bc48323d0e126fb68fda0da7987",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/BitacoraCierreTests.cs": {
+    "mtime": 1791677797.7455266,
+    "ast_hash": "7e38a6b0a8f64721e6edcde96c478218",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/BitacoraRepositorioMySqlIntegracionTests.cs": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "8dca9efa8a4ee6f0c9d3eff7dee4624e",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/BitacoraRepositorioMySqlTests.cs": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "903a4aa7eae4ea3966b566529014c1ca",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/Falsos.cs": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "85951f47279b3cbb7489ff0ca3da9a9c",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/MetadataBitacoraTests.cs": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "fe124b9b9791379e34c033e7c0448faf",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/ProgresoConBitacoraTests.cs": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "953d90a8c874988abc7024d9af7410fa",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/ProgresoPorPedidoTests.cs": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "6ffdb8db7071f307b22a0da85b038091",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaCierreBitacora/RespaldoArchivoTests.cs": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "305e516509508365046c7fb8d3301363",
+    "semantic_hash": ""
+  },
+  "SIGEFA.Tests/VentaServicios/StockLineaReglaTests.cs": {
+    "mtime": 1794948869.1242046,
+    "ast_hash": "5e5e5e7399c236eec419d79a257951d5",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/dist-server/server/db.js": {
+    "mtime": 1793647613.33732,
+    "ast_hash": "ac82092d464e20a3fc2bd9b0688404a2",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/dist-server/server/index.js": {
+    "mtime": 1793647613.3573906,
+    "ast_hash": "f4b6f768564e28831ef035f56d839bd5",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/dist-server/server/routes/api.js": {
+    "mtime": 1793647613.3553207,
+    "ast_hash": "651d02391fe6fe129790878e4b958dfc",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/package.json": {
+    "mtime": 1793649265.3668296,
+    "ast_hash": "80f772af9b4a24d8f5265a0b3c0b8492",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/postcss.config.js": {
+    "mtime": 1793647522.8391113,
+    "ast_hash": "c735540bb63936a123bc867d950c9f69",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/server/db.ts": {
+    "mtime": 1793647532.0553362,
+    "ast_hash": "93ac5bc2fbd15f8336a427dc236e061d",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/server/index.ts": {
+    "mtime": 1793647534.5663974,
+    "ast_hash": "b113a511f20787895c5ca120c3f2460c",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/server/routes/api.ts": {
+    "mtime": 1793650591.6044707,
+    "ast_hash": "c5b47e93506b659b261dc6c1f00b3241",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/App.tsx": {
+    "mtime": 1793650711.4615023,
+    "ast_hash": "2b13142cd8e3cb6a8e089282e0aa2a9d",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/components/DataTable.tsx": {
+    "mtime": 1793648835.7465043,
+    "ast_hash": "e1ec9abb510076c15b42a38fe7591d96",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/components/ui.tsx": {
+    "mtime": 1793647843.6780977,
+    "ast_hash": "6baf4f2b68abb31383025ed6a560c314",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/components/ui/chart.tsx": {
+    "mtime": 1793649310.8836722,
+    "ast_hash": "34c48cc4ca769073a0ca677ef70b4354",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/lib/api.ts": {
+    "mtime": 1793650593.7225251,
+    "ast_hash": "82e295935118d62765445f3e5bd2dd21",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/lib/utils.ts": {
+    "mtime": 1793649268.4045844,
+    "ast_hash": "8595c2f874aa1ff8c7cc28df2999f354",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/main.tsx": {
+    "mtime": 1793647552.165827,
+    "ast_hash": "aa122bdcf833a2c00fdf9ca8e5348675",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/src/types/index.ts": {
+    "mtime": 1793650273.2713184,
+    "ast_hash": "ea1643ad890f3b0031741be5bb904a48",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/tailwind.config.ts": {
+    "mtime": 1793647521.7160838,
+    "ast_hash": "9b22ac3c8afd869702b8e1bc715b6a2e",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/tsconfig.json": {
+    "mtime": 1793647525.3541727,
+    "ast_hash": "3b76441c3727ff3fdc7291ebd37b89e4",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/tsconfig.server.json": {
+    "mtime": 1793647525.3541727,
+    "ast_hash": "0b63f36e0c75968ddd9f611f41b23d6d",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/vite.config.ts": {
+    "mtime": 1793647519.5330305,
+    "ast_hash": "c0fc3401bd1e8b0c6f36e7acd8e3eacd",
+    "semantic_hash": ""
+  },
+  "build_warnings.md": {
+    "mtime": 1792788520.4296825,
+    "ast_hash": "017c2dc7117ebfac9e500dd7cd2342ea",
+    "semantic_hash": ""
+  },
+  "docs/accesos/accesos.md": {
+    "mtime": 1793039054.4303336,
+    "ast_hash": "d45ea0e5f3aac021c00771cd173a2ae1",
+    "semantic_hash": ""
+  },
+  "docs/almacen/requerimiento-transferencia-listado-procedures.md": {
+    "mtime": 1794417342.8498378,
+    "ast_hash": "a3284c7f9a082f13704fad369fb385cc",
+    "semantic_hash": ""
+  },
+  "odd/tasks/venta-cierre-bitacora.md": {
+    "mtime": 1791677797.7471614,
+    "ast_hash": "f2cfed1a4635ee289614e17b35b13eb5",
+    "semantic_hash": ""
+  },
+  "odd/tasks/venta-servicios-sin-stock.md": {
+    "mtime": 1794948982.4977224,
+    "ast_hash": "c8d7ef0b8ca8bb78cedb7883368f9b4b",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/README.md": {
+    "mtime": 1793647659.472278,
+    "ast_hash": "b3a8bc319a9411c696a1843e7abdada4",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/index.html": {
+    "mtime": 1793647526.6922052,
+    "ast_hash": "acb678aa54ac9e228ca9670506b4c820",
+    "semantic_hash": ""
+  },
+  "tools/venta-cierre-dashboard/pnpm-workspace.yaml": {
+    "mtime": 1794257918.5935645,
+    "ast_hash": "7bb23c19c0343fac40d375bacca550d0",
     "semantic_hash": ""
   }
 }
