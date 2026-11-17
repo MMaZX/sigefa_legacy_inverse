@@ -22,6 +22,7 @@ using DevComponents.Editors.DateTimeAdv;
 using FinalXML.Librerias;
 using Microsoft.VisualBasic;
 using SIGEFA.Administradores;
+using SIGEFA.Administradores.PedidoPendiente;
 using SIGEFA.Administradores.VentaCierre;
 using SIGEFA.Conexion;
 using SIGEFA.Data;
@@ -4932,7 +4933,10 @@ public class frmVenta2019 : Office2007Form
 			dgvproductos.Rows.Clear();
 			dgvStockAlmacenes.DataSource = null;
 			dgvStockAlmacenes.Rows.Clear();
-			CargaPedidoVenta();
+			if (!CargaPedidoVenta())
+			{
+				return;
+			}
 			if (frmLogin.iNivelUser == 3 || frmLogin.iNivelUser == 1 || frmLogin.iNivelUser == 2)
 			{
 				btnreq.Visible = true;
@@ -5612,21 +5616,26 @@ public class frmVenta2019 : Office2007Form
 		chkRetencion.Enabled = false;
 	}
 
-	private void CargaPedidoVenta()
+	// Carga en la venta el pedido elegido en Pedidos Pendientes. Devuelve false si la carga no
+	// termino, para que quien llama no habilite el guardado sobre un formulario a medio cargar.
+	// "paso" indica en el diagnostico que parte de la carga fallo.
+	private bool CargaPedidoVenta()
 	{
+		string paso = "Leer el pedido";
 		try
 		{
 			clsCliente cli2 = null;
 			pedido = AdmPedido.CargaPedido(Convert.ToInt32(codPedidoVenta));
 			if (pedido != null)
 			{
-				int a = 1;
+				paso = "Requerimientos de almacén del pedido";
 				DataTable dat_req = admreqalm.CargaRequerimientosSegunPedido(Convert.ToInt32(pedido.CodPedido));
 				if (dat_req != null && verificarSiReqActivo(dat_req))
 				{
 					SinStock = 1;
 					chbxstock.Checked = true;
 				}
+				paso = "Datos generales del pedido";
 				cmbTecnico.SelectedValue = pedido.idTecnico;
 				cmbZona.SelectedValue = pedido.idZona;
 				cmbCanalVenta.SelectedValue = pedido.CodCanalVenta;
@@ -5640,7 +5649,8 @@ public class frmVenta2019 : Office2007Form
 				cmbMoneda.SelectedValue = pedido.Moneda;
 				if (pedido.Boletafactura == 1 || pedido.Boletafactura == 3)
 				{
-					cli2 = AdmCli.MuestraCliente(pedido.CodCliente);
+					paso = "Cliente de " + CargaPedidoDiagnostico.TipoComprobante(pedido.Boletafactura).ToLower();
+					cli2 = MuestraClienteDelPedido();
 					if (cli2.Dni != "")
 					{
 						txtCodCliente.Text = cli2.Dni;
@@ -5658,8 +5668,9 @@ public class frmVenta2019 : Office2007Form
 						txtNombreCliente.Text = pedido.RazonSocialCliente;
 					}
 					txtDireccion.Text = pedido.Direccion;
-					cli2 = AdmCli.ConsultaCliente(pedido.DNI);
-					CargaCreditoCliente(cli2);
+					// La linea de credito se busca por el documento mostrado (DNI o, si no tiene, RUC).
+					// Buscarla por pedido.DNI devolvia null con clientes registrados solo con RUC.
+					CargaCreditoCliente(AdmCli.ConsultaCliente(txtCodCliente.Text));
 					CodCliente = cli2.CodCliente;
 					if (pedido.Boletafactura == 1)
 					{
@@ -5672,7 +5683,8 @@ public class frmVenta2019 : Office2007Form
 				}
 				else
 				{
-					cli2 = AdmCli.MuestraCliente(pedido.CodCliente);
+					paso = "Cliente de factura";
+					cli2 = MuestraClienteDelPedido();
 					txtCodCliente.Text = cli2.RucDni;
 					if (cli2.RazonSocial != "")
 					{
@@ -5687,6 +5699,7 @@ public class frmVenta2019 : Office2007Form
 					chkFactura.Checked = true;
 					CodCliente = cli2.CodCliente;
 				}
+				paso = "Fecha y montos del pedido";
 				dtpFecha.Value = pedido.FechaPedido;
 				if (txtDocRef.Enabled)
 				{
@@ -5706,25 +5719,91 @@ public class frmVenta2019 : Office2007Form
 				montogratuitas = pedido.Gratuitas;
 				txtPedido.Text = pedido.Numeracion.ToString().PadLeft(8, '0');
 				chkRetencion.Checked = pedido.ValorRetencion == 1;
+				paso = "Detalle del pedido";
 				CargaDetalle();
+				paso = "Totales del pedido";
 				calculatotales();
 				montosventa();
+				paso = "Vendedor del pedido";
 				txtCodigoVendedor.Text = pedido.CodUser.ToString();
 				txtCodigoVendedor.Focus();
 				KeyEventArgs arg = new KeyEventArgs(Keys.Return);
 				txtCodigoVendedor_KeyDown(new object(), arg);
+				paso = "Forma y fecha de pago del pedido";
 				dtpFechaPago.Value = pedido.FechaPago;
 				cmbFormaPago.SelectedValue = pedido.FormaPago;
 				dtpFechaPago.Value = pedido.FechaPago;
+				return true;
 			}
-			else
-			{
-				MessageBox.Show("El documento solicitado no existe", "Nota de Ingreso", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-			}
+			MessageBox.Show("El documento solicitado no existe", "Nota de Ingreso", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+			return false;
 		}
 		catch (Exception ex)
 		{
-			MessageBox.Show(ex.Message);
+			MostrarErrorCargaPedido(ex, paso);
+			return false;
+		}
+	}
+
+	// Trae el cliente del pedido por su codigo. Si no existe se lanza un error con el codigo,
+	// en vez de dejar que falle mas adelante con una referencia nula sin contexto.
+	private clsCliente MuestraClienteDelPedido()
+	{
+		clsCliente cliente = AdmCli.MuestraCliente(pedido.CodCliente);
+		if (cliente == null)
+		{
+			throw new InvalidOperationException("No se encontró el cliente con codCliente " + pedido.CodCliente + " asociado al pedido.");
+		}
+		return cliente;
+	}
+
+	// Muestra y registra el error de carga del pedido con su contexto completo.
+	private void MostrarErrorCargaPedido(Exception ex, string paso)
+	{
+		string detalle = CargaPedidoDiagnostico.ArmarDetalle(ex, paso, ContextoCargaPedido());
+		string ruta = RegistrarErrorCargaPedido(detalle);
+		string aviso = ruta == null ? "" : Environment.NewLine + Environment.NewLine + "Se guardó en: " + ruta;
+		MessageBox.Show(detalle + aviso, CargaPedidoDiagnostico.Titulo, MessageBoxButtons.OK, MessageBoxIcon.Error);
+	}
+
+	private CargaPedidoContexto ContextoCargaPedido()
+	{
+		if (pedido == null)
+		{
+			return null;
+		}
+		return new CargaPedidoContexto
+		{
+			CodPedido = pedido.CodPedido,
+			Numeracion = pedido.Numeracion.ToString(),
+			CodCliente = pedido.CodCliente,
+			DniPedido = pedido.DNI,
+			BoletaFactura = pedido.Boletafactura,
+			CodUsuario = pedido.CodUser,
+			CodAlmacen = pedido.CodAlmacen
+		};
+	}
+
+	// Agrega el detalle a %LOCALAPPDATA%\SIGEFA\carga_pedido_errores.log, junto a la bitacora del
+	// cierre de venta. Devuelve la ruta, o null si no se pudo escribir: el registro nunca debe
+	// ocultar el error original.
+	private static string RegistrarErrorCargaPedido(string detalle)
+	{
+		try
+		{
+			string rutaBitacora = VentaCierreRegistroErrores.obtenerRutaArchivoLog();
+			if (string.IsNullOrEmpty(rutaBitacora))
+			{
+				return null;
+			}
+			string ruta = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(rutaBitacora), "carga_pedido_errores.log");
+			string entrada = $"===== {DateTime.Now:yyyy-MM-dd HH:mm:ss} | Usuario sesión: {frmLogin.iCodUser}{Environment.NewLine}{VentaCierreRegistroErrores.enmascararCredenciales(detalle)}{Environment.NewLine}{Environment.NewLine}";
+			System.IO.File.AppendAllText(ruta, entrada, Encoding.UTF8);
+			return ruta;
+		}
+		catch (Exception)
+		{
+			return null;
 		}
 	}
 
@@ -5780,7 +5859,7 @@ public class frmVenta2019 : Office2007Form
 		}
 		catch (Exception ex)
 		{
-			MessageBox.Show(ex.Message);
+			MostrarErrorCargaPedido(ex, "Detalle del pedido (CargaDetalle)");
 		}
 	}
 

@@ -47,4 +47,8 @@
     <Compile Include="..\SIGEFA.Administradores\PlantillaCambios\*.cs" Link="PlantillaCambios\%(Filename)%(Extension)" />
     <Compile Include="..\SIGEFA.Entidades\clsDetallePlantillaDeProductos.cs" Link="PlantillaCambios\clsDetallePlantillaDeProductos.cs" />
   </ItemGroup>
+  <!-- Diagnostico puro de errores al cargar un pedido pendiente en la venta -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\PedidoPendiente\*.cs" Link="PedidoPendiente\%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>
