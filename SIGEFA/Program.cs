@@ -72,6 +72,7 @@ internal static class Program
 				StyleManager.Style = eStyle.Office2007Black;
 			}
 			Thread.CurrentThread.CurrentCulture = new CultureInfo("es-PE");
+			IconoSistema.UsarComoIconoPorDefecto();
 			Application.Run(new frmLogin());
 		}
 		catch (Exception ex)

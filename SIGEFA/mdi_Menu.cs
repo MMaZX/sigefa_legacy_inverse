@@ -780,6 +780,7 @@ public class mdi_Menu : Office2007RibbonForm
 	public mdi_Menu()
 	{
 		InitializeComponent();
+		IconoSistema.Aplicar(this);
 		GenerarLista();
 	}
 
@@ -2164,6 +2165,7 @@ public class mdi_Menu : Office2007RibbonForm
 		if (base.ActiveMdiChild != null)
 		{
 			base.ActiveMdiChild.WindowState = FormWindowState.Maximized;
+			IconoSistema.Aplicar(base.ActiveMdiChild);
 		}
 	}
 

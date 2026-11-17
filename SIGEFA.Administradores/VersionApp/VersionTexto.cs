@@ -23,20 +23,27 @@ public static class VersionTexto
         return string.IsNullOrWhiteSpace(fechaCompilacion) ? texto : texto + " · " + fechaCompilacion.Trim();
     }
 
-    // Texto del dialogo de version del home: explica cada dato del build.
-    public static string Detalle(string version, string commit, string rama, bool conCambiosLocales, string fechaCompilacion)
+    // Texto del dialogo "Version del sistema" del home.
+    public static string Detalle(VersionDatos datos)
     {
-        string fecha = string.IsNullOrWhiteSpace(fechaCompilacion) ? "desconocida" : fechaCompilacion.Trim();
-        string codigo = string.IsNullOrWhiteSpace(commit) ? Desconocido : commit.Trim();
-        string nombreRama = string.IsNullOrWhiteSpace(rama) ? Desconocido : rama.Trim();
-        return "Fecha y hora del build: " + fecha + "\n"
-            + "Commit: " + codigo + "\n"
-            + "Rama: " + nombreRama + "\n"
-            + "Cambios sin commitear: " + (conCambiosLocales ? "Sí" : "No") + "\n"
-            + "Versión del ensamblado: " + RecortarVersion(version) + "\n\n"
-            + "La fecha y hora indican cuándo se compiló este ejecutable. "
-            + "El commit identifica exactamente el código con el que se compiló. "
-            + "Si hay cambios sin commitear, el ejecutable incluye código que no está en ese commit.";
+        string commit = string.IsNullOrWhiteSpace(datos.Commit) ? Desconocido : datos.Commit.Trim();
+        if (!string.IsNullOrWhiteSpace(datos.Asunto))
+        {
+            commit += " - " + datos.Asunto.Trim();
+        }
+        return "Último commit: " + commit + "\n"
+            + "Fecha y hora del build: " + ValorODesconocido(datos.FechaCompilacion) + "\n"
+            + "Versión del ensamblado: " + RecortarVersion(datos.Version) + "\n"
+            + "Cambios sin commitear: " + (datos.ConCambiosLocales ? "Sí" : "No") + "\n\n"
+            + "Base de datos: " + ValorODesconocido(datos.BaseDatos) + "\n"
+            + "Servidor: " + ValorODesconocido(datos.Servidor) + "\n"
+            + "Equipo: " + ValorODesconocido(datos.Equipo) + "\n"
+            + "Ejecutable: " + ValorODesconocido(datos.RutaEjecutable);
+    }
+
+    private static string ValorODesconocido(string valor)
+    {
+        return string.IsNullOrWhiteSpace(valor) ? "desconocido" : valor.Trim();
     }
 
     // "1.0.0.0" -> "1.0.0": el cuarto componente nunca se usa.

@@ -512,12 +512,19 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="SigefaRama" />
       <Output TaskParameter="ExitCode" PropertyName="SigefaRamaRc" />
     </Exec>
+    <Exec Command="git log -1 --format=%25%25s" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="SigefaAsunto" />
+      <Output TaskParameter="ExitCode" PropertyName="SigefaAsuntoRc" />
+    </Exec>
     <Exec Command="git status --porcelain --untracked-files=no" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
       <Output TaskParameter="ConsoleOutput" PropertyName="SigefaCambios" />
     </Exec>
     <PropertyGroup>
       <SigefaCommit Condition="'$(SigefaCommitRc)' != '0'"></SigefaCommit>
       <SigefaRama Condition="'$(SigefaRamaRc)' != '0'"></SigefaRama>
+      <SigefaAsunto Condition="'$(SigefaAsuntoRc)' != '0'"></SigefaAsunto>
+      <SigefaAsunto>$(SigefaAsunto.Replace('\','\\').Replace('&quot;','\&quot;'))</SigefaAsunto>
+      <SigefaAsunto>$([MSBuild]::Escape($(SigefaAsunto)))</SigefaAsunto>
       <SigefaConCambios>false</SigefaConCambios>
       <SigefaConCambios Condition="'$(SigefaCommitRc)' == '0' And '$(SigefaCambios)' != ''">true</SigefaConCambios>
       <SigefaFecha>$([System.DateTime]::Now.ToString('yyyy-MM-dd HH:mm'))</SigefaFecha>
@@ -530,6 +537,7 @@
       <SigefaVersionLinea Include="{" />
       <SigefaVersionLinea Include="    public const string Commit = &quot;$(SigefaCommit)&quot;%3B" />
       <SigefaVersionLinea Include="    public const string Rama = &quot;$(SigefaRama)&quot;%3B" />
+      <SigefaVersionLinea Include="    public const string Asunto = &quot;$(SigefaAsunto)&quot;%3B" />
       <SigefaVersionLinea Include="    public const bool ConCambiosLocales = $(SigefaConCambios)%3B" />
       <SigefaVersionLinea Include="    public const string Fecha = &quot;$(SigefaFecha)&quot;%3B" />
       <SigefaVersionLinea Include="}" />

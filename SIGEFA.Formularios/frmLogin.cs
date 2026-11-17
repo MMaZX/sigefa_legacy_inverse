@@ -106,6 +106,7 @@ public class frmLogin : Office2007Form
 	public frmLogin()
 	{
 		InitializeComponent();
+		IconoSistema.Aplicar(this);
 	}
 
 	private async void btnLogin_Click(object sender, EventArgs e)
@@ -204,23 +205,16 @@ public class frmLogin : Office2007Form
 		}
 	}
 
-	// El login se oculta antes de construir el menu principal: su constructor y su Load
-	// (seleccion de almacen) tardan, y el login no debe quedar visible mientras tanto.
-	// Si el menu no se puede abrir, el login vuelve a mostrarse con el error.
+	// El login sigue visible hasta que el menu principal termina de cargar: Show() ejecuta el Load
+	// del menu de forma sincronica (seleccion de almacen, accesos y configuracion), y recien
+	// despues se oculta el login. Si algo falla, el login queda visible con el error.
 	private void AbrirMenuPrincipal()
 	{
+		lblMensaje.Text = "Abriendo el sistema...";
+		var frm = new mdi_Menu();
+		frm.Show();
 		Hide();
-		try
-		{
-			var frm = new mdi_Menu();
-			frm.Show();
-			frm.Activate();
-		}
-		catch
-		{
-			Show();
-			throw;
-		}
+		frm.Activate();
 	}
 
 	private async void frmLogin_Load(object sender, EventArgs e)

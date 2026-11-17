@@ -1,4 +1,7 @@
+using System;
 using System.Windows.Forms;
+using MySql.Data.MySqlClient;
+using SIGEFA.Conexion;
 using SIGEFA.Administradores.VersionApp;
 
 namespace SIGEFA.Formularios;
@@ -16,7 +19,33 @@ internal static class VersionSistema
 
     public static void MostrarDialogo(IWin32Window owner)
     {
-        string detalle = VersionTexto.Detalle(VersionEnsamblado, VersionCompilacion.Commit, VersionCompilacion.Rama, VersionCompilacion.ConCambiosLocales, VersionCompilacion.Fecha);
-        MessageBox.Show(owner, detalle, "Versión del sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show(owner, VersionTexto.Detalle(ArmarDatos()), "Versión del sistema", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private static VersionDatos ArmarDatos()
+    {
+        var datos = new VersionDatos
+        {
+            Version = VersionEnsamblado,
+            Commit = VersionCompilacion.Commit,
+            Asunto = VersionCompilacion.Asunto,
+            ConCambiosLocales = VersionCompilacion.ConCambiosLocales,
+            FechaCompilacion = VersionCompilacion.Fecha,
+            Equipo = Environment.MachineName,
+            RutaEjecutable = Application.ExecutablePath
+        };
+        // Solo servidor, puerto y base: nunca usuario ni contrasena.
+        try
+        {
+            var conexion = new MySqlConnectionStringBuilder(clsConexionMysql.sConex);
+            datos.BaseDatos = conexion.Database;
+            datos.Servidor = conexion.Server + ":" + conexion.Port;
+        }
+        catch (Exception)
+        {
+            datos.BaseDatos = null;
+            datos.Servidor = null;
+        }
+        return datos;
     }
 }
