@@ -6,6 +6,8 @@
     <UseWindowsForms>True</UseWindowsForms>
     <TargetFramework>net461</TargetFramework>
     <PlatformTarget>x86</PlatformTarget>
+    <!-- Icono del ejecutable (SIGEFA.exe) para esta version -->
+    <ApplicationIcon>SIGEFA\Recursos\sigefa-legacy.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <LangVersion>latest</LangVersion>

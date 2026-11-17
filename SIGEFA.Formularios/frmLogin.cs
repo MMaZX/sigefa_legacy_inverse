@@ -186,9 +186,7 @@ public class frmLogin : Office2007Form
 			logo = pictureBox1.Image;
 			accesocanalventas = Login.CanalVentaAcceso1;
 
-			var frm = new mdi_Menu();
-			Hide();
-			frm.Show();
+			AbrirMenuPrincipal();
 		}
 		catch (Exception ex)
 		{
@@ -203,6 +201,25 @@ public class frmLogin : Office2007Form
 				btnLogin.Text = "INGRESAR";
 				Cursor = Cursors.Default;
 			}
+		}
+	}
+
+	// El login se oculta antes de construir el menu principal: su constructor y su Load
+	// (seleccion de almacen) tardan, y el login no debe quedar visible mientras tanto.
+	// Si el menu no se puede abrir, el login vuelve a mostrarse con el error.
+	private void AbrirMenuPrincipal()
+	{
+		Hide();
+		try
+		{
+			var frm = new mdi_Menu();
+			frm.Show();
+			frm.Activate();
+		}
+		catch
+		{
+			Show();
+			throw;
 		}
 	}
 
