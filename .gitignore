@@ -27,7 +27,7 @@ packages/
 ## Agent Skills and Graphify cache
 .agents/
 .opencode/node_modules/
-graphify-out/cache/
+graphify-out/
 .atl/
 .codegraph/
 
