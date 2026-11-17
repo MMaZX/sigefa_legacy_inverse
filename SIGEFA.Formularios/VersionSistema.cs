@@ -32,7 +32,8 @@ internal static class VersionSistema
             ConCambiosLocales = VersionCompilacion.ConCambiosLocales,
             FechaCompilacion = VersionCompilacion.Fecha,
             Equipo = Environment.MachineName,
-            RutaEjecutable = Application.ExecutablePath
+            RutaEjecutable = Application.ExecutablePath,
+            Es64Bits = Environment.Is64BitProcess
         };
         // Solo servidor, puerto y base: nunca usuario ni contrasena.
         try

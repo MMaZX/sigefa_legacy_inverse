@@ -12,4 +12,5 @@ public class VersionDatos
     public string Servidor { get; set; }
     public string Equipo { get; set; }
     public string RutaEjecutable { get; set; }
+    public bool Es64Bits { get; set; }
 }

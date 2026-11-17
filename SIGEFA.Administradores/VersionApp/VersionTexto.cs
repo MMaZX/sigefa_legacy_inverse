@@ -34,6 +34,7 @@ public static class VersionTexto
         return "Último commit: " + commit + "\n"
             + "Fecha y hora del build: " + ValorODesconocido(datos.FechaCompilacion) + "\n"
             + "Versión del ensamblado: " + RecortarVersion(datos.Version) + "\n"
+            + "Arquitectura: " + (datos.Es64Bits ? "64 bits (x64)" : "32 bits (x86)") + "\n"
             + "Cambios sin commitear: " + (datos.ConCambiosLocales ? "Sí" : "No") + "\n\n"
             + "Base de datos: " + ValorODesconocido(datos.BaseDatos) + "\n"
             + "Servidor: " + ValorODesconocido(datos.Servidor) + "\n"

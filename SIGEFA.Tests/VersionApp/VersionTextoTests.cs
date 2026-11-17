@@ -76,4 +76,14 @@ public class VersionTextoTests
         Assert.Contains("Fecha y hora del build: desconocido", texto);
         Assert.Contains("Cambios sin commitear: Sí", texto);
     }
+
+    [Theory]
+    [InlineData(true, "Arquitectura: 64 bits (x64)")]
+    [InlineData(false, "Arquitectura: 32 bits (x86)")]
+    public void Detalle_MuestraLaArquitectura(bool es64Bits, string esperado)
+    {
+        string texto = VersionTexto.Detalle(new VersionDatos { Es64Bits = es64Bits });
+
+        Assert.Contains(esperado, texto);
+    }
 }

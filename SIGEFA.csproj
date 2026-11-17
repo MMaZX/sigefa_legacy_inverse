@@ -5,7 +5,11 @@
     <OutputType>WinExe</OutputType>
     <UseWindowsForms>True</UseWindowsForms>
     <TargetFramework>net461</TargetFramework>
+    <!-- 32 bits (x86) por defecto, tambien con "Any CPU". La plataforma x64 compila en 64 bits:
+         necesita el runtime de Crystal Reports de 64 bits en la PC donde se instala. -->
+    <Platforms>AnyCPU;x86;x64</Platforms>
     <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget Condition="'$(Platform)' == 'x64'">x64</PlatformTarget>
     <!-- Icono del ejecutable (SIGEFA.exe) para esta version -->
     <ApplicationIcon>SIGEFA\Recursos\sigefa-legacy.ico</ApplicationIcon>
   </PropertyGroup>
