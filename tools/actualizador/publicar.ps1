@@ -105,20 +105,34 @@ function Registrar-Contador([int]$numero, [string]$origen) {
 # Lee lo que quedo compilado DENTRO de SIGEFA.exe (VersionCompilacion). No se lee el archivo de obj: si el exe no se
 # regenero (por ejemplo, estaba abierto al compilar) obj dice un numero y el exe otro, y las PCs avisarian
 # "hay version nueva" para siempre.
+# Se hace con Windows PowerShell 5.1 (siempre esta en Windows) en un proceso aparte: PowerShell 7 no soporta cargar un
+# ensamblado "solo para reflexion", y asi el script anda igual desde cualquiera de las dos consolas.
 function Leer-Compilacion([string]$exe) {
+    $lector = @'
+$ErrorActionPreference = 'Stop'
+$bytes = [IO.File]::ReadAllBytes($env:SIGEFA_EXE_A_LEER)
+$ensamblado = [Reflection.Assembly]::ReflectionOnlyLoad($bytes)
+$tipo = $ensamblado.GetType('SIGEFA.Administradores.VersionApp.VersionCompilacion')
+if (-not $tipo) { exit 2 }
+function Valor($nombre) { $campo = $tipo.GetField($nombre); if ($campo) { $campo.GetRawConstantValue() } }
+'{0}|{1}|{2}' -f (Valor 'Build'), (Valor 'Commit'), (Valor 'ConCambiosLocales')
+'@
     try {
-        # Se carga desde bytes: no bloquea el archivo ni deja copias temporales.
-        $ensamblado = [Reflection.Assembly]::ReflectionOnlyLoad([IO.File]::ReadAllBytes($exe))
-        $tipo = $ensamblado.GetType('SIGEFA.Administradores.VersionApp.VersionCompilacion')
-        if (-not $tipo) { return $null }
-        $valor = { param($nombre) $campo = $tipo.GetField($nombre); if ($campo) { $campo.GetRawConstantValue() } else { $null } }
+        $powershell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+        $codificado = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($lector))
+        $env:SIGEFA_EXE_A_LEER = $exe
+        $salida = & $powershell -NoProfile -NonInteractive -EncodedCommand $codificado 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        $partes = ("$salida".Trim()) -split '\|'
+        if ($partes.Count -ne 3) { return $null }
         [pscustomobject]@{
-            Build      = [int](& $valor 'Build')
-            Commit     = [string](& $valor 'Commit')
-            ConCambios = [bool](& $valor 'ConCambiosLocales')
+            Build      = [int]$partes[0]
+            Commit     = [string]$partes[1]
+            ConCambios = ($partes[2] -eq 'True')
         }
     }
     catch { return $null }
+    finally { Remove-Item Env:\SIGEFA_EXE_A_LEER -ErrorAction SilentlyContinue }
 }
 
 # --- 0) Conexion a inyectar: los tres datos juntos y sin caracteres que rompan la cadena
