@@ -18,6 +18,11 @@
   - Nunca incluye carpetas "documentos" ni archivos .log (son datos de trabajo, no parte de la version).
   - Muestra a que base de datos apunta el SIGEFA.exe.config empaquetado (sin la clave).
 
+  Conexion a la base de datos: con -HostBd, -UserBd y -PasswordBd (los tres juntos) el script reescribe ConnNegocio
+  SOLO en la copia que va al zip (el SIGEFA.exe.config de la carpeta de salida no se toca). Se conservan base de
+  datos y demas opciones de la cadena original; el puerto pasa a -PuertoBd (3306 por defecto). Asi quien compila no
+  necesita llevar la conexion de produccion dentro del codigo. La clave nunca se imprime.
+
   Actualizacion obligatoria: -Obligatoria exige este build para iniciar sesion (equivale a -MinBuild <build>).
   Sin ella, las PCs reciben el aviso parpadeante pero pueden seguir trabajando hasta actualizar.
 
@@ -40,6 +45,12 @@ param(
     [string]$Notas = '',
     # Cuantos zips conservar en el servidor (los mas recientes). Minimo 1.
     [int]$ConservarZips = 3,
+    # Conexion que se escribe en el SIGEFA.exe.config del zip. Se indican los tres juntos o ninguno.
+    [string]$HostBd = '',
+    [string]$UserBd = '',
+    [string]$PasswordBd = '',
+    # Puerto de MySQL; solo se aplica cuando se indica -HostBd.
+    [int]$PuertoBd = 3306,
     # Salta las protecciones de numero de build y de cambios sin commitear.
     [switch]$Forzar
 )
@@ -49,6 +60,26 @@ $ErrorActionPreference = 'Stop'
 
 # Raiz del repositorio: este script vive en <raiz>\tools\actualizador.
 $raiz = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+
+# Pone (o agrega) una clave de la cadena de conexion, respetando el resto de la cadena.
+function Poner-Clave([string]$cadena, [string]$alias, [string]$nombre, [string]$valor) {
+    $patron = '(?i)(^|;)\s*(?:' + $alias + ')\s*=[^;]*'
+    $regex = New-Object System.Text.RegularExpressions.Regex($patron)
+    if ($regex.IsMatch($cadena)) {
+        # "$" en el valor se duplica para que .NET lo tome literal en el reemplazo.
+        return $regex.Replace($cadena, ('${1}' + $nombre + '=' + ($valor -replace '\$', '$$$$')), 1)
+    }
+    return $cadena.TrimEnd(';') + ';' + $nombre + '=' + $valor
+}
+
+# Cadena de conexion que llevara el zip a partir de la original.
+function Aplicar-Conexion([string]$cadena) {
+    $cadena = Poner-Clave $cadena 'Server|Host|Data Source' 'Server' $HostBd
+    $cadena = Poner-Clave $cadena 'Uid|User Id|User|Username' 'Uid' $UserBd
+    $cadena = Poner-Clave $cadena 'Pwd|Password' 'Pwd' $PasswordBd
+    $cadena = Poner-Clave $cadena 'Port' 'Port' ([string]$PuertoBd)
+    return $cadena
+}
 
 # Historial persistente de builds publicados: una linea "build|fecha|origen" por publicacion. La lee SIGEFA.csproj.
 $archivoContador = Join-Path $PSScriptRoot 'contador-build.txt'
@@ -86,6 +117,14 @@ function Leer-Compilacion([string]$configuracion) {
         Commit     = [regex]::Match($texto, 'Commit = "([^"]*)"').Groups[1].Value
         ConCambios = ($texto -match 'ConCambiosLocales = true')
     }
+}
+
+# --- 0) Conexion a inyectar: los tres datos juntos y sin caracteres que rompan la cadena
+$inyectaConexion = [bool]($HostBd -or $UserBd -or $PasswordBd)
+if ($inyectaConexion) {
+    if (-not ($HostBd -and $UserBd -and $PasswordBd)) { throw 'Indica -HostBd, -UserBd y -PasswordBd juntos (o ninguno).' }
+    if ("$HostBd$UserBd$PasswordBd" -match '[;"]') { throw 'HostBd, UserBd y PasswordBd no pueden contener ; ni comillas dobles.' }
+    if ($PuertoBd -le 0 -or $PuertoBd -gt 65535) { throw "-PuertoBd ($PuertoBd) no es un puerto valido." }
 }
 
 # --- 1) Validar el origen
@@ -136,9 +175,13 @@ if (Test-Path $rutaConfig) {
     try {
         $xml = [xml](Get-Content $rutaConfig -Raw)
         $cs = $xml.configuration.connectionStrings.add | Where-Object { $_.name -eq 'ConnNegocio' } | Select-Object -First 1
-        $servidorBd = [regex]::Match($cs.connectionString, '(?i)Server=([^;]+)').Groups[1].Value
-        $baseBd = [regex]::Match($cs.connectionString, '(?i)Database=([^;]+)').Groups[1].Value
-        Write-Host "Conexion empaquetada en SIGEFA.exe.config: servidor $servidorBd, base $baseBd  <-- verifica que sea la correcta" -ForegroundColor Yellow
+        $cadenaFinal = $cs.connectionString
+        if ($inyectaConexion) { $cadenaFinal = Aplicar-Conexion $cadenaFinal }
+        $servidorBd = [regex]::Match($cadenaFinal, '(?i)Server=([^;]+)').Groups[1].Value
+        $puertoMostrado = [regex]::Match($cadenaFinal, '(?i)Port=([^;]+)').Groups[1].Value
+        $baseBd = [regex]::Match($cadenaFinal, '(?i)Database=([^;]+)').Groups[1].Value
+        $origenConexion = $(if ($inyectaConexion) { 'inyectada por parametros' } else { 'la del SIGEFA.exe.config de origen' })
+        Write-Host "Conexion empaquetada ($origenConexion): servidor ${servidorBd}:$puertoMostrado, base $baseBd  <-- verifica que sea la correcta" -ForegroundColor Yellow
     }
     catch { Write-Warning 'No pude leer la conexion de SIGEFA.exe.config.' }
 }
@@ -152,6 +195,23 @@ try {
     # Se excluyen las carpetas "documentos" y los .log: son datos de trabajo, no parte de la version.
     robocopy $Origen $contenido /E /XD documentos /XF *.log /NFL /NDL /NJH /NJS /NP | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy fallo (codigo $LASTEXITCODE)." }
+
+    if ($inyectaConexion) {
+        $configZip = Join-Path $contenido 'SIGEFA.exe.config'
+        if (-not (Test-Path $configZip)) { throw "No hay SIGEFA.exe.config en '$Origen': no hay donde escribir la conexion de -HostBd/-UserBd/-PasswordBd." }
+        $xmlZip = New-Object System.Xml.XmlDocument
+        $xmlZip.PreserveWhitespace = $true
+        $xmlZip.Load($configZip)
+        $nodo = $xmlZip.SelectSingleNode("/configuration/connectionStrings/add[@name='ConnNegocio']")
+        if (-not $nodo) { throw "El SIGEFA.exe.config de '$Origen' no tiene la conexion 'ConnNegocio'." }
+        $nodo.SetAttribute('connectionString', (Aplicar-Conexion $nodo.GetAttribute('connectionString')))
+        $xmlZip.Save($configZip)
+        # Comprobacion: lo que quedo escrito en la copia del zip es lo pedido.
+        $xmlVerif = New-Object System.Xml.XmlDocument
+        $xmlVerif.Load($configZip)
+        $escrita = $xmlVerif.SelectSingleNode("/configuration/connectionStrings/add[@name='ConnNegocio']").GetAttribute('connectionString')
+        if ($escrita -notmatch ('(?i)(^|;)\s*Server=' + [regex]::Escape($HostBd) + '(;|$)')) { throw 'No pude confirmar la conexion escrita en el zip. No se publico nada.' }
+    }
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zipLocal = Join-Path $temporal "SIGEFA-$Build.zip"

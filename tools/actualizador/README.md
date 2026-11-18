@@ -32,6 +32,10 @@ escribe la ficha al final. Se detiene si: el build no coincide con el compilado,
 mayor, o `SIGEFA.exe` se compilo con cambios sin commitear. Antes de publicar muestra a que base de datos apunta el
 `SIGEFA.exe.config` empaquetado: **verificala**.
 
+Para publicar a produccion sin llevar su conexion dentro del codigo, agrega `-HostBd`, `-UserBd` y `-PasswordBd`
+(`-PuertoBd`, 3306 por defecto): se reescriben **solo en el zip**, conservando la base de datos y demas opciones. La clave
+no se imprime, pero queda en el historial de la consola: usa una cuenta con permisos minimos, no `root`.
+
 **Contador de builds.** `tools\actualizador\contador-build.txt` (ignorado por git, una linea `build|fecha|origen` por
 publicacion) guarda el historial. `SIGEFA.csproj` compila `max(ultimo + 1, commits de la rama)`: si recompilas sin un
 commit nuevo despues de publicar, el numero sube igual. El servidor manda: si otra PC u otro programador publico algo
