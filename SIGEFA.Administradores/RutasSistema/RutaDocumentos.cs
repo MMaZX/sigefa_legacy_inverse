@@ -5,10 +5,9 @@ using System.IO;
 namespace SIGEFA.Administradores.RutasSistema;
 
 // Carpeta donde se guardan los comprobantes electronicos (XML, CDR, PDF).
-// Orden de prioridad: la clave RutaDocumentos de app.config (por ejemplo una carpeta del servidor, para que los
-// comprobantes de todas las PCs queden juntos), luego la variable de entorno SIGEFA_RUTA_DOCUMENTOS (la fija el
-// launcher para que no queden dentro de la carpeta de una version, que se borra al actualizar) y por ultimo
-// "documentos" junto al ejecutable, como siempre.
+// Los comprobantes se guardan en cada PC, nunca en el servidor. Orden de prioridad: la clave RutaDocumentos de
+// app.config, luego la variable de entorno SIGEFA_RUTA_DOCUMENTOS (la fija el launcher a una carpeta local fuera
+// de la carpeta de la version, que se borra al actualizar) y por ultimo "documentos" junto al ejecutable.
 public static class RutaDocumentos
 {
     public const string Clave = "RutaDocumentos";
