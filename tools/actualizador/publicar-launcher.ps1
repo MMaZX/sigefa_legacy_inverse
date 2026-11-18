@@ -87,7 +87,7 @@ if (Test-Path $rutaFicha) {
             Write-Host "Contador del launcher alineado con el servidor: ultimo build publicado = $enServidor." -ForegroundColor Yellow
         }
         if ($build -le $enServidor -and -not $Forzar) {
-            throw "El servidor ya tiene el launcher $enServidor (el contador quedo en $enServidor). Compila SIGEFA.Launcher de nuevo en $configuracion: saldra el build $($enServidor + 1) o mayor. Con -Forzar publicas igual."
+            throw "El servidor ya tiene el launcher $enServidor (el contador quedo en $enServidor). Compila SIGEFA.Launcher de nuevo en ${configuracion}: saldra el build $($enServidor + 1) o mayor. Con -Forzar publicas igual."
         }
     }
 }
