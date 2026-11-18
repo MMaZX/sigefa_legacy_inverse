@@ -152,11 +152,12 @@ $rutaTemporal = Join-Path $Servidor 'latest.manifest.tmp'
 [IO.File]::WriteAllText($rutaTemporal, (($lineas -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
 Move-Item $rutaTemporal $rutaManifiesto -Force
 
-# --- 7) Limpiar zips antiguos (conserva los mas recientes; el recien publicado nunca se borra)
+# --- 7) Limpiar zips antiguos (conserva los mas recientes). El recien publicado NUNCA se borra, ni siquiera si se
+#        publico un build menor con -Forzar (si no, la ficha apuntaria a un archivo que ya no existe).
 Get-ChildItem $Servidor -Filter 'SIGEFA-*.zip' | ForEach-Object {
     $n = [regex]::Match($_.Name, '^SIGEFA-(\d+)\.zip$')
     if ($n.Success) { [pscustomobject]@{ Build = [int]$n.Groups[1].Value; Ruta = $_.FullName } }
-} | Sort-Object Build -Descending | Select-Object -Skip $ConservarZips | ForEach-Object {
+} | Where-Object { $_.Build -ne $Build } | Sort-Object Build -Descending | Select-Object -Skip ($ConservarZips - 1) | ForEach-Object {
     Remove-Item $_.Ruta -Force
     Write-Host "  zip antiguo eliminado: $(Split-Path $_.Ruta -Leaf)"
 }

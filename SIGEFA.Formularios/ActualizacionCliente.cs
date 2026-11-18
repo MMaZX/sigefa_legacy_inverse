@@ -24,14 +24,28 @@ internal static class ActualizacionCliente
         {
             if (!detectada)
             {
-                configuracion = ConfiguracionActualizacion.Detectar(
-                    AppDomain.CurrentDomain.BaseDirectory,
-                    Environment.GetEnvironmentVariable,
-                    File.Exists,
-                    LectorConfigLauncher.LeerRutaActualizacion);
+                configuracion = Detectar();
                 detectada = true;
             }
             return configuracion;
+        }
+    }
+
+    // Esto corre al abrir la ventana principal: la actualizacion es un extra y jamas debe impedir abrir SIGEFA.
+    // Ante cualquier fallo al detectarla, la funcion queda apagada.
+    private static ConfiguracionActualizacion Detectar()
+    {
+        try
+        {
+            return ConfiguracionActualizacion.Detectar(
+                AppDomain.CurrentDomain.BaseDirectory,
+                Environment.GetEnvironmentVariable,
+                File.Exists,
+                LectorConfigLauncher.LeerRutaActualizacion);
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 

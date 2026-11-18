@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Xml;
@@ -29,6 +30,11 @@ public static class LectorConfigLauncher
         }
         catch (IOException)
         {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // El .config existe pero esta cuenta no puede leerlo: sin ruta de servidor, igual que si faltara.
             return null;
         }
     }

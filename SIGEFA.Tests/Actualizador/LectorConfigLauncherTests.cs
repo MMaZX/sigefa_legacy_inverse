@@ -57,6 +57,18 @@ public class LectorConfigLauncherTests : IDisposable
         Assert.Null(LectorConfigLauncher.LeerRutaActualizacion(Path.Combine(carpeta, "no_existe.config")));
     }
 
+    // Otro proceso tiene el archivo abierto (por ejemplo, el launcher actualizandose): no debe romper a SIGEFA.
+    [Fact]
+    public void LeerRutaActualizacion_ArchivoBloqueadoPorOtroProceso_DevuelveNullSinFallar()
+    {
+        string ruta = Config(@"<configuration><appSettings><add key=""RutaActualizacion"" value=""x"" /></appSettings></configuration>");
+
+        using (new FileStream(ruta, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.Null(LectorConfigLauncher.LeerRutaActualizacion(ruta));
+        }
+    }
+
     [Fact]
     public void LeerRutaActualizacion_XmlDanado_DevuelveNullSinFallar()
     {
