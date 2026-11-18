@@ -32,11 +32,14 @@
     <Compile Remove="SIGEFA (1.0.0.0).cs" />
     <Compile Remove="__fAnonymousType*.cs" />
   </ItemGroup>
-  <!-- El proyecto de pruebas vive en una carpeta hermana y no debe entrar al ejecutable -->
+  <!-- El proyecto de pruebas y el launcher viven en carpetas hermanas y no deben entrar al ejecutable -->
   <ItemGroup>
     <Compile Remove="SIGEFA.Tests\**" />
     <EmbeddedResource Remove="SIGEFA.Tests\**" />
     <None Remove="SIGEFA.Tests\**" />
+    <Compile Remove="SIGEFA.Launcher\**" />
+    <EmbeddedResource Remove="SIGEFA.Launcher\**" />
+    <None Remove="SIGEFA.Launcher\**" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="SIGEFA.Reportes.clsReportes.CRCuotasPrestamo.rpt" />

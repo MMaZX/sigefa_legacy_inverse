@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <!-- Launcher de SIGEFA: ejecutable liviano que instala/actualiza SIGEFA desde el servidor y lo abre.
+       Sin dependencias externas: solo el framework y la logica pura de SIGEFA.Administradores\Actualizador. -->
+  <PropertyGroup>
+    <AssemblyName>SIGEFA.Launcher</AssemblyName>
+    <RootNamespace>SIGEFA.Launcher</RootNamespace>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net461</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ApplicationIcon>..\SIGEFA\Recursos\sigefa-legacy.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\Actualizador\*.cs" Link="Actualizador\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>
