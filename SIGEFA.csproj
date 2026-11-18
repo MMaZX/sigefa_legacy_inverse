@@ -536,6 +536,15 @@
     <PropertyGroup>
       <SigefaCommit Condition="'$(SigefaCommitRc)' != '0'"></SigefaCommit>
       <SigefaBuild Condition="'$(SigefaBuildRc)' != '0' Or '$(SigefaBuild)' == ''">0</SigefaBuild>
+      <!-- Contador persistente (lo escribe publicar.ps1, no esta en git): cada linea es "build|fecha|origen" y la ultima
+           es el ultimo build publicado. El build compilado es max(ultimo + 1, commits de la rama), asi recompilar sin un
+           commit nuevo despues de publicar no repite el numero. Sin archivo, queda el conteo de commits como siempre. -->
+      <SigefaContadorArchivo>$(MSBuildProjectDirectory)\tools\actualizador\contador-build.txt</SigefaContadorArchivo>
+      <SigefaContadorTexto Condition="Exists('$(SigefaContadorArchivo)')">$([System.IO.File]::ReadAllText('$(SigefaContadorArchivo)'))</SigefaContadorTexto>
+      <SigefaContadorUltimo Condition="'$(SigefaContadorTexto)' != ''">$([System.Text.RegularExpressions.Regex]::Replace('$(SigefaContadorTexto)', '(?s)^.*(?:^|\n)\s*(\d+)\|[^\n]*\s*$', '$1'))</SigefaContadorUltimo>
+      <SigefaContadorUltimo Condition="'$(SigefaContadorUltimo)' == '' Or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(SigefaContadorUltimo)', '^\d+$'))">0</SigefaContadorUltimo>
+      <SigefaBuildContador>$([MSBuild]::Add($(SigefaContadorUltimo), 1))</SigefaBuildContador>
+      <SigefaBuild Condition="'$(SigefaContadorUltimo)' != '0' And $([MSBuild]::Subtract($(SigefaBuildContador), $(SigefaBuild))) &gt; 0">$(SigefaBuildContador)</SigefaBuild>
       <SigefaRama Condition="'$(SigefaRamaRc)' != '0'"></SigefaRama>
       <SigefaAsunto Condition="'$(SigefaAsuntoRc)' != '0'"></SigefaAsunto>
       <SigefaAsunto>$(SigefaAsunto.Replace('\','\\').Replace('&quot;','\&quot;'))</SigefaAsunto>

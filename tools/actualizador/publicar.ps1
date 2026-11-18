@@ -10,6 +10,10 @@
   - Usa como numero de build el que quedo compilado dentro de SIGEFA.exe (obj\<config>\...\VersionCompilacion.g.cs).
     Si pasas -Build y no coincide, se detiene: el aviso de "hay version nueva" compara ese numero.
   - No publica un build menor o igual al que ya esta en el servidor (salvo -Forzar).
+  - Lleva un contador persistente (contador-build.txt, junto a este script, fuera de git): historial de builds
+    publicados. SIGEFA.csproj compila max(ultimo + 1, commits), asi recompilar sin commit nuevo no repite el numero.
+    El servidor manda: si esta por delante del contador (otra PC u otro programador publico), el contador se alinea
+    con el y hay que recompilar.
   - No publica algo compilado con cambios sin commitear (salvo -Forzar).
   - Nunca incluye carpetas "documentos" ni archivos .log (son datos de trabajo, no parte de la version).
   - Muestra a que base de datos apunta el SIGEFA.exe.config empaquetado (sin la clave).
@@ -45,6 +49,27 @@ $ErrorActionPreference = 'Stop'
 
 # Raiz del repositorio: este script vive en <raiz>\tools\actualizador.
 $raiz = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+
+# Historial persistente de builds publicados: una linea "build|fecha|origen" por publicacion. La lee SIGEFA.csproj.
+$archivoContador = Join-Path $PSScriptRoot 'contador-build.txt'
+
+function Leer-UltimoContador {
+    if (-not (Test-Path $archivoContador)) { return 0 }
+    $ultimo = 0
+    foreach ($linea in Get-Content $archivoContador) {
+        $m = [regex]::Match($linea, '^\s*(\d+)\|')
+        if ($m.Success -and [int]$m.Groups[1].Value -gt $ultimo) { $ultimo = [int]$m.Groups[1].Value }
+    }
+    return $ultimo
+}
+
+# Agrega un build al historial solo si supera al ultimo (la ultima linea siempre es el maximo, que es lo que lee el csproj).
+function Registrar-Contador([int]$numero, [string]$origen) {
+    if ($numero -le (Leer-UltimoContador)) { return $false }
+    $linea = '{0}|{1}|{2}' -f $numero, (Get-Date -Format 'yyyy-MM-dd HH:mm'), $origen
+    [IO.File]::AppendAllText($archivoContador, $linea + "`n", (New-Object Text.UTF8Encoding($false)))
+    return $true
+}
 
 # Lee lo que MSBuild dejo compilado dentro de SIGEFA.exe para la configuracion indicada (Release, Debug...).
 function Leer-Compilacion([string]$configuracion) {
@@ -93,8 +118,15 @@ New-Item -ItemType Directory $Servidor -Force | Out-Null
 $rutaManifiesto = Join-Path $Servidor 'latest.manifest'
 if (Test-Path $rutaManifiesto) {
     $actual = [regex]::Match((Get-Content $rutaManifiesto -Raw), '(?m)^\s*build\s*=\s*(\d+)')
-    if ($actual.Success -and $Build -le [int]$actual.Groups[1].Value -and -not $Forzar) {
-        throw "El servidor ya tiene la version $($actual.Groups[1].Value). Publica un build mayor que ese (o usa -Forzar)."
+    if ($actual.Success) {
+        $enServidor = [int]$actual.Groups[1].Value
+        # El servidor es la fuente de verdad: si esta por delante del contador local, se alinea.
+        if (Registrar-Contador $enServidor 'servidor') {
+            Write-Host "Contador alineado con el servidor: ultimo build publicado = $enServidor." -ForegroundColor Yellow
+        }
+        if ($Build -le $enServidor -and -not $Forzar) {
+            throw "El servidor ya tiene la version $enServidor (el contador quedo en $enServidor). Compila de nuevo en Release: saldra el build $($enServidor + 1) o mayor. Con -Forzar publicas igual."
+        }
     }
 }
 
@@ -161,6 +193,9 @@ Get-ChildItem $Servidor -Filter 'SIGEFA-*.zip' | ForEach-Object {
     Remove-Item $_.Ruta -Force
     Write-Host "  zip antiguo eliminado: $(Split-Path $_.Ruta -Leaf)"
 }
+
+$commitContador = $(if ($compilado -and $compilado.Commit) { $compilado.Commit } else { 'sin-commit' })
+[void](Registrar-Contador $Build $commitContador)
 
 Write-Host ''
 Write-Host "Publicada la version $Build" -ForegroundColor Green

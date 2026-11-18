@@ -32,6 +32,12 @@ escribe la ficha al final. Se detiene si: el build no coincide con el compilado,
 mayor, o `SIGEFA.exe` se compilo con cambios sin commitear. Antes de publicar muestra a que base de datos apunta el
 `SIGEFA.exe.config` empaquetado: **verificala**.
 
+**Contador de builds.** `tools\actualizador\contador-build.txt` (ignorado por git, una linea `build|fecha|origen` por
+publicacion) guarda el historial. `SIGEFA.csproj` compila `max(ultimo + 1, commits de la rama)`: si recompilas sin un
+commit nuevo despues de publicar, el numero sube igual. El servidor manda: si otra PC u otro programador publico algo
+mayor, `publicar.ps1` alinea el contador con `latest.manifest`, se detiene y hay que **compilar de nuevo**. Para empezar
+en una PC nueva basta con ejecutar `publicar.ps1` una vez (falla y alinea) o crear el archivo con `<build>|x|servidor`.
+
 Por defecto, las PCs reciben el aviso (boton **"Buscar Actualizaciones"** parpadeando arriba a la derecha) pero pueden
 seguir trabajando. `-Obligatoria` (o `-MinBuild <n>`) ademas **no deja iniciar sesion** a las PCs con un build menor:
 usalo cuando la version nueva cambia algo que el sistema viejo no puede convivir (por ejemplo, la base de datos).

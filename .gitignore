@@ -37,3 +37,6 @@ documentos/
 
 ## Datos locales de acceso a la VM de pruebas (nunca commitear)
 .local/
+
+## Historial local de builds publicados (cada PC que publica lleva el suyo; se realinea con el servidor)
+tools/actualizador/contador-build.txt
