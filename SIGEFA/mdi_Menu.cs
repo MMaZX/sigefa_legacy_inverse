@@ -781,6 +781,7 @@ public class mdi_Menu : Office2007RibbonForm
 	{
 		InitializeComponent();
 		IconoSistema.Aplicar(this);
+		BotonActualizaciones.Instalar(this);
 		GenerarLista();
 	}
 

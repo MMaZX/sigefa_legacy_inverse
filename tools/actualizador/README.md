@@ -32,7 +32,9 @@ escribe la ficha al final. Se detiene si: el build no coincide con el compilado,
 mayor, o `SIGEFA.exe` se compilo con cambios sin commitear. Antes de publicar muestra a que base de datos apunta el
 `SIGEFA.exe.config` empaquetado: **verificala**.
 
-`-MinBuild <n>` obliga a actualizar a los clientes con un build menor (se aplica en el login).
+Por defecto, las PCs reciben el aviso (boton **"Buscar Actualizaciones"** parpadeando arriba a la derecha) pero pueden
+seguir trabajando. `-Obligatoria` (o `-MinBuild <n>`) ademas **no deja iniciar sesion** a las PCs con un build menor:
+usalo cuando la version nueva cambia algo que el sistema viejo no puede convivir (por ejemplo, la base de datos).
 
 ## Instalar el launcher (una vez)
 

@@ -14,6 +14,9 @@
   - Nunca incluye carpetas "documentos" ni archivos .log (son datos de trabajo, no parte de la version).
   - Muestra a que base de datos apunta el SIGEFA.exe.config empaquetado (sin la clave).
 
+  Actualizacion obligatoria: -Obligatoria exige este build para iniciar sesion (equivale a -MinBuild <build>).
+  Sin ella, las PCs reciben el aviso parpadeante pero pueden seguir trabajando hasta actualizar.
+
 .EXAMPLE
   .\publicar.ps1 -Origen C:\ruta\sigefa_legacy\bin\Release\net461 -Servidor \\192.168.1.3\sgesystem\SISTEMA\actualizador
 #>
@@ -27,6 +30,8 @@ param(
     [int]$Build = 0,
     # Build minimo que puede iniciar sesion (0 = ninguno obligatorio).
     [int]$MinBuild = 0,
+    # Atajo: obliga a actualizar a este mismo build (MinBuild = Build).
+    [switch]$Obligatoria,
     # Texto corto para la ficha (una linea).
     [string]$Notas = '',
     # Cuantos zips conservar en el servidor (los mas recientes). Minimo 1.
@@ -79,6 +84,7 @@ elseif ($compilado -and $compilado.Build -gt 0 -and $compilado.Build -ne $Build 
 if ($compilado -and $compilado.ConCambios -and -not $Forzar) {
     throw 'SIGEFA.exe se compilo con cambios sin commitear: no se puede saber que codigo contiene. Haz commit y compila de nuevo (o usa -Forzar).'
 }
+if ($Obligatoria) { $MinBuild = $Build }
 if ($MinBuild -gt $Build) { throw "-MinBuild ($MinBuild) no puede ser mayor que -Build ($Build)." }
 if ($ConservarZips -lt 1) { $ConservarZips = 1 }
 

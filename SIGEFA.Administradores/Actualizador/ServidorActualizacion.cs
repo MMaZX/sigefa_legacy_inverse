@@ -1,11 +1,11 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using SIGEFA.Administradores.Actualizador;
 
-namespace SIGEFA.Launcher;
+namespace SIGEFA.Administradores.Actualizador;
 
 // Acceso a la carpeta del servidor: lee el manifiesto (con tiempo maximo) y copia el zip a esta PC.
+// Lo usan el launcher y el propio SIGEFA (boton "Buscar Actualizaciones" y control del login).
 internal sealed class ServidorActualizacion
 {
     public const string NombreManifiesto = "latest.manifest";
