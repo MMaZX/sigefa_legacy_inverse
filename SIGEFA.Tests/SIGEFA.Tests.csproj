@@ -38,6 +38,10 @@
   <ItemGroup>
     <Compile Include="..\SIGEFA.Administradores\ConsultaDocumento\*.cs" Link="ConsultaDocumento\%(Filename)%(Extension)" />
   </ItemGroup>
+  <!-- Actualizador de version: manifiesto, decision y hash. Solo logica pura, sin WinForms ni MySql -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\Actualizador\*.cs" Link="Actualizador\%(Filename)%(Extension)" />
+  </ItemGroup>
   <!-- Texto de version del login -->
   <ItemGroup>
     <Compile Include="..\SIGEFA.Administradores\VersionApp\*.cs" Link="VersionApp\%(Filename)%(Extension)" />
