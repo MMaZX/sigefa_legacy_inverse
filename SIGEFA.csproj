@@ -506,8 +506,8 @@
       <HintPath>..\Debug_gr\System.Net.Http.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <!-- Version del build para el login: commit, rama y fecha de compilacion (AssemblyVersion esta fija en 1.0.0.0).
-       Sin git (por ejemplo, compilado desde un zip) queda vacio y el login muestra "sin-git". -->
+  <!-- Version del build para el login: numero de build (commits de la rama; el actualizador ordena versiones con el), commit, rama y fecha de compilacion (AssemblyVersion esta fija en 1.0.0.0).
+       Sin git (por ejemplo, compilado desde un zip) queda vacio, el build en 0 y el login muestra "sin-git". -->
   <Target Name="GenerarVersionCompilacion" BeforeTargets="BeforeCompile">
     <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
       <Output TaskParameter="ConsoleOutput" PropertyName="SigefaCommit" />
@@ -521,11 +521,16 @@
       <Output TaskParameter="ConsoleOutput" PropertyName="SigefaAsunto" />
       <Output TaskParameter="ExitCode" PropertyName="SigefaAsuntoRc" />
     </Exec>
+    <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="SigefaBuild" />
+      <Output TaskParameter="ExitCode" PropertyName="SigefaBuildRc" />
+    </Exec>
     <Exec Command="git status --porcelain --untracked-files=no" ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low" WorkingDirectory="$(MSBuildProjectDirectory)">
       <Output TaskParameter="ConsoleOutput" PropertyName="SigefaCambios" />
     </Exec>
     <PropertyGroup>
       <SigefaCommit Condition="'$(SigefaCommitRc)' != '0'"></SigefaCommit>
+      <SigefaBuild Condition="'$(SigefaBuildRc)' != '0' Or '$(SigefaBuild)' == ''">0</SigefaBuild>
       <SigefaRama Condition="'$(SigefaRamaRc)' != '0'"></SigefaRama>
       <SigefaAsunto Condition="'$(SigefaAsuntoRc)' != '0'"></SigefaAsunto>
       <SigefaAsunto>$(SigefaAsunto.Replace('\','\\').Replace('&quot;','\&quot;'))</SigefaAsunto>
@@ -540,6 +545,7 @@
       <SigefaVersionLinea Include="namespace SIGEFA.Administradores.VersionApp%3B" />
       <SigefaVersionLinea Include="internal static class VersionCompilacion" />
       <SigefaVersionLinea Include="{" />
+      <SigefaVersionLinea Include="    public const int Build = $(SigefaBuild)%3B" />
       <SigefaVersionLinea Include="    public const string Commit = &quot;$(SigefaCommit)&quot;%3B" />
       <SigefaVersionLinea Include="    public const string Rama = &quot;$(SigefaRama)&quot;%3B" />
       <SigefaVersionLinea Include="    public const string Asunto = &quot;$(SigefaAsunto)&quot;%3B" />
