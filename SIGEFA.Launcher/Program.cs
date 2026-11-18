@@ -19,6 +19,11 @@ internal static class Program
             // Solo prueba que este launcher arranca (lo usa el launcher viejo antes de cambiarse por este).
             return 0;
         }
+        if (modo.Modo == ModoLauncher.MostrarBuild)
+        {
+            // El numero de build va como codigo de salida (lo lee publicar-launcher.ps1 del exe que va a subir).
+            return VersionLauncher.Build;
+        }
         if (modo.Modo == ModoLauncher.Reemplazar)
         {
             return AutoActualizacionLauncher.Reemplazar(modo);

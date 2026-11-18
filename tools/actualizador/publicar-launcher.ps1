@@ -62,21 +62,20 @@ function Registrar-Contador([int]$numero, [string]$origen) {
     return $true
 }
 
-# Build que quedo compilado dentro de SIGEFA.Launcher.exe (obj\<config>\...\VersionLauncher.g.cs).
-function Leer-BuildCompilado([string]$configuracion) {
-    $carpetaObj = Join-Path $raiz 'SIGEFA.Launcher\obj'
-    if (-not (Test-Path $carpetaObj)) { return 0 }
-    $archivo = Get-ChildItem $carpetaObj -Recurse -Filter 'VersionLauncher.g.cs' -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -match ('\\' + [regex]::Escape($configuracion) + '\\') } |
-        Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if (-not $archivo) { return 0 }
-    $b = [regex]::Match((Get-Content $archivo.FullName -Raw), 'Build = (\d+);')
-    return $(if ($b.Success) { [int]$b.Groups[1].Value } else { 0 })
+# Build del exe que se va a publicar: se le pregunta al propio exe (--build-launcher devuelve su build como codigo de
+# salida), asi el numero siempre es el del archivo que sube y nunca el de una compilacion anterior.
+function Leer-BuildDelExe([string]$exe) {
+    $proceso = Start-Process -FilePath $exe -ArgumentList '--build-launcher' -PassThru -WindowStyle Hidden
+    if (-not $proceso.WaitForExit(20000)) {
+        try { $proceso.Kill() } catch { }
+        throw "El launcher no respondio a --build-launcher en 20 segundos. Compila SIGEFA.Launcher de nuevo en Release."
+    }
+    return [int]$proceso.ExitCode
 }
 
 $configuracion = Split-Path (Split-Path $Origen -Parent) -Leaf
-$build = Leer-BuildCompilado $configuracion
-if ($build -le 0) { throw "No pude saber el build del launcher compilado. Compila SIGEFA.Launcher de nuevo en $configuracion." }
+$build = Leer-BuildDelExe (Join-Path $Origen 'SIGEFA.Launcher.exe')
+if ($build -le 0) { throw "No pude leer el build del SIGEFA.Launcher.exe de '$Origen'. Compila SIGEFA.Launcher de nuevo en $configuracion (un exe anterior a la autoactualizacion no sabe decir su build)." }
 
 # El servidor manda: si ya tiene un launcher igual o mayor, se alinea el contador y hay que recompilar.
 $rutaFicha = Join-Path $Servidor 'launcher.manifest'

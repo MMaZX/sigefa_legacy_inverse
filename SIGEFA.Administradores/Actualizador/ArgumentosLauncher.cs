@@ -12,6 +12,9 @@ public enum ModoLauncher
     // Solo comprueba que este launcher arranca: sale con codigo 0 sin hacer nada mas.
     Verificar,
 
+    // Sale con su numero de build como codigo de salida: asi publicar-launcher.ps1 lee el build del exe que sube.
+    MostrarBuild,
+
     // Copia temporal del launcher: espera que el original se cierre, lo reemplaza y lo vuelve a abrir.
     Reemplazar
 }
@@ -19,10 +22,12 @@ public enum ModoLauncher
 // Lo que el launcher entiende de su linea de comandos. Sin E/S.
 // Normal:     [--sin-autoactualizacion] <argumentos de SIGEFA...>
 // Verificar:  --verificar-launcher
+// MostrarBuild: --build-launcher
 // Reemplazar: --reemplazar-launcher <pid> <destino> <nuevo> [-- <argumentos de SIGEFA...>]
 public sealed class ArgumentosLauncher
 {
     public const string FlagVerificar = "--verificar-launcher";
+    public const string FlagBuild = "--build-launcher";
     public const string FlagReemplazar = "--reemplazar-launcher";
     public const string FlagSinAutoactualizacion = "--sin-autoactualizacion";
     public const string Separador = "--";
@@ -56,6 +61,10 @@ public sealed class ArgumentosLauncher
         if (args.Length == 1 && EsFlag(args[0], FlagVerificar))
         {
             return new ArgumentosLauncher(ModoLauncher.Verificar, new string[0]);
+        }
+        if (args.Length == 1 && EsFlag(args[0], FlagBuild))
+        {
+            return new ArgumentosLauncher(ModoLauncher.MostrarBuild, new string[0]);
         }
         if (EsReemplazoValido(args, out int pid))
         {

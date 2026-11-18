@@ -54,6 +54,18 @@ public sealed class ReemplazoLauncherTests : IDisposable
         Assert.Equal("viejo", File.ReadAllText(destino));
     }
 
+    // Si la comprobacion misma se rompe, no se deja un launcher dudoso: se vuelve al anterior.
+    [Fact]
+    public void Reemplazar_SiLaVerificacionLanzaUnaExcepcion_RestauraElAnterior()
+    {
+        File.WriteAllText(destino, "viejo");
+
+        var resultado = Reemplazar(ruta => throw new InvalidOperationException("no pudo comprobarse"));
+
+        Assert.Equal(ResultadoReemplazo.Revertido, resultado);
+        Assert.Equal("viejo", File.ReadAllText(destino));
+    }
+
     // Mientras el launcher viejo siga abierto Windows no deja tocarlo: no se pierde nada.
     [Fact]
     public void Reemplazar_SiElDestinoEstaBloqueado_NoLoToca()

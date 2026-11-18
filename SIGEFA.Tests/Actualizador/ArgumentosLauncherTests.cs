@@ -39,6 +39,15 @@ public class ArgumentosLauncherTests
     }
 
     [Fact]
+    public void Interpretar_BuildLauncher_EsModoMostrarBuild()
+    {
+        var a = ArgumentosLauncher.Interpretar(new[] { "--build-launcher" });
+
+        Assert.Equal(ModoLauncher.MostrarBuild, a.Modo);
+        Assert.Empty(a.ArgumentosSigefa);
+    }
+
+    [Fact]
     public void Interpretar_Reemplazar_LeePidDestinoNuevoYArgumentosDeSigefa()
     {
         var a = ArgumentosLauncher.Interpretar(new[] { "--reemplazar-launcher", "1234", @"C:\L\SIGEFA.Launcher.exe", @"C:\D\nuevo.exe", "--", "--usuario", "ana" });

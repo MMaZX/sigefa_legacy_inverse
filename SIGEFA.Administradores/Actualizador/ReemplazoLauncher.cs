@@ -36,7 +36,7 @@ public static class ReemplazoLauncher
             {
                 return ResultadoReemplazo.NoSePudo;
             }
-            if (verificar(destino))
+            if (Verifica(verificar, destino))
             {
                 return ResultadoReemplazo.Reemplazado;
             }
@@ -50,6 +50,19 @@ public static class ReemplazoLauncher
         finally
         {
             BorrarSiExiste(preparado);
+        }
+    }
+
+    // Si la verificacion misma falla (lanza una excepcion), el nuevo no es de fiar: se trata como "no arranca" y se revierte.
+    private static bool Verifica(Func<string, bool> verificar, string ruta)
+    {
+        try
+        {
+            return verificar(ruta);
+        }
+        catch (Exception)
+        {
+            return false;
         }
     }
 
