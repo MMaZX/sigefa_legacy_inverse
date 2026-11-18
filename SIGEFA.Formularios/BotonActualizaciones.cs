@@ -8,23 +8,26 @@ using SIGEFA.Administradores.Actualizador;
 namespace SIGEFA.Formularios;
 
 // Boton "Buscar Actualizaciones" arriba a la derecha, junto a los botones de la ventana.
-// Cada 3 minutos busca solo. Si hay una version nueva cambia a un color de acento fijo (azul si es opcional, rojo si es
-// obligatoria) con un punto de aviso; no parpadea. Si no hay nada, queda en gris suave.
+// Cada 3 minutos busca solo. Si hay una version nueva se pone naranja (rojo si es obligatoria), con un punto de aviso, y
+// parpadea suavemente entre dos tonos hasta que se actualice. Si no hay nada, queda en gris suave.
 // Al hacer clic busca en el acto o, si ya hay una pendiente, ofrece actualizar.
 internal sealed class BotonActualizaciones : Button
 {
     private const int IntervaloSondeoMs = 180000;
     private const int PrimeraBusquedaMs = 8000;
-    private const int RadioEsquinas = 13;
+    private const int IntervaloParpadeoMs = 650;
+    private const int RadioEsquinas = 8;
     private const int MargenDerecho = 170;
-    private const int MargenSuperior = 3;
+    private const int MargenSuperior = 2;
 
     private readonly System.Windows.Forms.Timer sondeo = new System.Windows.Forms.Timer();
+    private readonly System.Windows.Forms.Timer parpadeo = new System.Windows.Forms.Timer();
     private readonly ToolTip ayuda = new ToolTip();
     private ResultadoConsultaActualizacion ultimo;
     private bool consultando;
     private UrgenciaBotonActualizacion urgencia = UrgenciaBotonActualizacion.Ninguna;
     private bool encima;
+    private bool faseAlerta;
 
     private BotonActualizaciones()
     {
@@ -37,9 +40,15 @@ internal sealed class BotonActualizaciones : Button
         TabStop = false;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        MinimumSize = new Size(160, 28);
+        MinimumSize = new Size(160, 24);
         Padding = new Padding(14, 0, 14, 0);
         sondeo.Interval = PrimeraBusquedaMs;
+        parpadeo.Interval = IntervaloParpadeoMs;
+        parpadeo.Tick += (emisor, e) =>
+        {
+            faseAlerta = !faseAlerta;
+            Invalidate();
+        };
         sondeo.Tick += async (emisor, e) =>
         {
             sondeo.Interval = IntervaloSondeoMs;
@@ -66,7 +75,24 @@ internal sealed class BotonActualizaciones : Button
     protected override void OnSizeChanged(EventArgs e)
     {
         base.OnSizeChanged(e);
+        AplicarForma();
         Reubicar();
+    }
+
+    // El boton recorta su propia forma redondeada: las esquinas dejan ver lo que hay debajo (la barra del ribbon) en vez de
+    // pintarse con un color de fondo que no es el de esa barra.
+    private void AplicarForma()
+    {
+        if (Width <= 0 || Height <= 0)
+        {
+            return;
+        }
+        var anterior = Region;
+        using (var forma = FormaRedondeada(new Rectangle(0, 0, Width, Height), RadioEsquinas))
+        {
+            Region = new Region(forma);
+        }
+        anterior?.Dispose();
     }
 
     protected override void OnMouseEnter(EventArgs e)
@@ -99,6 +125,8 @@ internal sealed class BotonActualizaciones : Button
         if (disposing)
         {
             sondeo.Dispose();
+            parpadeo.Dispose();
+            Region?.Dispose();
             ayuda.Dispose();
         }
         base.Dispose(disposing);
@@ -149,6 +177,15 @@ internal sealed class BotonActualizaciones : Button
         Text = presentacion.Texto;
         ayuda.SetToolTip(this, TextoAyuda(resultado));
         urgencia = presentacion.Urgencia;
+        if (urgencia == UrgenciaBotonActualizacion.Ninguna)
+        {
+            parpadeo.Stop();
+            faseAlerta = false;
+        }
+        else
+        {
+            parpadeo.Start();
+        }
         Reubicar();
         Invalidate();
     }
@@ -157,7 +194,6 @@ internal sealed class BotonActualizaciones : Button
     {
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Parent != null ? Parent.BackColor : SystemColors.Control);
         var area = new Rectangle(0, 0, Width - 1, Height - 1);
         using (var forma = FormaRedondeada(area, RadioEsquinas))
         using (var relleno = new SolidBrush(ColorFondo()))
@@ -183,14 +219,16 @@ internal sealed class BotonActualizaciones : Button
             TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
     }
 
+    // Naranja para una actualizacion pendiente y rojo si es obligatoria: ninguno se parece al azul de la barra.
+    // Con aviso, alterna entre dos tonos cercanos (suave, sin pasar de un color a otro opuesto).
     private Color ColorFondo()
     {
         switch (urgencia)
         {
             case UrgenciaBotonActualizacion.Obligatoria:
-                return encima ? Color.FromArgb(198, 40, 40) : Color.FromArgb(211, 47, 47);
+                return faseAlerta ? Color.FromArgb(183, 28, 28) : Color.FromArgb(229, 57, 53);
             case UrgenciaBotonActualizacion.Aviso:
-                return encima ? Color.FromArgb(21, 101, 192) : Color.FromArgb(30, 136, 229);
+                return faseAlerta ? Color.FromArgb(239, 108, 0) : Color.FromArgb(255, 167, 38);
             default:
                 return encima ? Color.FromArgb(222, 228, 240) : Color.FromArgb(236, 240, 248);
         }
@@ -201,9 +239,9 @@ internal sealed class BotonActualizaciones : Button
         switch (urgencia)
         {
             case UrgenciaBotonActualizacion.Obligatoria:
-                return Color.FromArgb(183, 28, 28);
+                return Color.FromArgb(127, 0, 0);
             case UrgenciaBotonActualizacion.Aviso:
-                return Color.FromArgb(13, 71, 161);
+                return Color.FromArgb(191, 80, 0);
             default:
                 return Color.FromArgb(190, 198, 214);
         }
@@ -211,7 +249,15 @@ internal sealed class BotonActualizaciones : Button
 
     private Color ColorTexto()
     {
-        return urgencia == UrgenciaBotonActualizacion.Ninguna ? Color.FromArgb(55, 65, 85) : Color.White;
+        switch (urgencia)
+        {
+            case UrgenciaBotonActualizacion.Obligatoria:
+                return Color.White;
+            case UrgenciaBotonActualizacion.Aviso:
+                return Color.FromArgb(33, 33, 33);
+            default:
+                return Color.FromArgb(55, 65, 85);
+        }
     }
 
     private static GraphicsPath FormaRedondeada(Rectangle area, int radio)

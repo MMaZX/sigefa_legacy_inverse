@@ -42,7 +42,7 @@ commit nuevo despues de publicar, el numero sube igual. El servidor manda: si ot
 mayor, `publicar.ps1` alinea el contador con `latest.manifest`, se detiene y hay que **compilar de nuevo**. Para empezar
 en una PC nueva basta con ejecutar `publicar.ps1` una vez (falla y alinea) o crear el archivo con `<build>|x|servidor`.
 
-Por defecto, las PCs reciben el aviso (boton **"Buscar Actualizaciones"** arriba a la derecha, azul con un punto de aviso; rojo si es obligatoria) pero pueden
+Por defecto, las PCs reciben el aviso (boton **"Buscar Actualizaciones"** arriba a la derecha, naranja y parpadeando suave; rojo si es obligatoria) pero pueden
 seguir trabajando. `-Obligatoria` (o `-MinBuild <n>`) ademas **no deja iniciar sesion** a las PCs con un build menor:
 usalo cuando la version nueva cambia algo que el sistema viejo no puede convivir (por ejemplo, la base de datos).
 

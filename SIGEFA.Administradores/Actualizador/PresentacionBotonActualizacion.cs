@@ -1,6 +1,6 @@
 namespace SIGEFA.Administradores.Actualizador;
 
-// Nivel de aviso del boton: decide el color de acento, nunca un parpadeo.
+// Nivel de aviso del boton: decide el color (naranja para un aviso, rojo si es obligatoria) y si parpadea.
 public enum UrgenciaBotonActualizacion
 {
     Ninguna,
@@ -21,7 +21,7 @@ public sealed class PresentacionBotonActualizacion
 
     public string Texto { get; }
 
-    // Con una actualizacion pendiente el boton cambia a un color de acento fijo (sin parpadear) hasta que se actualice.
+    // Con una actualizacion pendiente el boton se pone de color y parpadea suavemente hasta que se actualice.
     public UrgenciaBotonActualizacion Urgencia { get; }
 
     public static PresentacionBotonActualizacion Para(EstadoActualizacion estado, int buildNueva)
