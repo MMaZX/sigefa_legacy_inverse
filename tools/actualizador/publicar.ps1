@@ -7,8 +7,8 @@
   SHA256 y escribe latest.manifest AL FINAL (asi ninguna PC lee la ficha antes de que el zip este completo).
 
   Protecciones:
-  - Usa como numero de build el que quedo compilado dentro de SIGEFA.exe (obj\<config>\...\VersionCompilacion.g.cs).
-    Si pasas -Build y no coincide, se detiene: el aviso de "hay version nueva" compara ese numero.
+  - Usa como numero de build el que quedo compilado DENTRO de SIGEFA.exe (se lee del propio exe, no de obj).
+    Si pasas -Build y no coincide, se detiene (tampoco -Forzar lo salta): el aviso de "hay version nueva" compara ese numero.
   - No publica un build menor o igual al que ya esta en el servidor (salvo -Forzar).
   - Lleva un contador persistente (contador-build.txt, junto a este script, fuera de git): historial de builds
     publicados. SIGEFA.csproj compila max(ultimo + 1, commits), asi recompilar sin commit nuevo no repite el numero.
@@ -35,7 +35,7 @@ param(
     [Parameter(Mandatory)][string]$Origen,
     # Carpeta del servidor que leen los clientes.
     [Parameter(Mandatory)][string]$Servidor,
-    # Numero de build. Si no lo indicas, se toma el compilado dentro de SIGEFA.exe.
+    # Numero de build. Opcional: si lo indicas debe coincidir con el compilado dentro de SIGEFA.exe (solo sirve para comprobar).
     [int]$Build = 0,
     # Build minimo que puede iniciar sesion (0 = ninguno obligatorio).
     [int]$MinBuild = 0,
@@ -51,7 +51,7 @@ param(
     [string]$PasswordBd = '',
     # Puerto de MySQL; solo se aplica cuando se indica -HostBd.
     [int]$PuertoBd = 3306,
-    # Salta las protecciones de numero de build y de cambios sin commitear.
+    # Salta las protecciones de "no retroceder" y de cambios sin commitear (nunca la coincidencia con el build del exe).
     [switch]$Forzar
 )
 
@@ -102,21 +102,23 @@ function Registrar-Contador([int]$numero, [string]$origen) {
     return $true
 }
 
-# Lee lo que MSBuild dejo compilado dentro de SIGEFA.exe para la configuracion indicada (Release, Debug...).
-function Leer-Compilacion([string]$configuracion) {
-    $carpetaObj = Join-Path $raiz 'obj'
-    if (-not (Test-Path $carpetaObj)) { return $null }
-    $archivo = Get-ChildItem $carpetaObj -Recurse -Filter 'VersionCompilacion.g.cs' -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -match ('\\' + [regex]::Escape($configuracion) + '\\') } |
-        Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if (-not $archivo) { return $null }
-    $texto = Get-Content $archivo.FullName -Raw
-    $b = [regex]::Match($texto, 'Build = (\d+);')
-    [pscustomobject]@{
-        Build      = $(if ($b.Success) { [int]$b.Groups[1].Value } else { 0 })
-        Commit     = [regex]::Match($texto, 'Commit = "([^"]*)"').Groups[1].Value
-        ConCambios = ($texto -match 'ConCambiosLocales = true')
+# Lee lo que quedo compilado DENTRO de SIGEFA.exe (VersionCompilacion). No se lee el archivo de obj: si el exe no se
+# regenero (por ejemplo, estaba abierto al compilar) obj dice un numero y el exe otro, y las PCs avisarian
+# "hay version nueva" para siempre.
+function Leer-Compilacion([string]$exe) {
+    try {
+        # Se carga desde bytes: no bloquea el archivo ni deja copias temporales.
+        $ensamblado = [Reflection.Assembly]::ReflectionOnlyLoad([IO.File]::ReadAllBytes($exe))
+        $tipo = $ensamblado.GetType('SIGEFA.Administradores.VersionApp.VersionCompilacion')
+        if (-not $tipo) { return $null }
+        $valor = { param($nombre) $campo = $tipo.GetField($nombre); if ($campo) { $campo.GetRawConstantValue() } else { $null } }
+        [pscustomobject]@{
+            Build      = [int](& $valor 'Build')
+            Commit     = [string](& $valor 'Commit')
+            ConCambios = [bool](& $valor 'ConCambiosLocales')
+        }
     }
+    catch { return $null }
 }
 
 # --- 0) Conexion a inyectar: los tres datos juntos y sin caracteres que rompan la cadena
@@ -132,19 +134,18 @@ $Origen = (Resolve-Path $Origen).Path
 if (-not (Test-Path (Join-Path $Origen 'SIGEFA.exe'))) {
     throw "No encontre SIGEFA.exe en '$Origen'. Indica la carpeta de salida de la compilacion (por ejemplo bin\Release\net461)."
 }
-$configuracion = Split-Path (Split-Path $Origen -Parent) -Leaf
-$compilado = Leer-Compilacion $configuracion
+$compilado = Leer-Compilacion (Join-Path $Origen 'SIGEFA.exe')
 
-# --- 2) Numero de build
-if ($Build -le 0) {
-    if (-not $compilado -or $compilado.Build -le 0) {
-        throw 'No pude saber el numero de build. Compila desde un checkout con git (o indica -Build y -Forzar).'
-    }
-    $Build = $compilado.Build
+# --- 2) Numero de build: siempre el que lleva SIGEFA.exe por dentro. Si no se puede leer, no se publica (ni con -Forzar):
+#        sin saberlo, el zip podria llevar un exe de otro build.
+if (-not $compilado -or $compilado.Build -le 0) {
+    throw 'No pude leer el numero de build compilado dentro de SIGEFA.exe (sin git, o el exe no es de esta version). Compila de nuevo desde un checkout con git.'
 }
-elseif ($compilado -and $compilado.Build -gt 0 -and $compilado.Build -ne $Build -and -not $Forzar) {
-    throw "-Build $Build no coincide con el build compilado dentro de SIGEFA.exe ($($compilado.Build)). Quita -Build o usa -Forzar."
+if ($Build -gt 0 -and $Build -ne $compilado.Build) {
+    # Ni siquiera -Forzar lo permite: el zip llevaria un exe que se cree de otro build y las PCs avisarian actualizacion para siempre.
+    throw "-Build $Build no coincide con el build compilado dentro de SIGEFA.exe ($($compilado.Build)). Quita -Build y, si hace falta otro numero, compila de nuevo."
 }
+$Build = $compilado.Build
 if ($compilado -and $compilado.ConCambios -and -not $Forzar) {
     throw 'SIGEFA.exe se compilo con cambios sin commitear: no se puede saber que codigo contiene. Haz commit y compila de nuevo (o usa -Forzar).'
 }
