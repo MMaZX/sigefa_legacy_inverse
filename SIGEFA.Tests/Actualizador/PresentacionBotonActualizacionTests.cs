@@ -7,29 +7,29 @@ namespace SIGEFA.Tests.Actualizador;
 public class PresentacionBotonActualizacionTests
 {
     [Fact]
-    public void Para_AlDia_MuestraBuscarActualizacionesYNoParpadea()
+    public void Para_AlDia_MuestraBuscarActualizacionesSinAviso()
     {
         var p = PresentacionBotonActualizacion.Para(EstadoActualizacion.AlDia, 0);
 
         Assert.Equal("Buscar Actualizaciones", p.Texto);
-        Assert.False(p.Parpadea);
+        Assert.Equal(UrgenciaBotonActualizacion.Ninguna, p.Urgencia);
     }
 
     [Fact]
-    public void Para_Disponible_AvisaLaBuildPendienteYParpadea()
+    public void Para_Disponible_AvisaLaBuildPendienteConAcentoDeAviso()
     {
         var p = PresentacionBotonActualizacion.Para(EstadoActualizacion.Disponible, 245);
 
         Assert.Equal("¡Tienes una actualización pendiente a la build 245!", p.Texto);
-        Assert.True(p.Parpadea);
+        Assert.Equal(UrgenciaBotonActualizacion.Aviso, p.Urgencia);
     }
 
     [Fact]
-    public void Para_Obligatoria_LoDiceEnMayusculasYParpadea()
+    public void Para_Obligatoria_LoDiceEnMayusculasConAcentoObligatorio()
     {
         var p = PresentacionBotonActualizacion.Para(EstadoActualizacion.Obligatoria, 245);
 
         Assert.Equal("¡ACTUALIZACIÓN OBLIGATORIA: build 245!", p.Texto);
-        Assert.True(p.Parpadea);
+        Assert.Equal(UrgenciaBotonActualizacion.Obligatoria, p.Urgencia);
     }
 }

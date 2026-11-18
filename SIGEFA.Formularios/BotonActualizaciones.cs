@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SIGEFA.Administradores.Actualizador;
@@ -7,43 +8,43 @@ using SIGEFA.Administradores.Actualizador;
 namespace SIGEFA.Formularios;
 
 // Boton "Buscar Actualizaciones" arriba a la derecha, junto a los botones de la ventana.
-// Cada 3 minutos busca solo. Si hay una version nueva se pone rojo/amarillo y parpadea hasta que se actualice;
-// si no hay nada, no muestra nada. Al hacer clic busca en el acto o, si ya hay una pendiente, ofrece actualizar.
+// Cada 3 minutos busca solo. Si hay una version nueva cambia a un color de acento fijo (azul si es opcional, rojo si es
+// obligatoria) con un punto de aviso; no parpadea. Si no hay nada, queda en gris suave.
+// Al hacer clic busca en el acto o, si ya hay una pendiente, ofrece actualizar.
 internal sealed class BotonActualizaciones : Button
 {
     private const int IntervaloSondeoMs = 180000;
     private const int PrimeraBusquedaMs = 8000;
-    private const int IntervaloParpadeoMs = 500;
+    private const int RadioEsquinas = 13;
     private const int MargenDerecho = 170;
     private const int MargenSuperior = 3;
 
     private readonly System.Windows.Forms.Timer sondeo = new System.Windows.Forms.Timer();
-    private readonly System.Windows.Forms.Timer parpadeo = new System.Windows.Forms.Timer();
     private readonly ToolTip ayuda = new ToolTip();
     private ResultadoConsultaActualizacion ultimo;
     private bool consultando;
-    private bool faseAlerta;
+    private UrgenciaBotonActualizacion urgencia = UrgenciaBotonActualizacion.Ninguna;
+    private bool encima;
 
     private BotonActualizaciones()
     {
         Text = PresentacionBotonActualizacion.TextoNormal;
         Font = new Font("Segoe UI", 9f, FontStyle.Bold);
         FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
         Cursor = Cursors.Hand;
         TabStop = false;
         AutoSize = true;
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        MinimumSize = new Size(160, 26);
-        Padding = new Padding(8, 0, 8, 0);
-        AspectoNormal();
+        MinimumSize = new Size(160, 28);
+        Padding = new Padding(14, 0, 14, 0);
         sondeo.Interval = PrimeraBusquedaMs;
         sondeo.Tick += async (emisor, e) =>
         {
             sondeo.Interval = IntervaloSondeoMs;
             await BuscarAsync(false);
         };
-        parpadeo.Interval = IntervaloParpadeoMs;
-        parpadeo.Tick += (emisor, e) => AlternarAlerta();
     }
 
     // Lo deja instalado sobre la ventana principal. Si SIGEFA no fue instalado por el launcher no hace nada.
@@ -68,6 +69,20 @@ internal sealed class BotonActualizaciones : Button
         Reubicar();
     }
 
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        base.OnMouseEnter(e);
+        encima = true;
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        encima = false;
+        Invalidate();
+    }
+
     protected override void OnClick(EventArgs e)
     {
         base.OnClick(e);
@@ -84,7 +99,6 @@ internal sealed class BotonActualizaciones : Button
         if (disposing)
         {
             sondeo.Dispose();
-            parpadeo.Dispose();
             ayuda.Dispose();
         }
         base.Dispose(disposing);
@@ -134,32 +148,82 @@ internal sealed class BotonActualizaciones : Button
         var presentacion = PresentacionBotonActualizacion.Para(resultado.Estado, buildNueva);
         Text = presentacion.Texto;
         ayuda.SetToolTip(this, TextoAyuda(resultado));
-        if (presentacion.Parpadea)
-        {
-            parpadeo.Start();
-            AlternarAlerta();
-        }
-        else
-        {
-            parpadeo.Stop();
-            AspectoNormal();
-        }
+        urgencia = presentacion.Urgencia;
         Reubicar();
+        Invalidate();
     }
 
-    private void AlternarAlerta()
+    protected override void OnPaint(PaintEventArgs e)
     {
-        faseAlerta = !faseAlerta;
-        BackColor = faseAlerta ? Color.Red : Color.Gold;
-        ForeColor = faseAlerta ? Color.White : Color.Black;
-        FlatAppearance.BorderColor = Color.DarkRed;
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(Parent != null ? Parent.BackColor : SystemColors.Control);
+        var area = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (var forma = FormaRedondeada(area, RadioEsquinas))
+        using (var relleno = new SolidBrush(ColorFondo()))
+        using (var borde = new Pen(ColorBorde()))
+        {
+            g.FillPath(relleno, forma);
+            g.DrawPath(borde, forma);
+        }
+        var colorTexto = ColorTexto();
+        int izquierda = Padding.Left;
+        if (urgencia != UrgenciaBotonActualizacion.Ninguna)
+        {
+            // Punto de aviso fijo a la izquierda del texto.
+            int d = 8;
+            using (var punto = new SolidBrush(colorTexto))
+            {
+                g.FillEllipse(punto, Padding.Left - 4, (Height - d) / 2, d, d);
+            }
+            izquierda += d;
+        }
+        var zonaTexto = new Rectangle(izquierda, 0, Math.Max(0, Width - izquierda - Padding.Right), Height);
+        TextRenderer.DrawText(g, Text, Font, zonaTexto, colorTexto,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
     }
 
-    private void AspectoNormal()
+    private Color ColorFondo()
     {
-        BackColor = Color.FromArgb(236, 240, 248);
-        ForeColor = Color.FromArgb(40, 40, 40);
-        FlatAppearance.BorderColor = Color.FromArgb(150, 160, 180);
+        switch (urgencia)
+        {
+            case UrgenciaBotonActualizacion.Obligatoria:
+                return encima ? Color.FromArgb(198, 40, 40) : Color.FromArgb(211, 47, 47);
+            case UrgenciaBotonActualizacion.Aviso:
+                return encima ? Color.FromArgb(21, 101, 192) : Color.FromArgb(30, 136, 229);
+            default:
+                return encima ? Color.FromArgb(222, 228, 240) : Color.FromArgb(236, 240, 248);
+        }
+    }
+
+    private Color ColorBorde()
+    {
+        switch (urgencia)
+        {
+            case UrgenciaBotonActualizacion.Obligatoria:
+                return Color.FromArgb(183, 28, 28);
+            case UrgenciaBotonActualizacion.Aviso:
+                return Color.FromArgb(13, 71, 161);
+            default:
+                return Color.FromArgb(190, 198, 214);
+        }
+    }
+
+    private Color ColorTexto()
+    {
+        return urgencia == UrgenciaBotonActualizacion.Ninguna ? Color.FromArgb(55, 65, 85) : Color.White;
+    }
+
+    private static GraphicsPath FormaRedondeada(Rectangle area, int radio)
+    {
+        int d = Math.Min(radio * 2, Math.Min(area.Width, area.Height));
+        var camino = new GraphicsPath();
+        camino.AddArc(area.X, area.Y, d, d, 180, 90);
+        camino.AddArc(area.Right - d, area.Y, d, d, 270, 90);
+        camino.AddArc(area.Right - d, area.Bottom - d, d, d, 0, 90);
+        camino.AddArc(area.X, area.Bottom - d, d, d, 90, 90);
+        camino.CloseFigure();
+        return camino;
     }
 
     private static string TextoAyuda(ResultadoConsultaActualizacion resultado)
