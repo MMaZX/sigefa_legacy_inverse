@@ -502,6 +502,8 @@
     <Reference Include="WinApp.Servicio.Soap">
       <HintPath>..\Debug_gr\WinApp.Servicio.Soap.dll</HintPath>
     </Reference>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Net.Http">
       <HintPath>..\Debug_gr\System.Net.Http.dll</HintPath>
     </Reference>
