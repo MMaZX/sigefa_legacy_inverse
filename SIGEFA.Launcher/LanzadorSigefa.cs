@@ -17,13 +17,19 @@ internal static class LanzadorSigefa
         {
             WorkingDirectory = Path.GetDirectoryName(exe),
             UseShellExecute = false,
-            Arguments = string.Join(" ", argumentos.Select(Entrecomillar))
+            Arguments = Unir(argumentos)
         };
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(RutaDocumentos.VariableEntorno)))
         {
             inicio.EnvironmentVariables[RutaDocumentos.VariableEntorno] = carpetaDocumentos;
         }
         Process.Start(inicio);
+    }
+
+    // Une argumentos para una linea de comandos (cada uno entre comillas).
+    public static string Unir(string[] argumentos)
+    {
+        return string.Join(" ", argumentos.Select(Entrecomillar));
     }
 
     private static string Entrecomillar(string argumento)

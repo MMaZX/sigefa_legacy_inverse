@@ -20,4 +20,30 @@
     <Compile Include="..\SIGEFA.Administradores\Actualizador\*.cs" Link="Actualizador\%(Filename)%(Extension)" />
     <Compile Include="..\SIGEFA.Administradores\RutasSistema\*.cs" Link="RutasSistema\%(Filename)%(Extension)" />
   </ItemGroup>
+  <!-- Build propio del launcher, para que pueda actualizarse solo. Se toma del contador que escribe publicar-launcher.ps1
+       (tools\actualizador\contador-launcher.txt, ignorado por git): ultimo publicado + 1, o 1 si no hay archivo.
+       Cada linea del contador es "build|fecha|origen" y la ultima es la mas alta. -->
+  <Target Name="GenerarVersionLauncher" BeforeTargets="BeforeCompile">
+    <PropertyGroup>
+      <LauncherContadorArchivo>$(MSBuildProjectDirectory)\..\tools\actualizador\contador-launcher.txt</LauncherContadorArchivo>
+      <LauncherContadorTexto Condition="Exists('$(LauncherContadorArchivo)')">$([System.IO.File]::ReadAllText('$(LauncherContadorArchivo)'))</LauncherContadorTexto>
+      <LauncherContadorUltimo Condition="'$(LauncherContadorTexto)' != ''">$([System.Text.RegularExpressions.Regex]::Replace('$(LauncherContadorTexto)', '(?s)^.*(?:^|\n)\s*(\d+)\|[^\n]*\s*$', '$1'))</LauncherContadorUltimo>
+      <LauncherContadorUltimo Condition="'$(LauncherContadorUltimo)' == '' Or !$([System.Text.RegularExpressions.Regex]::IsMatch('$(LauncherContadorUltimo)', '^\d+$'))">0</LauncherContadorUltimo>
+      <LauncherBuild>$([MSBuild]::Add($(LauncherContadorUltimo), 1))</LauncherBuild>
+      <LauncherVersionArchivo>$(IntermediateOutputPath)VersionLauncher.g.cs</LauncherVersionArchivo>
+    </PropertyGroup>
+    <ItemGroup>
+      <LauncherVersionLinea Include="// Generado al compilar por el target GenerarVersionLauncher de SIGEFA.Launcher.csproj. No editar." />
+      <LauncherVersionLinea Include="namespace SIGEFA.Launcher%3B" />
+      <LauncherVersionLinea Include="internal static class VersionLauncher" />
+      <LauncherVersionLinea Include="{" />
+      <LauncherVersionLinea Include="    public const int Build = $(LauncherBuild)%3B" />
+      <LauncherVersionLinea Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(LauncherVersionArchivo)" Lines="@(LauncherVersionLinea)" Overwrite="true" />
+    <ItemGroup>
+      <Compile Include="$(LauncherVersionArchivo)" />
+      <FileWrites Include="$(LauncherVersionArchivo)" />
+    </ItemGroup>
+  </Target>
 </Project>

@@ -60,6 +60,23 @@ powershell -ExecutionPolicy Bypass -File "\\192.168.1.3\sgesystem\SISTEMA\actual
 Crea un acceso directo **"SIGEFA (launcher)"** en el escritorio y **no toca el acceso directo anterior**.
 Cuando confirmes que funciona, retiras el viejo.
 
+## El launcher tambien se actualiza solo
+
+Cada vez que se abre, el launcher compara su build con `launcher.manifest` del servidor. Si hay uno mas nuevo:
+
+1. Baja `SIGEFA.Launcher-<build>.zip`, comprueba su sha256 y que el exe nuevo arranca (`--verificar-launcher`).
+2. Se lanza una copia de si mismo desde `%TEMP%`, que espera a que el original se cierre, cambia el exe instalado
+   (guarda el anterior como `SIGEFA.Launcher.exe.anterior`) y comprueba que el nuevo arranca; si no, restaura el anterior.
+3. Abre el launcher ya actualizado, que sigue con SIGEFA como siempre.
+
+Todo falla hacia "abrir SIGEFA igual": servidor caido, sha256 distinto o reemplazo imposible dejan el launcher que ya habia.
+Para publicar un launcher nuevo: compila `SIGEFA.Launcher` en **Release** y corre `publicar-launcher.ps1` (el mismo comando
+de arriba). Tiene su propio contador (`contador-launcher.txt`, fuera de git) y el servidor manda, igual que con SIGEFA.
+
+**Importante:** el launcher que repartas por primera vez ya debe traer esta funcion; uno anterior no puede actualizarse
+solo y habria que reinstalarlo a mano en cada PC. Y un launcher roto es el peor caso (ninguna PC puede arreglarlo sola):
+pruebalo en una PC antes de publicarlo.
+
 ## Donde queda todo en cada PC
 
 ```
