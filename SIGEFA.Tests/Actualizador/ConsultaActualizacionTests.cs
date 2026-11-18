@@ -89,6 +89,25 @@ public class ConsultaActualizacionTests : IDisposable
         Assert.Equal(EstadoActualizacion.AlDia, ConsultaActualizacion.Consultar(servidor, 0, Espera).Estado);
     }
 
+    // Solo la actualizacion obligatoria impide iniciar sesion; una simplemente disponible no.
+    [Fact]
+    public void BloqueaInicioDeSesion_SoloSiEsObligatoria()
+    {
+        Publicar(245, 245);
+        Assert.True(ConsultaActualizacion.Consultar(servidor, 244, Espera).BloqueaInicioDeSesion);
+
+        Publicar(245, 240);
+        Assert.False(ConsultaActualizacion.Consultar(servidor, 244, Espera).BloqueaInicioDeSesion);
+
+        Assert.False(ConsultaActualizacion.Consultar(servidor, 245, Espera).BloqueaInicioDeSesion);
+    }
+
+    [Fact]
+    public void BloqueaInicioDeSesion_SinConsulta_NoBloquea()
+    {
+        Assert.False(ResultadoConsultaActualizacion.SinConsulta(244, "servidor caido").BloqueaInicioDeSesion);
+    }
+
     [Fact]
     public void SinConsulta_EsAlDiaConMotivo()
     {

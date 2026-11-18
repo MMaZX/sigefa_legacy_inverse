@@ -26,6 +26,12 @@ public sealed class ResultadoConsultaActualizacion
         get { return Manifiesto != null; }
     }
 
+    // El servidor exige un build mayor al de este SIGEFA: no puede iniciar sesion hasta actualizar.
+    public bool BloqueaInicioDeSesion
+    {
+        get { return Estado == EstadoActualizacion.Obligatoria; }
+    }
+
     // No se pudo consultar: se trata como "al dia" para no molestar ni bloquear a nadie.
     public static ResultadoConsultaActualizacion SinConsulta(int buildLocal, string motivo)
     {
