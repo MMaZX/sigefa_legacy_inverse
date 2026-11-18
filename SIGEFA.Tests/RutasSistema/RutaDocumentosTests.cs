@@ -41,6 +41,32 @@ public class RutaDocumentosTests
         Assert.Equal(Path.Combine(Base, "comprobantes"), RutaDocumentos.Resolver("comprobantes", Base));
     }
 
+    // El launcher fija esta variable para que los comprobantes no queden dentro de la carpeta de una version.
+    [Fact]
+    public void Resolver_SinClave_UsaLaVariableDeEntorno()
+    {
+        string estable = Path.Combine(Path.GetTempPath(), "sigefa_estable");
+
+        Assert.Equal(estable, RutaDocumentos.Resolver(null, estable, Base));
+    }
+
+    [Fact]
+    public void Resolver_ConClaveYEntorno_GanaLaClave()
+    {
+        string clave = Path.Combine(Path.GetTempPath(), "servidor");
+        string entorno = Path.Combine(Path.GetTempPath(), "estable");
+
+        Assert.Equal(clave, RutaDocumentos.Resolver(clave, entorno, Base));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("  ")]
+    public void Resolver_ConEntornoVacio_UsaDocumentosJuntoAlEjecutable(string entorno)
+    {
+        Assert.Equal(Path.Combine(Base, "documentos"), RutaDocumentos.Resolver(null, entorno, Base));
+    }
+
     [Fact]
     public void Resolver_ConEspaciosAlrededor_LosIgnora()
     {

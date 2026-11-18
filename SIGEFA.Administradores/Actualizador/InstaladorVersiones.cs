@@ -149,6 +149,12 @@ public sealed class InstaladorVersiones
         foreach (int build in ListarBuilds().Where(b => b != buildActivo && !conservar.Contains(b)))
         {
             string carpeta = CarpetaVersion(build);
+            if (TieneDocumentos(carpeta))
+            {
+                // Comprobantes electronicos dentro de la version: borrarla los perderia. Se deja y se informa.
+                noEliminadas.Add(carpeta);
+                continue;
+            }
             try
             {
                 Directory.Delete(carpeta, true);
@@ -163,6 +169,13 @@ public sealed class InstaladorVersiones
             }
         }
         return noEliminadas;
+    }
+
+    // Hay archivos en <version>\documentos (donde SIGEFA guarda XML, CDR y PDF si no se configuro otra carpeta).
+    private static bool TieneDocumentos(string carpetaVersion)
+    {
+        string documentos = Path.Combine(carpetaVersion, "documentos");
+        return Directory.Exists(documentos) && Directory.EnumerateFiles(documentos, "*", SearchOption.AllDirectories).Any();
     }
 
     private List<int> ListarBuilds()

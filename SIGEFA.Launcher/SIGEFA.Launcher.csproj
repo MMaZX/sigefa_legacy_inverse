@@ -18,5 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\SIGEFA.Administradores\Actualizador\*.cs" Link="Actualizador\%(Filename)%(Extension)" />
+    <Compile Include="..\SIGEFA.Administradores\RutasSistema\*.cs" Link="RutasSistema\%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

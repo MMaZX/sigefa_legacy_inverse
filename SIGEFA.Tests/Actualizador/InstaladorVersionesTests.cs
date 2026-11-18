@@ -175,6 +175,42 @@ public class InstaladorVersionesTests : IDisposable
         Assert.True(Directory.Exists(Path.Combine(raiz, "versions", "9")));
     }
 
+    // Los comprobantes electronicos nunca deben perderse al limpiar versiones viejas.
+    [Fact]
+    public void Instalar_NoBorraUnaVersionVieja_QueTieneComprobantesDentro()
+    {
+        var v7 = PaqueteValido(7);
+        var v8 = PaqueteValido(8);
+        var v9 = PaqueteValido(9);
+        instalador.Instalar(v7.Manifiesto, v7.Zip);
+        string comprobante = Path.Combine(raiz, "versions", "7", "documentos", "CDR", "R-001.zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(comprobante));
+        File.WriteAllText(comprobante, "comprobante");
+        instalador.Instalar(v8.Manifiesto, v8.Zip);
+
+        var resultado = instalador.Instalar(v9.Manifiesto, v9.Zip);
+
+        Assert.True(File.Exists(comprobante));
+        Assert.Contains(Path.Combine(raiz, "versions", "7"), resultado.VersionesNoEliminadas);
+    }
+
+    // SIGEFA crea las carpetas de documentos vacias al arrancar: eso solo no impide limpiar la version.
+    [Fact]
+    public void Instalar_BorraUnaVersionVieja_CuyaCarpetaDocumentosEstaVacia()
+    {
+        var v7 = PaqueteValido(7);
+        var v8 = PaqueteValido(8);
+        var v9 = PaqueteValido(9);
+        instalador.Instalar(v7.Manifiesto, v7.Zip);
+        Directory.CreateDirectory(Path.Combine(raiz, "versions", "7", "documentos", "CDR"));
+        instalador.Instalar(v8.Manifiesto, v8.Zip);
+
+        var resultado = instalador.Instalar(v9.Manifiesto, v9.Zip);
+
+        Assert.False(Directory.Exists(Path.Combine(raiz, "versions", "7")));
+        Assert.Empty(resultado.VersionesNoEliminadas);
+    }
+
     [Fact]
     public void Instalar_MismoBuildDeNuevo_Reemplaza()
     {

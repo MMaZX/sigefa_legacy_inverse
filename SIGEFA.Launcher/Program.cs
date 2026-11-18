@@ -70,7 +70,7 @@ internal static class Program
         {
             return Avisar("No se pudo instalar SIGEFA.\n\n" + errorActualizacion, 1);
         }
-        LanzadorSigefa.Lanzar(exe, args);
+        LanzadorSigefa.Lanzar(exe, args, Path.Combine(config.CarpetaInstalacion, "documentos"));
         return 0;
     }
 
