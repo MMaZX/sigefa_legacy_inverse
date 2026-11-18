@@ -23,9 +23,9 @@ Supuestos (no pedidos por el usuario, a confirmar si cambian el alcance):
 
 ## Tasks
 
-- [ ] T0 (A5) RutaDocumentos configurable (`RutaDocumentos`), mismo comportamiento por defecto. Route: inline. Escrita, sin verificar en compilador. Commit: ver Log L5.
-- [ ] T1 (S1,S2,A1) Dominio puro: leer manifiesto, comparar builds, decidir si hay/obliga actualizar, verificar SHA256. Route: inline. Commit f966326. Compilo en la VM (Debug/AnyCPU, por el usuario); pruebas pendientes de confirmar.
-- [ ] T2 (A1) Numero de build en `VersionCompilacion` (target de MSBuild). Route: inline. Commit b48a7ca. Compilo en la VM; sin git en el snapshot el build queda en 0 (esperado).
+- [x] T0 (A5) RutaDocumentos configurable (`RutaDocumentos`), mismo comportamiento por defecto. Route: inline. Commit 4502a9c. Verificada en la VM por el usuario (compila, pruebas pasaron).
+- [x] T1 (S1,S2,A1) Dominio puro: leer manifiesto, comparar builds, decidir si hay/obliga actualizar, verificar SHA256. Route: inline. Commit f966326. Verificada en la VM por el usuario (VS, Debug/AnyCPU, 4502a9c): compila y las pruebas pasaron.
+- [x] T2 (A1) Numero de build en `VersionCompilacion` (target de MSBuild). Route: inline. Commit b48a7ca. Verificada en la VM por el usuario (4502a9c, repo con .git).
 - [ ] T3 (S4,A2) Instalador por versiones: descargar zip, verificar, extraer, puntero `current`, rollback. Route: inline.
 - [ ] T4 (S4) Proyecto `SIGEFA.Launcher` (net461, sin dependencias) y su acceso directo. Route: inline.
 - [ ] T5 (S2,S3,A3) Polling cada 3 min en `mdi_Menu` y barra superior "Actualizar cliente SIGEFA". Route: inline.
@@ -41,3 +41,4 @@ Supuestos (no pedidos por el usuario, a confirmar si cambian el alcance):
 - L3: pendiente de verificar en el share real: contenido, tamaño del paquete, "Iniciar en" del acceso directo, Crystal runtime en las PCs.
 - L4 (2026-11-18): decisiones de T1. El manifiesto es texto `clave=valor` (no JSON): el launcher no necesita dependencias y el parseo es determinista para firmarlo despues (A6). `archivo` solo acepta el nombre de un `.zip` sin ruta (evita escribir fuera de la carpeta). Un build local <= 0 (sin git) nunca se avisa ni se bloquea. RED no observado: tests y codigo se escribieron juntos.
 - L5 (2026-11-18): T0. `RutaDocumentos.Raiz` lee la clave `RutaDocumentos` de app.config; sin ella usa `documentos` junto al exe (antes `Program.Carpeta*` usaba `./documentos` relativo al cwd y `Facturacion` el directorio base; coinciden mientras el cwd sea la carpeta del exe, que es lo que ya exige el codigo actual al mezclar ambos). Se reemplazaron 14 rutas directas (Facturacion 10, frmEnvioSunat, frmResumenDiario, frmVentas 2) y las 7 propiedades de `Program`. No se tocaron: la carpeta de logs de `VentaCierreServiceConBitacora` (SIGEFA_LOGS) ni el manejo de errores de `Program.Main`. Riesgo: si la clave apunta a un share caido, `Directory.CreateDirectory` en `Main` falla al arrancar; por defecto (sin clave) no cambia nada.
+- L6 (2026-11-18, usuario): "ya compile ahora que hago? los test si pasaron". Verificado en la VM sobre `4502a9c` (repo `C:\Users\qemu\Documents\sigefa_legacy`, rama `feat/actualizador-versiones`). El usuario no informo los totales de pruebas. Nota: un build anterior del usuario corrio sobre la rama vieja `feat/venta-servicios-sin-stock` (334f59e), no sobre este codigo.
