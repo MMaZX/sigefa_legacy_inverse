@@ -42,6 +42,10 @@
   <ItemGroup>
     <Compile Include="..\SIGEFA.Administradores\Actualizador\*.cs" Link="Actualizador\%(Filename)%(Extension)" />
   </ItemGroup>
+  <!-- Carpeta de comprobantes electronicos (RutaDocumentos de app.config) -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\RutasSistema\*.cs" Link="RutasSistema\%(Filename)%(Extension)" />
+  </ItemGroup>
   <!-- Texto de version del login -->
   <ItemGroup>
     <Compile Include="..\SIGEFA.Administradores\VersionApp\*.cs" Link="VersionApp\%(Filename)%(Extension)" />

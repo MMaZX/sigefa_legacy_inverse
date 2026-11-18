@@ -23,9 +23,9 @@ Supuestos (no pedidos por el usuario, a confirmar si cambian el alcance):
 
 ## Tasks
 
-- [ ] T0 (A5) RutaDocumentos configurable (`RutasSistema`), mismo comportamiento por defecto. Route: inline.
-- [ ] T1 (S1,S2,A1) Dominio puro: leer manifiesto, comparar builds, decidir si hay/obliga actualizar, verificar SHA256. Route: inline.
-- [ ] T2 (A1) Numero de build en `VersionCompilacion` (target de MSBuild). Route: inline.
+- [ ] T0 (A5) RutaDocumentos configurable (`RutaDocumentos`), mismo comportamiento por defecto. Route: inline. Escrita, sin verificar en compilador. Commit: ver Log L5.
+- [ ] T1 (S1,S2,A1) Dominio puro: leer manifiesto, comparar builds, decidir si hay/obliga actualizar, verificar SHA256. Route: inline. Commit f966326. Compilo en la VM (Debug/AnyCPU, por el usuario); pruebas pendientes de confirmar.
+- [ ] T2 (A1) Numero de build en `VersionCompilacion` (target de MSBuild). Route: inline. Commit b48a7ca. Compilo en la VM; sin git en el snapshot el build queda en 0 (esperado).
 - [ ] T3 (S4,A2) Instalador por versiones: descargar zip, verificar, extraer, puntero `current`, rollback. Route: inline.
 - [ ] T4 (S4) Proyecto `SIGEFA.Launcher` (net461, sin dependencias) y su acceso directo. Route: inline.
 - [ ] T5 (S2,S3,A3) Polling cada 3 min en `mdi_Menu` y barra superior "Actualizar cliente SIGEFA". Route: inline.
@@ -39,3 +39,5 @@ Supuestos (no pedidos por el usuario, a confirmar si cambian el alcance):
   - Pedido original de la investigacion: "vamos a armar un sub-programa que se encargue de leer cada 3 minutos si existe una nueva versión por una clave sha256 o algo que me permita saber la versión si es que requiere de una o no."
 - L2 (2026-11-18): hallazgos de la investigacion. El exe corre en cada PC (no en el servidor) y la conexion MySQL ya es directa (`app.config` ConnNegocio). `app.config` tiene `loadFromRemoteSources=true`. `SIGEFA.csproj` es net461; tests net48. `AssemblyVersion` fija en 1.0.0.0; `GenerarVersionCompilacion` ya genera Commit/Rama/Asunto/Fecha. Comprobantes: `Program.Carpeta*` = `./documentos/...` (relativo al cwd, 39 usos) y `Facturacion.cs` usa `BaseDirectory + "documentos\"`.
 - L3: pendiente de verificar en el share real: contenido, tamaño del paquete, "Iniciar en" del acceso directo, Crystal runtime en las PCs.
+- L4 (2026-11-18): decisiones de T1. El manifiesto es texto `clave=valor` (no JSON): el launcher no necesita dependencias y el parseo es determinista para firmarlo despues (A6). `archivo` solo acepta el nombre de un `.zip` sin ruta (evita escribir fuera de la carpeta). Un build local <= 0 (sin git) nunca se avisa ni se bloquea. RED no observado: tests y codigo se escribieron juntos.
+- L5 (2026-11-18): T0. `RutaDocumentos.Raiz` lee la clave `RutaDocumentos` de app.config; sin ella usa `documentos` junto al exe (antes `Program.Carpeta*` usaba `./documentos` relativo al cwd y `Facturacion` el directorio base; coinciden mientras el cwd sea la carpeta del exe, que es lo que ya exige el codigo actual al mezclar ambos). Se reemplazaron 14 rutas directas (Facturacion 10, frmEnvioSunat, frmResumenDiario, frmVentas 2) y las 7 propiedades de `Program`. No se tocaron: la carpeta de logs de `VentaCierreServiceConBitacora` (SIGEFA_LOGS) ni el manejo de errores de `Program.Main`. Riesgo: si la clave apunta a un share caido, `Directory.CreateDirectory` en `Main` falla al arrancar; por defecto (sin clave) no cambia nada.
