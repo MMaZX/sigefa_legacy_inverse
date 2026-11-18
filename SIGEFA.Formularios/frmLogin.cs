@@ -114,6 +114,11 @@ public class frmLogin : Office2007Form
 		lblMensaje.ForeColor = System.Drawing.Color.FromArgb(220, 53, 69);
 		lblMensaje.Text = "";
 
+		if (!await ControlVersionLogin.PermiteIniciarSesionAsync(this, lblMensaje))
+		{
+			return;
+		}
+
 		if (string.IsNullOrWhiteSpace(txtUsuario.Text))
 		{
 			lblMensaje.Text = "Por favor, ingrese el nombre de usuario.";
@@ -220,6 +225,7 @@ public class frmLogin : Office2007Form
 	private async void frmLogin_Load(object sender, EventArgs e)
 	{
 		MostrarVersion();
+		ControlVersionLogin.Precargar();
 		await CargaEmpresasAsync();
 	}
 

@@ -1,4 +1,5 @@
 using System;
+using SIGEFA.Administradores.RutasSistema;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -422,7 +423,7 @@ public class frmResumenDiario : RadForm
 						EnviarDocumentoResponse response = await new ConsultarTicket(servicioSunatDocumentos, serializador).PostSunat(consultaTicketRequest);
 						if (response != null)
 						{
-							string ruta3 = AppDomain.CurrentDomain.BaseDirectory + "documentos\\CDR\\R-" + r.Nombredoc + ".zip";
+							string ruta3 = Path.Combine(RutaDocumentos.Subcarpeta("CDR"), "R-" + r.Nombredoc + ".zip");
 							if (response.TramaZipCdr != null)
 							{
 								File.WriteAllBytes(ruta3, Convert.FromBase64String(response.TramaZipCdr));

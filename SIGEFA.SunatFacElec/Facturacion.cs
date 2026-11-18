@@ -1,4 +1,5 @@
 using System;
+using SIGEFA.Administradores.RutasSistema;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
@@ -249,7 +250,7 @@ public class Facturacion
 				informarComprobante(colectorErrores, "el servicio no devolvió el XML sin firmar", null);
 				return;
 			}
-			RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
+			RutaArchivo = Path.Combine(RutaDocumentos.Raiz, _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
 			File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
 			new EscribirLog("Firmando XML ", mostrarConsola: true);
 			if (!await Firmar(colectorErrores))
@@ -398,7 +399,7 @@ public class Facturacion
 			{
 				MessageBox.Show(response.MensajeError);
 			}
-			RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
+			RutaArchivo = Path.Combine(RutaDocumentos.Raiz, _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
 			File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
 			await Firmar();
 			string rutadocumentosboletas = "C:\\DOCUMENTOS-" + empresa.Ruc + "\\DOCUMENTOS ENVIAR\\BOLETAS\\" + _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml";
@@ -670,7 +671,7 @@ public class Facturacion
 			{
 				MessageBox.Show(response.MensajeError);
 			}
-			RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
+			RutaArchivo = Path.Combine(RutaDocumentos.Raiz, _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
 			File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
 			await Firmar();
 			string rutadocumentosnc = "C:\\DOCUMENTOS-" + empresa.Ruc + "\\DOCUMENTOS ENVIAR\\NOTAS CREDITO\\" + _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml";
@@ -812,7 +813,7 @@ public class Facturacion
 			{
 				MessageBox.Show(response.MensajeError);
 			}
-			RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
+			RutaArchivo = Path.Combine(RutaDocumentos.Raiz, _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
 			File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
 			await Firmar();
 			File.WriteAllBytes(Program.CarpetaNC + "\\" + _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml", Convert.FromBase64String(respuestaFirmado.TramaXmlFirmado));
@@ -905,7 +906,7 @@ public class Facturacion
 				informarComprobante(colectorErrores, "la empresa no tiene configurada la contraseña del certificado", null);
 				return false;
 			}
-			string rutaXmlSinFirma = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
+			string rutaXmlSinFirma = Path.Combine(RutaDocumentos.Raiz, _documento.Emisor.NroDocumento + "-" + _documento.TipoDocumento + "-" + _documento.IdDocumento + ".xml");
 			if (!File.Exists(rutaXmlSinFirma))
 			{
 				informarComprobante(colectorErrores, "no se encontró el XML generado en " + rutaXmlSinFirma, null);
@@ -1072,12 +1073,12 @@ public class Facturacion
 						{
 							if (respuestaEnvio.Exito)
 							{
-								File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + "documentos\\RESUMEN\\" + empresa.Ruc + "-" + IdDocumento + ".xml", Convert.FromBase64String(TramaXmlFirmado));
+								File.WriteAllBytes(RutaDocumentos.Subcarpeta("RESUMEN") + "\\" + empresa.Ruc + "-" + IdDocumento + ".xml", Convert.FromBase64String(TramaXmlFirmado));
 								File.WriteAllBytes("C:\\DOCUMENTOS-" + empresa.Ruc + "\\DOCUMENTOS ENVIAR\\RESUMEN\\" + empresa.Ruc + "-" + IdDocumento + ".xml", Convert.FromBase64String(TramaXmlFirmado));
 							}
 							else
 							{
-								File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory + "documentos\\RESUMEN\\" + empresa.Ruc + "-" + TipoDocumento + "-" + IdDocumento + ".xml", Convert.FromBase64String(TramaXmlFirmado));
+								File.WriteAllBytes(RutaDocumentos.Subcarpeta("RESUMEN") + "\\" + empresa.Ruc + "-" + TipoDocumento + "-" + IdDocumento + ".xml", Convert.FromBase64String(TramaXmlFirmado));
 							}
 						}
 					}
@@ -1370,7 +1371,7 @@ public class Facturacion
 			if (response.Exito)
 			{
 				string RutaArchivo2 = "C:\\DOCUMENTOS-" + empresa.Ruc + "\\DOCUMENTOS ENVIAR\\RESUMEN\\" + documentoResumenDiario.IdDocumento + ".xml";
-				RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Documentos\\RESUMEN\\" + documentoResumenDiario.IdDocumento + ".xml");
+				RutaArchivo = Path.Combine(RutaDocumentos.Subcarpeta("RESUMEN"), documentoResumenDiario.IdDocumento + ".xml");
 				File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
 				File.WriteAllBytes(RutaArchivo2, Convert.FromBase64String(response.TramaXmlSinFirma));
 				string tramaXmlSinFirma = Convert.ToBase64String(File.ReadAllBytes(RutaArchivo));
@@ -1565,7 +1566,7 @@ public class Facturacion
 			{
 				MessageBox.Show(response.MensajeError);
 			}
-			RutaArchivo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", documento.Remitente.NroDocumento + "-" + documento.TipoDocumento + "-" + documento.IdDocumento + ".xml");
+			RutaArchivo = Path.Combine(RutaDocumentos.Raiz, documento.Remitente.NroDocumento + "-" + documento.TipoDocumento + "-" + documento.IdDocumento + ".xml");
 			File.WriteAllBytes(RutaArchivo, Convert.FromBase64String(response.TramaXmlSinFirma));
 			await FirmarGuia();
 			string rutadocumentosgr = "C:\\DOCUMENTOS-" + empresa.Ruc + "\\DOCUMENTOS ENVIAR\\GUIAS\\" + documento.Remitente.NroDocumento + "-" + documento.TipoDocumento + "-" + documento.IdDocumento + ".xml";
@@ -1771,7 +1772,7 @@ public class Facturacion
 				MessageBox.Show("La Serie y el Correlativo no pueden estar vacíos");
 				return;
 			}
-			string tramaXmlSinFirma = Convert.ToBase64String(File.ReadAllBytes(Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", documento.Remitente.NroDocumento + "-" + documento.TipoDocumento + "-" + documento.IdDocumento + ".xml")));
+			string tramaXmlSinFirma = Convert.ToBase64String(File.ReadAllBytes(Path.Combine(RutaDocumentos.Raiz, documento.Remitente.NroDocumento + "-" + documento.TipoDocumento + "-" + documento.IdDocumento + ".xml")));
 			FirmadoRequest firmadoRequest = new FirmadoRequest
 			{
 				TramaXmlSinFirma = tramaXmlSinFirma,

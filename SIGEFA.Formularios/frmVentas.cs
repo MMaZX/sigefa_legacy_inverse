@@ -1,4 +1,5 @@
 using System;
+using SIGEFA.Administradores.RutasSistema;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -1774,7 +1775,7 @@ public class frmVentas : Office2007Form
 					directorio = "Boletas";
 				}
 				string[] rucEmpresa = nombreDocumento.Split('-');
-				string RutaArchivo1 = AppDomain.CurrentDomain.BaseDirectory + "\\documentos\\" + directorio + "\\" + nombreDocumento + ".pdf";
+				string RutaArchivo1 = Path.Combine(RutaDocumentos.Raiz, directorio, nombreDocumento + ".pdf");
 				string RutaArchivo2 = "C:\\DOCUMENTOS-" + rucEmpresa[0] + "\\DOCUMENTOS ENVIAR\\" + directorio + "\\" + nombreDocumento + ".pdf";
 				if (File.Exists(RutaArchivo1))
 				{
@@ -1832,7 +1833,7 @@ public class frmVentas : Office2007Form
 					directorio = "Boletas";
 				}
 				string[] rucEmpresa = nombreDocumento.Split('-');
-				string RutaArchivo1 = AppDomain.CurrentDomain.BaseDirectory + "\\documentos\\" + directorio + "\\" + nombreDocumento + ".xml";
+				string RutaArchivo1 = Path.Combine(RutaDocumentos.Raiz, directorio, nombreDocumento + ".xml");
 				string RutaArchivo2 = "C:\\DOCUMENTOS-" + rucEmpresa[0] + "\\DOCUMENTOS ENVIAR\\" + directorio + "\\" + nombreDocumento + ".xml";
 				if (File.Exists(RutaArchivo1))
 				{

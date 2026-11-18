@@ -1,4 +1,5 @@
 using System;
+using SIGEFA.Administradores.RutasSistema;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -218,7 +219,7 @@ public class frmEnvioSunat : Office2007Form
 					CargaDetalle();
 					RecorreDetalle();
 					await con.GeneraDocumentoEnvio(client, fact, ListaDetalleVenta);
-					string sinfirma = Path.Combine(AppDomain.CurrentDomain.BaseDirectory + "documentos\\", r.Nombredoc + ".xml");
+					string sinfirma = Path.Combine(RutaDocumentos.Raiz, r.Nombredoc + ".xml");
 					string tramaXmlSinFirma2 = Convert.ToBase64String(File.ReadAllBytes(sinfirma));
 					new FirmadoRequest
 					{

@@ -5,25 +5,26 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using DevComponents.DotNetBar;
+using SIGEFA.Administradores.RutasSistema;
 using SIGEFA.Formularios;
 
 namespace SIGEFA;
 
 internal static class Program
 {
-	public static string CarpetaCdr => "./documentos/CDR";
+	public static string CarpetaCdr => RutaDocumentos.Subcarpeta("CDR");
 
-	public static string CarpetaBoletas => "./documentos/Boletas";
+	public static string CarpetaBoletas => RutaDocumentos.Subcarpeta("Boletas");
 
-	public static string CarpetaFacturas => "./documentos/Facturas";
+	public static string CarpetaFacturas => RutaDocumentos.Subcarpeta("Facturas");
 
-	public static string CarpetaNC => "./documentos/NC";
+	public static string CarpetaNC => RutaDocumentos.Subcarpeta("NC");
 
-	public static string CarpetaND => "./documentos/ND";
+	public static string CarpetaND => RutaDocumentos.Subcarpeta("ND");
 
-	public static string CarpetaResumen => "./documentos/RESUMEN";
+	public static string CarpetaResumen => RutaDocumentos.Subcarpeta("RESUMEN");
 
-	public static string CarpetaGR => "./documentos/GUIAS";
+	public static string CarpetaGR => RutaDocumentos.Subcarpeta("GUIAS");
 
 	[STAThread]
 	private static void Main()

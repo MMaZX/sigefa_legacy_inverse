@@ -15,6 +15,8 @@
     <Reference Include="MySql.Data">
       <HintPath>..\..\Debug_gr\MySql.Data.dll</HintPath>
     </Reference>
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Configuration" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\Debug_gr\Newtonsoft.Json.dll</HintPath>
@@ -37,6 +39,14 @@
   <!-- Consulta de DNI/RUC en SUNAT: se enlaza todo (parser puro y cliente HTTP sin BD) -->
   <ItemGroup>
     <Compile Include="..\SIGEFA.Administradores\ConsultaDocumento\*.cs" Link="ConsultaDocumento\%(Filename)%(Extension)" />
+  </ItemGroup>
+  <!-- Actualizador de version: manifiesto, decision y hash. Solo logica pura, sin WinForms ni MySql -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\Actualizador\*.cs" Link="Actualizador\%(Filename)%(Extension)" />
+  </ItemGroup>
+  <!-- Carpeta de comprobantes electronicos (RutaDocumentos de app.config) -->
+  <ItemGroup>
+    <Compile Include="..\SIGEFA.Administradores\RutasSistema\*.cs" Link="RutasSistema\%(Filename)%(Extension)" />
   </ItemGroup>
   <!-- Texto de version del login -->
   <ItemGroup>
