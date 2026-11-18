@@ -13,10 +13,26 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        var modo = ArgumentosLauncher.Interpretar(args);
+        if (modo.Modo == ModoLauncher.Verificar)
+        {
+            // Solo prueba que este launcher arranca (lo usa el launcher viejo antes de cambiarse por este).
+            return 0;
+        }
+        if (modo.Modo == ModoLauncher.MostrarBuild)
+        {
+            // El numero de build va como codigo de salida (lo lee publicar-launcher.ps1 del exe que va a subir).
+            return VersionLauncher.Build;
+        }
+        if (modo.Modo == ModoLauncher.Reemplazar)
+        {
+            return AutoActualizacionLauncher.Reemplazar(modo);
+        }
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         var config = ConfiguracionLauncher.Leer();
         RegistroLauncher.Iniciar(config.CarpetaInstalacion);
+        AutoActualizacionLauncher.LimpiarTemporales();
         // Un solo launcher a la vez por usuario: si hay otro instalando, se espera a que termine.
         using (var mutex = new Mutex(false, NombreMutex))
         {
@@ -26,7 +42,7 @@ internal static class Program
             }
             try
             {
-                return Ejecutar(config, args);
+                return Ejecutar(config, modo);
             }
             finally
             {
@@ -48,10 +64,15 @@ internal static class Program
         }
     }
 
-    private static int Ejecutar(ConfiguracionLauncher config, string[] args)
+    private static int Ejecutar(ConfiguracionLauncher config, ArgumentosLauncher modo)
     {
         var instalador = new InstaladorVersiones(config.CarpetaInstalacion);
         var servidor = new ServidorActualizacion(config.RutaActualizacion, config.EsperaServidor);
+        // Primero el propio launcher: si hay uno nuevo, el reemplazo lo abre ya actualizado y este se cierra sin abrir SIGEFA.
+        if (!modo.OmitirAutoactualizacion && AutoActualizacionLauncher.Intentar(config, servidor, modo.ArgumentosSigefa))
+        {
+            return 0;
+        }
         var manifiesto = servidor.LeerManifiesto(out string motivo);
         if (manifiesto == null)
         {
@@ -70,7 +91,7 @@ internal static class Program
         {
             return Avisar("No se pudo instalar SIGEFA.\n\n" + errorActualizacion, 1);
         }
-        LanzadorSigefa.Lanzar(exe, args, Path.Combine(config.CarpetaInstalacion, "documentos"));
+        LanzadorSigefa.Lanzar(exe, modo.ArgumentosSigefa, Path.Combine(config.CarpetaInstalacion, "documentos"));
         return 0;
     }
 

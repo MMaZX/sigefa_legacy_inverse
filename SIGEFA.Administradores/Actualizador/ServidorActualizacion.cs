@@ -10,6 +10,9 @@ internal sealed class ServidorActualizacion
 {
     public const string NombreManifiesto = "latest.manifest";
 
+    // Ficha del propio launcher: mismo formato; "archivo" es un .zip con SIGEFA.Launcher.exe en la raiz.
+    public const string NombreManifiestoLauncher = "launcher.manifest";
+
     private readonly string ruta;
     private readonly TimeSpan espera;
 
@@ -23,13 +26,23 @@ internal sealed class ServidorActualizacion
     // por eso la lectura corre en otro hilo y se abandona al vencer la espera.
     public ManifiestoVersion LeerManifiesto(out string motivo)
     {
+        return Leer(NombreManifiesto, out motivo);
+    }
+
+    public ManifiestoVersion LeerManifiestoLauncher(out string motivo)
+    {
+        return Leer(NombreManifiestoLauncher, out motivo);
+    }
+
+    private ManifiestoVersion Leer(string nombreManifiesto, out string motivo)
+    {
         motivo = null;
         if (ruta.Length == 0)
         {
             motivo = "No esta configurada la ruta del servidor (RutaActualizacion).";
             return null;
         }
-        string archivo = Path.Combine(ruta, NombreManifiesto);
+        string archivo = Path.Combine(ruta, nombreManifiesto);
         var lectura = Task.Run(() => File.ReadAllText(archivo));
         try
         {
